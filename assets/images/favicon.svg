@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0097A7"/>
+  <path d="M256 96c-88.4 0-160 71.6-160 160s71.6 160 160 160 160-71.6 160-160S344.4 96 256 96z" fill="rgba(255,255,255,0.15)"/>
+  <!-- Medical Cross -->
+  <rect x="224" y="156" width="64" height="200" rx="12" fill="white"/>
+  <rect x="156" y="224" width="200" height="64" rx="12" fill="white"/>
+  <!-- Stethoscope hint arcs -->
+  <path d="M176 340 Q176 400 256 400 Q336 400 336 340" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="176" cy="340" r="8" fill="rgba(255,255,255,0.5)"/>
+  <circle cx="336" cy="340" r="8" fill="rgba(255,255,255,0.5)"/>
+</svg>
