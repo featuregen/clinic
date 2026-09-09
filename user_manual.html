@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeatureGen Care - User Manual</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #0d6efd;
+            --primary-dark: #0a58ca;
+            --success: #198754;
+            --warning: #ffc107;
+            --info: #0dcaf0;
+            --secondary: #6c757d;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --border: #dee2e6;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: #e9ecef;
+            margin: 0;
+            padding: 20px;
+        }
+        .toolbar {
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        .document-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .cover-page {
+            text-align: center;
+            padding: 100px 0;
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: 40px;
+        }
+        .cover-page h1 {
+            font-size: 2.5em;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        .cover-page p {
+            font-size: 1.2em;
+            color: var(--secondary);
+        }
+        h2 {
+            color: var(--primary-dark);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        h3 {
+            color: #495057;
+            margin-top: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step-badge {
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .workflow-box {
+            background: var(--light);
+            border-left: 4px solid var(--success);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .tip-box {
+            background: #e0f7fa;
+            border-left: 4px solid var(--info);
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .toolbar {
+                display: none;
+            }
+            .document-container {
+                box-shadow: none;
+                padding: 0;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <button class="btn" onclick="downloadPDF()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download User Manual
+        </button>
+    </div>
+
+    <div class="document-container" id="content-to-print">
+        
+        <div class="cover-page">
+            <h1>FeatureGen Care</h1>
+            <h2>Comprehensive User Manual</h2>
+            <p>Step-by-step guide on how to use the Clinic Suite</p>
+            <p style="margin-top: 50px; font-size: 0.9em; color: #adb5bd;">Generated automatically by FeatureGen</p>
+        </div>
+
+        <h2>1. Getting Started</h2>
+        <p>Welcome to FeatureGen Care! To log into your clinic's portal:</p>
+        <ol>
+            <li>Navigate to your clinic's specific web address (e.g., <em>yourclinic.featuregen.com</em>).</li>
+            <li>Enter your assigned <strong>Username</strong> and <strong>Password</strong>.</li>
+            <li>Upon logging in, you will be directed to your role-specific dashboard.</li>
+        </ol>
+
+        <div class="tip-box">
+            <strong>Security Tip:</strong> Your session is highly secure. If you are inactive for an extended period, the system will safely log you out to protect patient data.
+        </div>
+
+        <div class="page-break"></div>
+
+        <h2>2. The Patient Journey (End-to-End Workflow)</h2>
+        <p>Here is how a standard patient visit flows through the software:</p>
+
+        <div class="workflow-box">
+            <h4 style="margin-top:0;">1. Registration & Booking (Receptionist)</h4>
+            <p>The patient arrives. The receptionist clicks <strong>"Add Patient"</strong>, enters basic details, and clicks <strong>"Book Appointment"</strong> to assign them to a Doctor for a specific time slot.</p>
+            
+            <h4>2. Consultation (Doctor)</h4>
+            <p>The Doctor sees the appointment on their Dashboard. They open the patient's file, review past history, and click <strong>"Create Prescription"</strong> or use the <strong>Dental/Vaccination Chart</strong>.</p>
+            
+            <h4>3. Checkout & Billing (Accountant/Receptionist)</h4>
+            <p>The patient returns to the front desk. The receptionist clicks <strong>"Create Invoice"</strong>, adds the consultation fee and any procedures, collects the payment, and prints the final receipt.</p>
+        </div>
+
+        <div class="page-break"></div>
+
+        <h2>3. Guide for Receptionists</h2>
+        
+        <h3><span class="step-badge">1</span> Managing Patients</h3>
+        <ul>
+            <li><strong>Adding a Patient:</strong> Go to the sidebar > <em>Patients</em> > <em>Add Patient</em>. Fill in the required fields (Name, Phone, Age, Gender) and Save.</li>
+            <li><strong>Searching:</strong> Use the universal search bar at the top of the dashboard to quickly find patients by name or phone number.</li>
+        </ul>
+
+        <h3><span class="step-badge">2</span> Booking Appointments</h3>
+        <ul>
+            <li>Go to <em>Appointments</em> > <em>Book Appointment</em>.</li>
+            <li>Select the Patient (or add a new one directly from the booking screen).</li>
+            <li>Choose the Doctor, Date, and an available Time Slot.</li>
+            <li>Click <strong>Book</strong>. The appointment will instantly appear on the Doctor's dashboard.</li>
+        </ul>
+
+        <h3><span class="step-badge">3</span> Queue Management</h3>
+        <p>From the Appointments List, you can change the status of an appointment to keep track of the waiting room:</p>
+        <ul>
+            <li><strong>Scheduled:</strong> Patient has booked.</li>
+            <li><strong>Completed:</strong> Patient has seen the doctor.</li>
+            <li><strong>Cancelled:</strong> Patient did not show up.</li>
+        </ul>
+
+        <div class="page-break"></div>
+
+        <h2>4. Guide for Doctors</h2>
+
+        <h3><span class="step-badge">1</span> Dashboard & Patient Queue</h3>
+        <p>When you log in, your dashboard shows your appointments for the day. Click on an appointment to view the patient's complete medical profile, past visits, and uploaded documents.</p>
+
+        <h3><span class="step-badge">2</span> Writing Prescriptions (E-Rx)</h3>
+        <ul>
+            <li>From the patient's profile, click <strong>Create Prescription</strong>.</li>
+            <li>Add medicines by typing the name, selecting dosage (e.g., 1-0-1), and duration.</li>
+            <li>Add general advice, chief complaints, and diagnosis.</li>
+            <li>Click <strong>Save & Print</strong> to generate a professional PDF prescription.</li>
+        </ul>
+        <div class="tip-box">
+            <strong>Pro Tip:</strong> Go to <em>Templates</em> on the sidebar to create "Prescription Templates" for common illnesses (like Viral Fever). You can then apply these templates to a patient with just one click to save time!
+        </div>
+
+        <h3><span class="step-badge">3</span> Specialized Modules</h3>
+        <ul>
+            <li><strong>Dental Charting:</strong> Open a patient's profile and click the "Dental" tab. Click on a specific tooth on the visual chart to log conditions (Decay, Missing) or treatments (RCT, Extraction).</li>
+            <li><strong>Vaccinations:</strong> Open the "Vaccination" tab to see the child's immunization schedule, mark doses as given, and log batch numbers.</li>
+        </ul>
+
+        <div class="page-break"></div>
+
+        <h2>5. Guide for Clinic Administrators</h2>
+
+        <h3><span class="step-badge">1</span> Clinic Settings</h3>
+        <p>Go to <em>Administration</em> > <em>Clinic Settings</em> to update your clinic's Name, Address, Contact Info, and Logo. This information automatically appears on all printed prescriptions and invoices.</p>
+
+        <h3><span class="step-badge">2</span> Managing Master Data</h3>
+        <p>Before your clinic runs smoothly, you should populate dropdown menus:</p>
+        <ul>
+            <li>Go to <em>Administration</em> > <em>Master Data</em>.</li>
+            <li>Add your clinic's <strong>Departments</strong> (e.g., General Medicine, Pediatrics).</li>
+            <li>Add <strong>Specialties</strong> (e.g., Cardiologist, Dentist).</li>
+        </ul>
+
+        <h3><span class="step-badge">3</span> Staff & Doctor Management</h3>
+        <ul>
+            <li><strong>Add Doctors:</strong> Go to <em>Management</em> > <em>Doctors</em> > <em>Add Doctor</em>. Set up their login credentials, specialty, consultation fees, and appointment slot durations.</li>
+            <li><strong>Add Staff:</strong> Go to <em>Management</em> > <em>Staff</em> > <em>Add Staff</em>. Assign roles like Receptionist, Accountant, or Nurse.</li>
+        </ul>
+        
+        <div class="tip-box">
+            <strong>Security Check:</strong> The <em>System Administrator</em> account cannot be edited or deleted by normal users, ensuring you never get locked out of your system.
+        </div>
+
+        <div style="text-align: center; margin-top: 60px; font-size: 0.9em; color: var(--secondary);">
+            &copy; 2026 FeatureGen Solutions. All rights reserved.<br>
+            User Manual v1.0
+        </div>
+
+    </div>
+
+    <script>
+        function downloadPDF() {
+            const element = document.getElementById('content-to-print');
+            const opt = {
+                margin:       10,
+                filename:     'FeatureGen_Care_User_Manual.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
+</body>
+</html>
