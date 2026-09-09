@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeatureGen Care - Clinic Suite Documentation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #0d6efd;
+            --primary-dark: #0a58ca;
+            --secondary: #6c757d;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --border: #dee2e6;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: #e9ecef;
+            margin: 0;
+            padding: 20px;
+        }
+        .toolbar {
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        .document-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .cover-page {
+            text-align: center;
+            padding: 100px 0;
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: 40px;
+        }
+        .cover-page h1 {
+            font-size: 2.5em;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        .cover-page p {
+            font-size: 1.2em;
+            color: var(--secondary);
+        }
+        h2 {
+            color: var(--primary-dark);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        h3 {
+            color: #495057;
+            margin-top: 25px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .feature-box {
+            background: var(--light);
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .toolbar {
+                display: none;
+            }
+            .document-container {
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <button class="btn" onclick="downloadPDF()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download as PDF
+        </button>
+    </div>
+
+    <div class="document-container" id="content-to-print">
+        
+        <div class="cover-page">
+            <h1>FeatureGen Care</h1>
+            <h2>Advanced Clinic Management Suite</h2>
+            <p>Comprehensive Product Documentation & Feature Guide</p>
+            <p style="margin-top: 50px; font-size: 0.9em; color: #adb5bd;">Generated automatically by FeatureGen</p>
+        </div>
+
+        <h2>1. Executive Summary</h2>
+        <p><strong>FeatureGen Care</strong> is a state-of-the-art, multi-tenant Clinic Management System designed to digitize, streamline, and secure the daily operations of modern medical facilities. From a single unified platform, healthcare providers can manage patients, appointments, digital prescriptions, complex billing, and multi-disciplinary specialty charts (including dental and vaccination modules).</p>
+
+        <div class="feature-box">
+            <strong>Architecture Note:</strong> The platform operates on a robust Multi-Tenant (SaaS) architecture. Every registered clinic gets its own isolated database linked via a custom subdomain (e.g., <em>apollo.featuregen.com</em>), guaranteeing maximum data privacy, security, and independent scalability.
+        </div>
+
+        <h2>2. Core Modules & Capabilities</h2>
+
+        <h3>2.1 Advanced Patient Management</h3>
+        <p>A centralized hub for all patient demographics and medical histories.</p>
+        <ul>
+            <li><strong>Digital Patient Records:</strong> Capture comprehensive demographics, contact details, and initial vital signs.</li>
+            <li><strong>Medical History Timeline:</strong> View a patient's complete history including past visits, prescriptions, and billing ledgers in one click.</li>
+            <li><strong>Smart Search:</strong> Global AJAX-powered search to instantly locate patients by name, ID, or phone number.</li>
+        </ul>
+
+        <h3>2.2 Appointment Scheduling</h3>
+        <p>Eliminate waiting room bottlenecks with a digital reception desk.</p>
+        <ul>
+            <li><strong>Doctor Scheduling:</strong> Book appointments based on doctor availability, assigned departments, and customized slot durations.</li>
+            <li><strong>Status Tracking:</strong> Update appointments dynamically (Scheduled, In-Progress, Completed, Cancelled).</li>
+            <li><strong>Queue Management:</strong> Real-time daily view for receptionists to manage patient flow.</li>
+        </ul>
+
+        <h3>2.3 Digital Prescriptions (E-Rx)</h3>
+        <p>Fast, secure, and professional prescription generation.</p>
+        <ul>
+            <li><strong>Smart Templates:</strong> Doctors can create and save prescription templates for common ailments to prescribe in one click.</li>
+            <li><strong>Drug Database:</strong> Structured entry for medicines, dosages, frequencies, and durations.</li>
+            <li><strong>Professional Printing:</strong> One-click professional PDF printout formatted specifically for the clinic's letterhead.</li>
+        </ul>
+
+        <h3>2.4 Financial & Billing Operations</h3>
+        <p>Comprehensive revenue management tailored for healthcare.</p>
+        <ul>
+            <li><strong>Invoice Generation:</strong> Auto-calculate doctor consultation fees, follow-up fees, and custom procedure costs.</li>
+            <li><strong>Payment Tracking:</strong> Track partial payments, dues, and payment methods (Cash, Card, UPI).</li>
+            <li><strong>Financial Reporting:</strong> Daily revenue breakdown and comprehensive ledger per patient.</li>
+        </ul>
+
+        <h2>3. Specialized Clinical Modules</h2>
+        
+        <h3>3.1 Dental Charting Module</h3>
+        <p>Purpose-built tools for dental professionals.</p>
+        <ul>
+            <li><strong>Interactive Tooth Chart:</strong> Visual mapping of adult and pediatric teeth.</li>
+            <li><strong>Treatment History:</strong> Log specific procedures against specific teeth (e.g., RCT, Extractions, Fillings).</li>
+        </ul>
+
+        <h3>3.2 Vaccination & Immunization Tracker</h3>
+        <p>Essential for pediatric and general care.</p>
+        <ul>
+            <li><strong>Master Schedules:</strong> Standardized vaccination schedules based on patient age.</li>
+            <li><strong>Dose Tracking:</strong> Record batch numbers, dates administered, and upcoming due dates.</li>
+        </ul>
+
+        <h2>4. Administrative & System Controls</h2>
+
+        <h3>4.1 Role-Based Access Control (RBAC)</h3>
+        <p>Strict security boundaries ensure staff only see what they need to see.</p>
+        <ul>
+            <li><strong>Super Admin:</strong> Oversees the entire SaaS network, provisions new clinics, and manages overarching system health. <em>(Highly restricted)</em></li>
+            <li><strong>Clinic Admin:</strong> Manages clinic settings, master data, and staff permissions.</li>
+            <li><strong>Doctors:</strong> Access clinical data, write prescriptions, and view their schedule.</li>
+            <li><strong>Receptionists:</strong> Handle bookings, basic patient registration, and queue management.</li>
+            <li><strong>Accountants:</strong> Manage billing, invoices, and financial reports.</li>
+        </ul>
+
+        <h3>4.2 Multi-Tenant Provisioning</h3>
+        <ul>
+            <li><strong>Automated Onboarding:</strong> Provisioning script seamlessly creates isolated databases and auto-runs schema configurations for newly onboarded clinics.</li>
+            <li><strong>Session Isolation:</strong> Secure cookie management prevents cross-tenant session hijacking or data bleeding.</li>
+        </ul>
+
+        <h2>5. Technical Specifications</h2>
+        <ul>
+            <li><strong>Backend Ecosystem:</strong> Modern PHP 8+ with PDO for secure database abstraction.</li>
+            <li><strong>Database:</strong> MySQL 8+ distributed architecture (Master Routing DB + Isolated Tenant DBs).</li>
+            <li><strong>Security:</strong> CSRF Protection, Password Hashing (Bcrypt), and SQL Injection prevention via Prepared Statements.</li>
+            <li><strong>Deployment:</strong> Automated CI/CD pipeline via GitHub Actions with zero-downtime FTP synchronization.</li>
+        </ul>
+
+        <div style="text-align: center; margin-top: 60px; font-size: 0.9em; color: var(--secondary);">
+            &copy; 2026 FeatureGen Solutions. All rights reserved.<br>
+            Confidential Document.
+        </div>
+
+    </div>
+
+    <script>
+        function downloadPDF() {
+            const element = document.getElementById('content-to-print');
+            const opt = {
+                margin:       10,
+                filename:     'FeatureGen_Care_Documentation.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // New Promise-based usage:
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
+</body>
+</html>
