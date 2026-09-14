@@ -273,6 +273,15 @@ class Database {
                     ADD COLUMN custom_razorpay_key_secret VARCHAR(100) NULL");
             }
             
+            // Check if gst_number column exists in tenants
+            $colTenantGst = $masterConn->query("SHOW COLUMNS FROM tenants LIKE 'gst_number'")->fetch();
+            if (!$colTenantGst) {
+                $masterConn->exec("ALTER TABLE tenants 
+                    ADD COLUMN gst_number VARCHAR(20) NULL,
+                    ADD COLUMN pan_number VARCHAR(20) NULL,
+                    ADD COLUMN billing_address TEXT NULL");
+            }
+            
             // Ensure saas_global_settings exists
             $masterConn->exec("CREATE TABLE IF NOT EXISTS saas_global_settings (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -299,6 +308,11 @@ class Database {
                     'addon_doctor_yearly_price' => '250',
                     'razorpay_key_id' => 'rzp_test_S2WE1vnYYcKVAm',
                     'razorpay_key_secret' => 'IkgTWkbFrmzpT0Gg0j3gvKK7',
+                    'platform_company_name' => 'Feature Gen Technologies',
+                    'platform_gstin' => '',
+                    'platform_pan' => '',
+                    'platform_address' => 'Chennai, Tamil Nadu, India',
+                    'platform_state' => 'Tamil Nadu (State Code: 33)',
                     'offline_payment_contact' => 'Phone: +91 98765 43210 | WhatsApp: +91 98765 43210',
                     'offline_bank_details' => "Account Name: Feature Gen Technologies\nAccount Number: 123456789012\nBank: HDFC Bank\nIFSC: HDFC0001234\nUPI ID: featuregen@upi"
                 ];
@@ -306,10 +320,15 @@ class Database {
                     $stmt->execute([$k, $v]);
                 }
             } else {
-                // Ensure addon pricing keys exist
+                // Ensure addon pricing and platform legal keys exist
                 $masterConn->exec("INSERT IGNORE INTO saas_global_settings (setting_key, setting_value) VALUES 
                     ('addon_doctor_monthly_price', '25'),
-                    ('addon_doctor_yearly_price', '250')");
+                    ('addon_doctor_yearly_price', '250'),
+                    ('platform_company_name', 'Feature Gen Technologies'),
+                    ('platform_gstin', ''),
+                    ('platform_pan', ''),
+                    ('platform_address', 'Chennai, Tamil Nadu, India'),
+                    ('platform_state', 'Tamil Nadu (State Code: 33)')");
                 
                 // Auto-populate Razorpay test keys if currently empty
                 $masterConn->exec("UPDATE saas_global_settings SET setting_value = 'rzp_test_S2WE1vnYYcKVAm' WHERE setting_key = 'razorpay_key_id' AND (setting_value = '' OR setting_value IS NULL)");

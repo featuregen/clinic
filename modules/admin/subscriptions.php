@@ -75,6 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $customRzpKey = sanitize(trim($_POST['custom_razorpay_key_id'] ?? ''));
         $customRzpSecret = sanitize(trim($_POST['custom_razorpay_key_secret'] ?? ''));
 
+        $clinicGst = strtoupper(sanitize(trim($_POST['clinic_gst_number'] ?? '')));
+        $clinicPan = strtoupper(sanitize(trim($_POST['clinic_pan_number'] ?? '')));
+        $clinicAddress = sanitize($_POST['clinic_billing_address'] ?? '');
+
         // Update active max_doctors immediately for the current plan
         $currentPlanType = $t['plan_type'] ?? 'trial';
         $newActiveMaxDoctors = intval($t['max_doctors']);
@@ -104,6 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     custom_addon_doctor_yearly_price = ?,
                     custom_razorpay_key_id = ?,
                     custom_razorpay_key_secret = ?,
+                    gst_number = ?,
+                    pan_number = ?,
+                    billing_address = ?,
                     max_doctors = ?,
                     updated_at = NOW()
                 WHERE id = ?
@@ -112,7 +119,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $monthlyPrice, $monthlyDoctors, $yearlyPrice, $yearlyDoctors,
                 $yearlyBonus, $lifetimePrice, $lifetimeDoctors, $trialMonths,
                 $trialDoctors, $customAddonMonthly, $customAddonYearly,
-                $customRzpKey, $customRzpSecret, $newActiveMaxDoctors, $t['id']
+                $customRzpKey, $customRzpSecret,
+                $clinicGst, $clinicPan, $clinicAddress,
+                $newActiveMaxDoctors, $t['id']
             ]);
             
             setFlashMessage('success', "Custom configuration for {$t['clinic_name']} saved successfully! Active doctor quota updated to {$newActiveMaxDoctors} doctors.");
@@ -366,6 +375,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'one_time_max_doctors' => sanitize($_POST['one_time_max_doctors'] ?? '0'),
             'addon_doctor_monthly_price' => sanitize($_POST['addon_doctor_monthly_price'] ?? '25'),
             'addon_doctor_yearly_price' => sanitize($_POST['addon_doctor_yearly_price'] ?? '250'),
+            'platform_company_name' => sanitize($_POST['platform_company_name'] ?? 'Feature Gen Technologies'),
+            'platform_gstin' => strtoupper(sanitize(trim($_POST['platform_gstin'] ?? ''))),
+            'platform_pan' => strtoupper(sanitize(trim($_POST['platform_pan'] ?? ''))),
+            'platform_address' => sanitize($_POST['platform_address'] ?? ''),
+            'platform_state' => sanitize($_POST['platform_state'] ?? ''),
             'razorpay_key_id' => sanitize($_POST['razorpay_key_id'] ?? ''),
             'razorpay_key_secret' => sanitize($_POST['razorpay_key_secret'] ?? ''),
             'offline_payment_contact' => sanitize($_POST['offline_payment_contact'] ?? ''),
@@ -741,6 +755,40 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         </div>
                     </div>
                 </div>
+
+                <!-- 7. CLIENT CLINIC TAX & GST DETAILS (CUSTOMER / BILLED TO) -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid var(--border-color); border-radius: 12px; grid-column: span 2;">
+                    <div class="card-body" style="padding: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h4 style="margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-file-invoice" style="color: #059669;"></i> 7. Clinic GSTIN & Tax Details (Customer / Billed To)
+                            </h4>
+                            <?php if (!empty($t['gst_number'])): ?>
+                                <span class="badge badge-success" style="font-size: 11px;"><i class="fas fa-check"></i> Registered (GSTIN: <?= sanitizeOutput($t['gst_number']) ?>)</span>
+                            <?php else: ?>
+                                <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 11px;">Unregistered (B2C)</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            These details appear in the <strong>"Billed To (Recipient)"</strong> section on all official tax invoices & receipts for <strong><?= sanitizeOutput($t['clinic_name']) ?></strong> so they can claim Input Tax Credit (ITC).
+                        </p>
+                        <div class="grid-3 gap-16 mb-16">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Clinic GSTIN (15 Digits)</label>
+                                <input type="text" name="clinic_gst_number" class="form-control" value="<?= sanitizeOutput($t['gst_number'] ?? '') ?>" placeholder="e.g. 33XYZAB9876C1Z2" maxlength="15" style="text-transform: uppercase;">
+                                <small class="text-muted">Leave empty if clinic is unregistered under GST.</small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Clinic PAN Number (10 Digits)</label>
+                                <input type="text" name="clinic_pan_number" class="form-control" value="<?= sanitizeOutput($t['pan_number'] ?? '') ?>" placeholder="e.g. ABCDE1234F" maxlength="10" style="text-transform: uppercase;">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Billing Address for Invoices</label>
+                                <input type="text" name="clinic_billing_address" class="form-control" value="<?= sanitizeOutput($t['billing_address'] ?? '') ?>" placeholder="Street, Area, City, State - Pincode">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid var(--border-color);">
@@ -931,6 +979,50 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                                 <label class="form-label">Yearly Add-on Rate per Doctor (₹)</label>
                                 <input type="number" name="addon_doctor_yearly_price" class="form-control" value="<?= sanitizeOutput($settings['addon_doctor_yearly_price'] ?? '250') ?>" step="0.01" required>
                                 <small class="text-muted">Default: ₹250 / year per extra doctor (+ 18% GST)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SaaS Platform Company & GST Details (Supplier / Billed By) -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid #00838f; border-radius: 12px; grid-column: span 2;">
+                    <div class="card-body">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="margin: 0; display: flex; align-items: center; gap: 8px; color: #00838f;">
+                                <i class="fas fa-landmark"></i> SaaS Platform Legal & GST Details (Supplier / Billed By)
+                            </h4>
+                            <?php if (!empty($settings['platform_gstin'])): ?>
+                                <span class="badge badge-success" style="font-size: 11px;"><i class="fas fa-check-circle"></i> GSTIN: <?= sanitizeOutput($settings['platform_gstin']) ?></span>
+                            <?php else: ?>
+                                <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 11px;">GSTIN Not Set (Unregistered)</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                            These details appear in the <strong>"Billed By (Supplier)"</strong> section on all official Tax Invoices (SAC: 998314) issued to clinics when they subscribe, renew, or purchase add-on doctor slots.
+                        </p>
+                        <div class="grid-3 gap-16 mb-16">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Legal Company / Business Name <span class="required">*</span></label>
+                                <input type="text" name="platform_company_name" class="form-control" value="<?= sanitizeOutput($settings['platform_company_name'] ?? 'Feature Gen Technologies') ?>" required>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Platform GSTIN (15 Digits)</label>
+                                <input type="text" name="platform_gstin" class="form-control" value="<?= sanitizeOutput($settings['platform_gstin'] ?? '') ?>" placeholder="e.g. 33ABCDE1234F1Z5" maxlength="15" style="text-transform: uppercase;">
+                                <small class="text-muted">Required to legally charge 18% GST.</small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Platform PAN Number (10 Digits)</label>
+                                <input type="text" name="platform_pan" class="form-control" value="<?= sanitizeOutput($settings['platform_pan'] ?? '') ?>" placeholder="e.g. ABCDE1234F" maxlength="10" style="text-transform: uppercase;">
+                            </div>
+                        </div>
+                        <div class="grid-2 gap-16">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Registered Business Address</label>
+                                <input type="text" name="platform_address" class="form-control" value="<?= sanitizeOutput($settings['platform_address'] ?? 'Chennai, Tamil Nadu, India') ?>">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Registered State & State Code</label>
+                                <input type="text" name="platform_state" class="form-control" value="<?= sanitizeOutput($settings['platform_state'] ?? 'Tamil Nadu (State Code: 33)') ?>">
                             </div>
                         </div>
                     </div>

@@ -32,6 +32,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $logoFilename, $clinicId
             ]
         );
+
+        // Sync clinic tax & address details to Master DB tenants table for subscription tax invoices
+        $tenantId = intval(db()->tenantInfo['id'] ?? 0);
+        if ($tenantId > 0) {
+            try {
+                $master = master_db();
+                $master->prepare("UPDATE tenants SET gst_number = ?, pan_number = ?, billing_address = ? WHERE id = ?")
+                       ->execute([
+                           strtoupper(sanitize(trim($_POST['gst_number'] ?? ''))),
+                           strtoupper(sanitize(trim($_POST['pan_number'] ?? ''))),
+                           sanitize($_POST['address'] ?? ''),
+                           $tenantId
+                       ]);
+            } catch (Exception $e) {}
+        }
+
         logAudit('update', 'settings', 'clinic', $clinicId);
         setFlashMessage('success', 'Clinic settings updated successfully.');
         header('Location: ' . BASE_URL . '/modules/clinic/settings.php');
