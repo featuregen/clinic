@@ -36,8 +36,15 @@ try {
     error_log("Branches Table Check: " . $e->getMessage());
 }
 
-// Handle form submissions
+$isSuperAdmin = (getCurrentUserRole() === ROLE_SUPER_ADMIN);
+
+// Handle form submissions (Super Admin Only)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$isSuperAdmin) {
+        setFlashMessage('error', 'Unauthorized: Only Super Administrators have permission to create or modify clinic branches.');
+        header('Location: ' . BASE_URL . '/modules/clinic/branches.php');
+        exit;
+    }
     $action = $_POST['action'] ?? '';
     
     try {
@@ -189,12 +196,23 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
         <h1><i class="fas fa-code-branch" style="color: var(--primary);"></i> Clinic Locations & Branches</h1>
         <p class="text-muted" style="margin-top: 4px; font-size: 14px;">Manage physical clinic facilities, consultation centres, and multi-location operating hours.</p>
     </div>
+    <?php if ($isSuperAdmin): ?>
     <div>
         <button class="btn btn-primary" onclick="openAddBranchModal()">
             <i class="fas fa-plus"></i> Add New Branch
         </button>
     </div>
+    <?php endif; ?>
 </div>
+
+<?php if (!$isSuperAdmin): ?>
+    <div style="background: #eef6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: #1e40af; font-size: 14px;">
+        <i class="fas fa-info-circle" style="font-size: 20px;"></i>
+        <div>
+            <strong>Clinic Locations Directory:</strong> Here are your registered facility locations. If you need to open a new branch or update operational addresses, please contact your Super Administrator.
+        </div>
+    </div>
+<?php endif; ?>
 
 <?php if (empty($branches)): ?>
     <div class="card" style="text-align: center; padding: 48px 24px;">
@@ -205,9 +223,11 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
         <p class="text-muted" style="max-width: 460px; margin: 0 auto 24px auto;">
             Configure your primary facility or add multiple physical branches so doctors, staff, appointments, and bills can be segregated by location.
         </p>
+        <?php if ($isSuperAdmin): ?>
         <button class="btn btn-primary" onclick="openAddBranchModal()">
             <i class="fas fa-plus"></i> Create First Branch
         </button>
+        <?php endif; ?>
     </div>
 <?php else: ?>
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
@@ -263,6 +283,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                     </div>
                 </div>
                 
+                <?php if ($isSuperAdmin): ?>
                 <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center; background: #fafbfc;">
                     <form method="POST" style="margin: 0;">
                         <input type="hidden" name="action" value="toggle_status">
@@ -276,11 +297,13 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         <i class="fas fa-edit"></i> Edit Branch
                     </button>
                 </div>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
 
+<?php if ($isSuperAdmin): ?>
 <!-- Branch Form Modal -->
 <div id="branchModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto;">
     <div class="modal-dialog" style="max-width: 600px; margin: 50px auto; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden;">
@@ -427,5 +450,6 @@ window.onclick = function(event) {
     }
 }
 </script>
+<?php endif; ?>
 
 <?php require_once INCLUDES_PATH . '/footer.php'; ?>
