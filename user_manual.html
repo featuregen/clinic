@@ -29,7 +29,32 @@
             max-width: 900px;
             margin: 0 auto 20px auto;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .doc-nav {
+            display: flex;
+            gap: 10px;
+        }
+        .nav-link {
+            text-decoration: none;
+            color: #495057;
+            background: white;
+            padding: 8px 14px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: #e7f1ff;
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        .nav-link.active {
+            font-weight: bold;
         }
         .btn {
             background-color: var(--primary);
@@ -137,6 +162,11 @@
 <body>
 
     <div class="toolbar">
+        <div class="doc-nav">
+            <a href="customer_document.html" class="nav-link">Product Overview</a>
+            <a href="user_manual.html" class="nav-link active">User Manual</a>
+            <a href="advantages.html" class="nav-link">Why Choose Us</a>
+        </div>
         <button class="btn" onclick="downloadPDF()">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             Download User Manual
