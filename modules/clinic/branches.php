@@ -9,6 +9,33 @@ requireRole([ROLE_SUPER_ADMIN, ROLE_ADMIN]);
 $db = db();
 $clinicId = getCurrentClinicId();
 
+// Self-healing: Ensure branches table exists
+try {
+    $db->query("
+        CREATE TABLE IF NOT EXISTS branches (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            clinic_id INT NOT NULL,
+            name VARCHAR(200) NOT NULL,
+            code VARCHAR(20) DEFAULT NULL,
+            email VARCHAR(150) DEFAULT NULL,
+            phone VARCHAR(20) DEFAULT NULL,
+            address TEXT DEFAULT NULL,
+            city VARCHAR(100) DEFAULT NULL,
+            state VARCHAR(100) DEFAULT NULL,
+            pincode VARCHAR(10) DEFAULT NULL,
+            working_hours_start TIME DEFAULT '09:00:00',
+            working_hours_end TIME DEFAULT '21:00:00',
+            working_days VARCHAR(50) DEFAULT '1,2,3,4,5,6',
+            is_active TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_branch_clinic (clinic_id)
+        ) ENGINE=InnoDB;
+    ");
+} catch (Exception $e) {
+    error_log("Branches Table Check: " . $e->getMessage());
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -89,16 +116,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch all branches for this clinic
-$branches = $db->fetchAll(
-    "SELECT b.*, 
-        (SELECT COUNT(*) FROM staff s WHERE s.branch_id = b.id AND s.clinic_id = b.clinic_id) as staff_count,
-        (SELECT COUNT(*) FROM appointments a WHERE a.branch_id = b.id AND a.clinic_id = b.clinic_id) as appointment_count
-     FROM branches b 
-     WHERE b.clinic_id = ? 
-     ORDER BY b.is_active DESC, b.id ASC",
-    [$clinicId]
-);
+// Fetch all branches safely
+$branches = [];
+try {
+    $branches = $db->fetchAll(
+        "SELECT b.*, 
+            (SELECT COUNT(*) FROM users u WHERE u.branch_id = b.id AND u.clinic_id = b.clinic_id) as staff_count,
+            (SELECT COUNT(*) FROM appointments a WHERE a.branch_id = b.id AND a.clinic_id = b.clinic_id) as appointment_count
+         FROM branches b 
+         WHERE b.clinic_id = ? 
+         ORDER BY b.is_active DESC, b.id ASC",
+        [$clinicId]
+    );
+} catch (Exception $e) {
+    // Fallback if users or appointments don't have branch_id column yet
+    try {
+        $branches = $db->fetchAll("SELECT * FROM branches WHERE clinic_id = ? ORDER BY is_active DESC, id ASC", [$clinicId]);
+        foreach ($branches as &$b) {
+            $b['staff_count'] = 0;
+            $b['appointment_count'] = 0;
+        }
+    } catch (Exception $ex) {
+        $branches = [];
+    }
+}
+
+// Auto-seed default branch if none exist
+if (empty($branches)) {
+    try {
+        $clinicInfo = $db->fetch("SELECT * FROM clinics WHERE id = ?", [$clinicId]);
+        if ($clinicInfo) {
+            $db->query(
+                "INSERT INTO branches (clinic_id, name, code, phone, email, address, city, state, pincode, is_active)
+                 VALUES (?, ?, 'MAIN', ?, ?, ?, ?, ?, ?, 1)",
+                [
+                    $clinicId,
+                    $clinicInfo['name'] . ' - Main Branch',
+                    $clinicInfo['phone'] ?? '',
+                    $clinicInfo['email'] ?? '',
+                    $clinicInfo['address'] ?? '',
+                    $clinicInfo['city'] ?? '',
+                    $clinicInfo['state'] ?? '',
+                    $clinicInfo['pincode'] ?? ''
+                ]
+            );
+            $branches = $db->fetchAll("SELECT * FROM branches WHERE clinic_id = ? ORDER BY is_active DESC, id ASC", [$clinicId]);
+            foreach ($branches as &$b) {
+                $b['staff_count'] = 0;
+                $b['appointment_count'] = 0;
+            }
+        }
+    } catch (Exception $e) {
+        // Ignore seed failure
+    }
+}
 
 $daysMap = [
     '1' => 'Mon', '2' => 'Tue', '3' => 'Wed', '4' => 'Thu', '5' => 'Fri', '6' => 'Sat', '7' => 'Sun'
@@ -177,7 +248,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-color);">
                             <div>
                                 <i class="fas fa-clock text-muted" style="width: 18px;"></i> 
-                                <?= date('h:i A', strtotime($branch['working_hours_start'])) ?> - <?= date('h:i A', strtotime($branch['working_hours_end'])) ?>
+                                <?= date('h:i A', strtotime($branch['working_hours_start'] ?? '09:00:00')) ?> - <?= date('h:i A', strtotime($branch['working_hours_end'] ?? '21:00:00')) ?>
                             </div>
                             <div style="font-size: 12px; color: var(--text-muted); margin-left: 22px;">
                                 Days: <?= implode(', ', $dayLabels) ?>
@@ -186,9 +257,9 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                     </div>
                     
                     <div style="display: flex; gap: 12px; margin-top: 16px; padding: 8px 12px; background: var(--bg-surface); border-radius: 6px; font-size: 12px;">
-                        <div><strong><?= $branch['staff_count'] ?></strong> Staff Members</div>
+                        <div><strong><?= $branch['staff_count'] ?? 0 ?></strong> Staff Members</div>
                         <div style="color: var(--border-color);">|</div>
-                        <div><strong><?= $branch['appointment_count'] ?></strong> Appointments</div>
+                        <div><strong><?= $branch['appointment_count'] ?? 0 ?></strong> Appointments</div>
                     </div>
                 </div>
                 
