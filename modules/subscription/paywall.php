@@ -439,9 +439,9 @@ if ($activePlanType === 'yearly') {
                     <i class="fas fa-hand-holding-usd"></i>
                 </div>
                 <div>
-                    <h3 style="margin: 0 0 4px; font-size: 20px; color: var(--text);">Prefer Paying in Cash on Hand or Direct Bank Transfer?</h3>
+                    <h3 style="margin: 0 0 4px; font-size: 20px; color: var(--text);">Prefer Paying via COD (Cash on Hand)?</h3>
                     <p style="margin: 0; color: var(--text-muted); font-size: 14px;">
-                        Hand over payment directly in cash to your Feature Gen Care administrator, or transfer via NEFT / UPI.
+                        Hand over payment directly via COD / Cash to your Feature Gen Care administrator.
                     </p>
                 </div>
             </div>
@@ -542,7 +542,7 @@ $pastPayments = $stmtHist->fetchAll();
                             </div>
                             <?php endif; ?>
                         </td>
-                        <td><span class="badge" style="background: #f3f4f6; text-transform: capitalize;"><?= str_replace('_', ' ', $p['payment_mode']) ?></span></td>
+                        <td><span class="badge" style="background: #f3f4f6; text-transform: capitalize;"><?= ($p['payment_mode'] === 'cash_on_hand') ? 'COD (Cash)' : ucfirst(str_replace('_', ' ', $p['payment_mode'])) ?></span></td>
                         <td><?= date('d M Y', strtotime($p['created_at'])) ?></td>
                         <td>
                             <a href="<?= BASE_URL ?>/modules/admin/print_subscription_receipt.php?id=<?= $p['id'] ?>" target="_blank" class="btn btn-sm btn-outline">
@@ -613,9 +613,9 @@ $pastPayments = $stmtHist->fetchAll();
             <?php endif; ?>
 
             <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
-                <h4 style="font-size: 14px; margin: 0 0 8px;"><i class="fas fa-hand-holding-usd" style="color: #059669;"></i> Paying via Cash on Hand or Direct Transfer?</h4>
+                <h4 style="font-size: 14px; margin: 0 0 8px;"><i class="fas fa-hand-holding-usd" style="color: #059669;"></i> Paying via COD (Cash on Hand)?</h4>
                 <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 12px; line-height: 1.5;">
-                    Total Payable: <strong style="color: #059669;" id="modalCashTotal">₹0.00</strong> (Includes 18% GST). Contact your Feature Gen Care administrator to collect payment and issue your official tax invoice receipt.
+                    Total Payable: <strong style="color: #059669;" id="modalCashTotal">₹0.00</strong> (Includes 18% GST). Contact your Feature Gen Care administrator for direct COD collection and official tax receipt.
                 </p>
                 <div style="display: flex; gap: 8px;">
                     <a href="tel:<?= preg_replace('/[^0-9\+]/', '', $offlineContact) ?>" class="btn btn-sm btn-outline" style="flex: 1; justify-content: center;">

@@ -436,7 +436,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
         <h1><i class="fas fa-handshake" style="color: var(--primary);"></i> <?= sanitizeOutput($t['clinic_name']) ?> &bull; Subscription & Pricing Control</h1>
     </div>
     <div class="d-flex gap-8">
-        <button class="btn btn-success" onclick="openPaymentModal()"><i class="fas fa-hand-holding-usd"></i> Record Payment (Cash on Hand)</button>
+        <button class="btn btn-success" onclick="openPaymentModal()"><i class="fas fa-hand-holding-usd"></i> Record Payment (COD / Cash)</button>
         <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" target="_blank" class="btn btn-outline" title="Preview what this clinic sees when renewing">
             <i class="fas fa-eye"></i> View Clinic Paywall
         </a>
@@ -776,11 +776,11 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                     <tr><td colspan="7" class="text-center text-muted" style="padding: 30px;">No payment records logged for this clinic yet.</td></tr>
                     <?php else: foreach ($payments as $p): 
                         $modePills = [
-                            'cash_on_hand' => '<span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;"><i class="fas fa-hand-holding-usd"></i> Cash on Hand</span>',
+                            'cash_on_hand' => '<span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;"><i class="fas fa-hand-holding-usd"></i> COD (Cash)</span>',
+                            'razorpay' => '<span class="badge" style="background:#cffafe; color:#0e7490; border:1px solid #a5f3fc; font-weight:700;"><i class="fas fa-bolt"></i> Razorpay</span>',
                             'bank_transfer' => '<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:700;"><i class="fas fa-university"></i> Bank Transfer</span>',
-                            'upi' => '<span class="badge" style="background:#f3e8ff; color:#7e22ce; border:1px solid #e9d5ff; font-weight:700;"><i class="fas fa-mobile-alt"></i> UPI Transfer</span>',
-                            'cheque' => '<span class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-weight:700;"><i class="fas fa-money-check-alt"></i> Cheque/DD</span>',
-                            'razorpay' => '<span class="badge" style="background:#cffafe; color:#0e7490; border:1px solid #a5f3fc; font-weight:700;"><i class="fas fa-bolt"></i> Razorpay</span>'
+                            'upi' => '<span class="badge" style="background:#f3e8ff; color:#7e22ce; border:1px solid #e9d5ff; font-weight:700;"><i class="fas fa-mobile-alt"></i> UPI</span>',
+                            'cheque' => '<span class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-weight:700;"><i class="fas fa-money-check-alt"></i> Cheque</span>'
                         ];
                     ?>
                     <tr>
@@ -1052,7 +1052,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px;">
                             <input type="checkbox" name="record_cash_payment" value="1" checked>
                             <div>
-                                <strong style="color: #15803d; font-size: 13px;">Also log as Cash on Hand Payment</strong>
+                                <strong style="color: #15803d; font-size: 13px;">Also log as COD (Cash on Hand) Payment</strong>
                                 <div style="font-size: 11px; color: #166534;">Generates official receipt # and records payment in ledger immediately.</div>
                             </div>
                         </label>
@@ -1096,10 +1096,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                     <div class="form-group mb-16">
                         <label class="form-label font-semibold">Payment Mode <span class="required">*</span></label>
                         <select name="payment_mode" class="form-control" required>
-                            <option value="cash_on_hand" selected>💵 Cash on Hand (Direct Handover)</option>
-                            <option value="bank_transfer">🏦 Bank Transfer / NEFT / IMPS</option>
-                            <option value="upi">📱 UPI (GPay / PhonePe / Paytm)</option>
-                            <option value="cheque">📝 Cheque / Demand Draft</option>
+                            <option value="cash_on_hand" selected>💵 COD (Cash on Hand / Direct Handover)</option>
                             <option value="razorpay">⚡ Razorpay Online</option>
                         </select>
                     </div>

@@ -35,10 +35,7 @@ if ($currentUserRole !== ROLE_SUPER_ADMIN && intval($payment['tenant_id']) !== $
 }
 
 $modeLabels = [
-    'cash_on_hand' => 'Cash on Hand (Direct Handover)',
-    'bank_transfer' => 'Direct Bank Transfer / NEFT / IMPS',
-    'upi' => 'UPI Transfer (GPay / PhonePe / Paytm)',
-    'cheque' => 'Cheque / Demand Draft',
+    'cash_on_hand' => 'COD (Cash on Hand / Direct Handover)',
     'razorpay' => 'Razorpay Online Gateway'
 ];
 $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', ' ', $payment['payment_mode']));
