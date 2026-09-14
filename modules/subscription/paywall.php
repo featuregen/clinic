@@ -30,6 +30,7 @@ $monthlyDoctors = !empty($currentTenant['custom_monthly_doctors']) ? intval($cur
 $yearlyPrice = !empty($currentTenant['custom_yearly_price']) ? floatval($currentTenant['custom_yearly_price']) : floatval($settings['yearly_price'] ?? 14999);
 $yearlyDoctors = !empty($currentTenant['custom_yearly_doctors']) ? intval($currentTenant['custom_yearly_doctors']) : intval($settings['yearly_max_doctors'] ?? 10);
 $yearlyBonus = isset($currentTenant['custom_yearly_bonus_months']) && $currentTenant['custom_yearly_bonus_months'] !== null ? intval($currentTenant['custom_yearly_bonus_months']) : intval($settings['yearly_default_bonus_months'] ?? 2);
+$totalYearlyMonths = 12 + $yearlyBonus;
 
 $lifetimePrice = !empty($currentTenant['custom_lifetime_price']) ? floatval($currentTenant['custom_lifetime_price']) : floatval($settings['one_time_price'] ?? 49999);
 $lifetimeDoctors = isset($currentTenant['custom_lifetime_doctors']) && $currentTenant['custom_lifetime_doctors'] !== null ? intval($currentTenant['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
@@ -154,24 +155,24 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
             </div>
             
             <h3 style="font-size: 22px; margin: 0 0 8px; color: var(--text);">Yearly Plan</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Complete hospital & clinic suite with 2 months free bonus access.</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Complete hospital & clinic suite <?= $yearlyBonus > 0 ? "with {$yearlyBonus} months free bonus access." : "for a full year." ?></p>
             
             <div style="margin-bottom: 24px;">
                 <span style="font-size: 36px; font-weight: 800; color: #00838f;">₹<?= number_format($yearlyPrice, 0) ?></span>
-                <span style="font-size: 14px; color: var(--text-muted);">/ year (14 Months)</span>
+                <span style="font-size: 14px; color: var(--text-muted);">/ year (<?= $totalYearlyMonths ?> Months)</span>
             </div>
 
             <ul style="list-style: none; padding: 0; margin: 0 0 32px; flex: 1; font-size: 14px; line-height: 2;">
                 <li><i class="fas fa-check" style="color: #00838f; margin-right: 10px;"></i> Up to <strong><?= $yearlyDoctors ?> Doctors</strong></li>
-                <li><i class="fas fa-check" style="color: #00838f; margin-right: 10px;"></i> <strong>14 Full Months Access</strong> (12 + 2 Bonus)</li>
+                <li><i class="fas fa-check" style="color: #00838f; margin-right: 10px;"></i> <strong><?= $totalYearlyMonths ?> Full Months Access</strong> <?= $yearlyBonus > 0 ? "(12 + {$yearlyBonus} Bonus)" : '' ?></li>
                 <li><i class="fas fa-check" style="color: #00838f; margin-right: 10px;"></i> Multi-Branch Management</li>
                 <li><i class="fas fa-check" style="color: #00838f; margin-right: 10px;"></i> Dental Chart & Treatment Plans</li>
                 <li><i class="fas fa-check" style="color: #00838f; margin-right: 10px;"></i> Vaccination Schedules</li>
                 <li><i class="fas fa-check" style="color: #00838f; margin-right: 10px;"></i> Priority 24/7 Technical Support</li>
             </ul>
 
-            <button type="button" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #00838f, #00695c); border: none;" onclick="selectPlan('yearly', <?= $yearlyPrice ?>, 'Yearly Plan (14 Months)')">
-                <i class="fas fa-crown"></i> Choose Yearly (14 Months)
+            <button type="button" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #00838f, #00695c); border: none;" onclick="selectPlan('yearly', <?= $yearlyPrice ?>, 'Yearly Plan (<?= $totalYearlyMonths ?> Months)')">
+                <i class="fas fa-crown"></i> Choose Yearly (<?= $totalYearlyMonths ?> Months)
             </button>
         </div>
     </div>
@@ -317,7 +318,7 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
 let selectedPlan = {
     type: 'yearly',
     price: <?= $yearlyPrice ?>,
-    name: 'Yearly Plan'
+    name: 'Yearly Plan (<?= $totalYearlyMonths ?> Months)'
 };
 
 function selectPlan(type, price, name) {
