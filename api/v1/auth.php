@@ -129,6 +129,40 @@ switch ($action) {
         jsonResponse(true, ['message' => 'Password updated successfully.']);
         break;
 
+    case 'update_profile':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            jsonResponse(false, null, 'Method not allowed', 405);
+        }
+        require_once __DIR__ . '/middleware/auth.php';
+        $auth = authenticateApiRequest();
+        $input = getJsonInput();
+        $phone = sanitize(trim($input['phone'] ?? ''));
+        $fullName = sanitize(trim($input['full_name'] ?? ''));
+
+        if (empty($fullName)) {
+            jsonResponse(false, null, 'Full name is required.', 400);
+        }
+
+        $db->query(
+            "UPDATE users SET full_name = ?, phone = ?, updated_at = NOW() WHERE id = ?",
+            [$fullName, $phone ?: null, $auth['user']['id']]
+        );
+
+        $updatedUser = $db->fetch(
+            "SELECT u.*, r.name as role_name, r.display_name as role_display_name
+             FROM users u
+             LEFT JOIN roles r ON u.role_id = r.id
+             WHERE u.id = ?",
+            [$auth['user']['id']]
+        );
+        unset($updatedUser['password']);
+
+        jsonResponse(true, [
+            'message' => 'Profile updated successfully',
+            'user' => $updatedUser
+        ]);
+        break;
+
     default:
         jsonResponse(false, null, 'Invalid action specified.', 400);
 }
