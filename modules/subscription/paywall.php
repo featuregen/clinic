@@ -128,7 +128,7 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
 <?php endif; ?>
 
 <!-- Plan Cards Grid -->
-<div class="grid-3 gap-24 mb-32" style="align-items: stretch;">
+<div class="grid-3 gap-24 mb-32" style="align-items: stretch; margin-top: 24px;">
 
     <!-- 1. Monthly Plan -->
     <div class="card" style="border: 2px solid <?= $activePlanType === 'monthly' ? '#16a34a' : '#e5e7eb' ?>; border-radius: 16px; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;">
@@ -171,8 +171,8 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
 
     <!-- 2. Yearly Plan (Featured) -->
     <div class="card" style="border: 2px solid #00838f; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 131, 143, 0.15); display: flex; flex-direction: column; position: relative;">
-        <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #00838f, #00695c); color: white; padding: 4px 18px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
-            <i class="fas fa-star"></i> <?= $activePlanType === 'yearly' ? 'Your Current Plan' : 'Recommended Upgrade' ?> &bull; <?= 12 + $yearlyBonus ?> Months Access
+        <div style="position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #00838f, #00695c); color: white; padding: 5px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0, 131, 143, 0.25); z-index: 5;">
+            <i class="fas fa-star" style="color: #fbbf24; margin-right: 4px;"></i> <?= $activePlanType === 'yearly' ? 'Current Plan' : 'Recommended Upgrade' ?> &bull; <?= $totalYearlyMonths ?> Months Access
         </div>
         
         <div class="card-body" style="padding: 36px 28px 32px; flex: 1; display: flex; flex-direction: column;">
@@ -181,9 +181,13 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
                 <span class="badge badge-success" style="font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
                     <i class="fas fa-check-circle"></i> Your Current Plan
                 </span>
-                <?php else: ?>
+                <?php elseif ($yearlyBonus > 0): ?>
                 <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
                     Includes +<?= $yearlyBonus ?> Bonus Months
+                </span>
+                <?php else: ?>
+                <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
+                    Annual Value
                 </span>
                 <?php endif; ?>
                 <i class="fas fa-crown" style="font-size: 24px; color: #d97706;"></i>
