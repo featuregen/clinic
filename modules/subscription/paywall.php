@@ -740,13 +740,17 @@ $pastPayments = $stmtHist->fetchAll();
 <!-- ============================================ -->
 <!-- CHECKOUT / PAYMENT MODAL -->
 <!-- ============================================ -->
-<div id="checkoutModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
-    <div class="card" style="width: 540px; max-width: 95vw; animation: slideUp 0.2s ease;">
-        <div class="card-header">
-            <h3><i class="fas fa-shopping-cart" style="color: var(--primary);"></i> Complete Subscription Renewal</h3>
-            <button type="button" class="btn btn-sm btn-ghost" onclick="closeCheckoutModal()" style="font-size: 20px;">&times;</button>
+<div id="checkoutModal" onclick="handleBackdropClick(event)" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); overflow-y:auto; -webkit-overflow-scrolling:touch; padding:24px 12px; align-items:flex-start; justify-content:center;">
+    <div class="card" onclick="event.stopPropagation()" style="width: 560px; max-width: 100%; margin: auto; background: #ffffff; border-radius: 14px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid var(--border-color); overflow: hidden; animation: slideUp 0.2s ease;">
+        <div class="card-header" style="position: sticky; top: 0; background: #ffffff; z-index: 20; padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-shopping-cart" style="color: var(--primary);"></i> Complete Subscription Renewal
+            </h3>
+            <button type="button" onclick="closeCheckoutModal()" aria-label="Close" style="background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #475569; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 20px; max-height: calc(85vh - 70px); overflow-y: auto;">
             <div style="background: var(--bg-secondary); padding: 18px 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <span style="font-size: 16px; font-weight: 700;" id="modalPlanName">Yearly Plan</span>
@@ -831,6 +835,9 @@ $pastPayments = $stmtHist->fetchAll();
                 <button type="submit" class="btn btn-success" style="width: 100%; padding: 14px; font-size: 15px; font-weight: 700; background: #059669; border: none; border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; cursor: pointer;">
                     <i class="fas fa-check-circle"></i> Complete Renewal & Record Payment (<span id="saBtnTotal">₹0.00</span>)
                 </button>
+                <button type="button" onclick="closeCheckoutModal()" class="btn btn-outline" style="width: 100%; margin-top: 8px; justify-content: center; padding: 10px; font-size: 13px;">
+                    <i class="fas fa-times"></i> Cancel / Close
+                </button>
             </form>
 
             <?php else: ?>
@@ -875,6 +882,9 @@ $pastPayments = $stmtHist->fetchAll();
                     </a>
                 </div>
             </div>
+            <button type="button" onclick="closeCheckoutModal()" class="btn btn-outline" style="width: 100%; margin-top: 12px; justify-content: center; padding: 10px; font-size: 13px;">
+                <i class="fas fa-times"></i> Cancel / Close
+            </button>
             <?php endif; ?>
         </div>
     </div>
@@ -960,8 +970,24 @@ function updateRefPlaceholder(mode) {
 }
 
 function closeCheckoutModal() {
-    document.getElementById('checkoutModal').style.display = 'none';
+    const modal = document.getElementById('checkoutModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
 }
+
+function handleBackdropClick(e) {
+    if (e && e.target && e.target.id === 'checkoutModal') {
+        closeCheckoutModal();
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+        closeCheckoutModal();
+    }
+});
 
 // Addon Calculator Functions
 const addonRatePerDoctor = <?= json_encode($addonRatePerDoctor) ?>;
