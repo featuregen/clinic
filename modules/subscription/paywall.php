@@ -608,6 +608,12 @@ $pastPayments = $stmtHist->fetchAll();
 
             <?php if (!empty($razorpayKey)): ?>
             <div class="mb-20">
+                <div id="razorpayErrorAlert" style="display: none; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; color: #991b1b; font-size: 13px; line-height: 1.45;">
+                    <div style="font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-exclamation-circle"></i> Payment Gateway Error
+                    </div>
+                    <span id="razorpayErrorText"></span>
+                </div>
                 <button type="button" id="razorpayBtn" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 700; background: #00838f;">
                     <i class="fas fa-bolt"></i> <span id="razorpayBtnText">Pay Online via Razorpay</span>
                 </button>
@@ -753,54 +759,116 @@ function buyAddonPack() {
 
 const rzpKey = <?= json_encode($razorpayKey) ?>;
 const razorpayBtn = document.getElementById('razorpayBtn');
+const rzpErrorAlert = document.getElementById('razorpayErrorAlert');
+const rzpErrorText = document.getElementById('razorpayErrorText');
 
 if (razorpayBtn && rzpKey) {
-    razorpayBtn.addEventListener('click', function() {
-        const isAddon = (selectedPlan.type === 'doctor_addon');
-        const descSuffix = isAddon ? ' - Doctor Add-on Pack (Incl. 18% GST)' : ' - Subscription Renewal (Incl. 18% GST)';
-        const options = {
-            "key": rzpKey,
-            "amount": Math.round(selectedPlan.totalPrice * 100),
-            "currency": "INR",
-            "name": "Feature Gen Care",
-            "description": selectedPlan.name + descSuffix,
-            "image": "<?= ASSETS_URL ?>/images/favicon.svg",
-            "handler": function (response) {
-                // Post to verification script
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '<?= BASE_URL ?>/modules/subscription/verify_payment.php';
-                
-                const fields = {
-                    razorpay_payment_id: response.razorpay_payment_id,
+    razorpayBtn.addEventListener('click', async function() {
+        if (rzpErrorAlert) rzpErrorAlert.style.display = 'none';
+
+        const originalBtnHtml = razorpayBtn.innerHTML;
+        razorpayBtn.disabled = true;
+        razorpayBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting to Gateway...';
+
+        try {
+            const resp = await fetch('<?= BASE_URL ?>/modules/subscription/create_order.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
                     plan_type: selectedPlan.type,
-                    addon_doctors: selectedPlan.addon_doctors || 0,
-                    amount: selectedPlan.totalPrice,
-                    base_amount: selectedPlan.basePrice,
-                    gst_rate: 18.00,
-                    gst_amount: selectedPlan.gstAmount
-                };
-                
-                for (const key in fields) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = key;
-                    input.value = fields[key];
-                    form.appendChild(input);
+                    addon_doctors: selectedPlan.addon_doctors || 0
+                })
+            });
+
+            const data = await resp.json();
+
+            if (!data.success) {
+                razorpayBtn.disabled = false;
+                razorpayBtn.innerHTML = originalBtnHtml;
+                if (rzpErrorAlert && rzpErrorText) {
+                    rzpErrorText.textContent = data.error || 'Failed to initialize payment gateway order.';
+                    rzpErrorAlert.style.display = 'block';
+                } else {
+                    alert('Gateway Error: ' + (data.error || 'Could not initiate order.'));
                 }
-                document.body.appendChild(form);
-                form.submit();
-            },
-            "prefill": {
-                "name": <?= json_encode(getSession('full_name', 'Admin')) ?>,
-                "email": <?= json_encode(getSession('email', '')) ?>
-            },
-            "theme": {
-                "color": "#0891b2"
+                return;
             }
-        };
-        const rzp = new Razorpay(options);
-        rzp.open();
+
+            // Order created successfully, launch Razorpay Checkout with server order_id
+            const options = {
+                "key": data.key_id,
+                "order_id": data.order_id,
+                "amount": data.amount,
+                "currency": data.currency,
+                "name": data.name,
+                "description": data.description,
+                "handler": function (response) {
+                    // Post to verification script
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '<?= BASE_URL ?>/modules/subscription/verify_payment.php';
+                    
+                    const fields = {
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_order_id: response.razorpay_order_id || data.order_id,
+                        razorpay_signature: response.razorpay_signature || '',
+                        plan_type: data.plan_type,
+                        addon_doctors: data.addon_doctors || 0,
+                        amount: data.total_price,
+                        base_amount: data.base_price,
+                        gst_rate: 18.00,
+                        gst_amount: data.gst_amount
+                    };
+                    
+                    for (const key in fields) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = fields[key];
+                        form.appendChild(input);
+                    }
+                    document.body.appendChild(form);
+                    form.submit();
+                },
+                "modal": {
+                    "ondismiss": function() {
+                        razorpayBtn.disabled = false;
+                        razorpayBtn.innerHTML = originalBtnHtml;
+                    }
+                },
+                "prefill": {
+                    "name": <?= json_encode(getSession('full_name', 'Admin')) ?>,
+                    "email": <?= json_encode(getSession('email', '')) ?>
+                },
+                "theme": {
+                    "color": "#00838f"
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.on('payment.failed', function (resp) {
+                razorpayBtn.disabled = false;
+                razorpayBtn.innerHTML = originalBtnHtml;
+                if (rzpErrorAlert && rzpErrorText) {
+                    rzpErrorText.textContent = 'Payment Failed: ' + (resp.error.description || 'Transaction was declined.');
+                    rzpErrorAlert.style.display = 'block';
+                }
+            });
+            rzp.open();
+
+        } catch (err) {
+            razorpayBtn.disabled = false;
+            razorpayBtn.innerHTML = originalBtnHtml;
+            if (rzpErrorAlert && rzpErrorText) {
+                rzpErrorText.textContent = 'Network or server error while initiating payment: ' + err.message;
+                rzpErrorAlert.style.display = 'block';
+            } else {
+                alert('Connection Error: ' + err.message);
+            }
+        }
     });
 }
 </script>
