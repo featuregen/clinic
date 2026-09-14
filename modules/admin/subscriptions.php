@@ -3,14 +3,10 @@
  * Subscription & Custom Plan Decision Screen - Feature Gen Care
  * Super Admin Only - Scoped to Current Clinic Tenant
  */
-$pageTitle = 'Decide Clinic Plan & Pricing';
-require_once dirname(dirname(__DIR__)) . '/includes/header.php';
-
-$role = getCurrentUserRole();
-if ($role !== ROLE_SUPER_ADMIN) {
-    header('Location: ' . BASE_URL . '/modules/auth/403.php');
-    exit;
-}
+ob_start();
+require_once dirname(dirname(__DIR__)) . '/config/session.php';
+requireAuth();
+requireRole([ROLE_SUPER_ADMIN]);
 
 $master = master_db();
 $tenantInfo = db()->tenantInfo;
@@ -358,6 +354,10 @@ $activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors WHERE clinic_id 
 $stmtRev = $master->prepare("SELECT COALESCE(SUM(amount), 0) as tot FROM tenant_subscription_payments WHERE tenant_id = ? AND status = 'completed'");
 $stmtRev->execute([$t['id']]);
 $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
+?>
+<?php
+$pageTitle = 'Decide Clinic Plan & Pricing';
+require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 ?>
 
 <div class="content-header">
