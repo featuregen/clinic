@@ -297,8 +297,8 @@ class Database {
                     'one_time_max_doctors' => '0',
                     'addon_doctor_monthly_price' => '25',
                     'addon_doctor_yearly_price' => '250',
-                    'razorpay_key_id' => '',
-                    'razorpay_key_secret' => '',
+                    'razorpay_key_id' => 'rzp_test_S2WE1vnYYcKVAm',
+                    'razorpay_key_secret' => 'IkgTWkbFrmzpT0Gg0j3gvKK7',
                     'offline_payment_contact' => 'Phone: +91 98765 43210 | WhatsApp: +91 98765 43210',
                     'offline_bank_details' => "Account Name: Feature Gen Technologies\nAccount Number: 123456789012\nBank: HDFC Bank\nIFSC: HDFC0001234\nUPI ID: featuregen@upi"
                 ];
@@ -310,6 +310,10 @@ class Database {
                 $masterConn->exec("INSERT IGNORE INTO saas_global_settings (setting_key, setting_value) VALUES 
                     ('addon_doctor_monthly_price', '25'),
                     ('addon_doctor_yearly_price', '250')");
+                
+                // Auto-populate Razorpay test keys if currently empty
+                $masterConn->exec("UPDATE saas_global_settings SET setting_value = 'rzp_test_S2WE1vnYYcKVAm' WHERE setting_key = 'razorpay_key_id' AND (setting_value = '' OR setting_value IS NULL)");
+                $masterConn->exec("UPDATE saas_global_settings SET setting_value = 'IkgTWkbFrmzpT0Gg0j3gvKK7' WHERE setting_key = 'razorpay_key_secret' AND (setting_value = '' OR setting_value IS NULL)");
             }
         } catch (PDOException $e) {
             error_log("Master DB Self-healing migration error: " . $e->getMessage());
