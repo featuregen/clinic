@@ -116,6 +116,45 @@ class Database {
             }
             $tenant['is_expired'] = $isExpired;
             
+            // Dynamically resolve and synchronize doctor quota based on active plan and custom terms / global settings
+            $planType = $tenant['plan_type'] ?? 'trial';
+            $effMaxDoc = isset($tenant['max_doctors']) ? intval($tenant['max_doctors']) : 0;
+            
+            if ($planType === 'trial') {
+                if (!empty($tenant['custom_trial_doctors'])) {
+                    $effMaxDoc = intval($tenant['custom_trial_doctors']);
+                } else {
+                    $stmtS = $masterConn->prepare("SELECT setting_value FROM saas_global_settings WHERE setting_key = 'trial_max_doctors' LIMIT 1");
+                    $stmtS->execute();
+                    $val = $stmtS->fetchColumn();
+                    if ($val !== false && $val !== null && is_numeric($val)) {
+                        $effMaxDoc = intval($val);
+                    }
+                }
+            } elseif ($planType === 'monthly') {
+                if (!empty($tenant['custom_monthly_doctors'])) {
+                    $effMaxDoc = intval($tenant['custom_monthly_doctors']);
+                }
+            } elseif ($planType === 'yearly') {
+                if (!empty($tenant['custom_yearly_doctors'])) {
+                    $effMaxDoc = intval($tenant['custom_yearly_doctors']);
+                }
+            } elseif ($planType === 'one_time') {
+                if (isset($tenant['custom_lifetime_doctors']) && $tenant['custom_lifetime_doctors'] !== null) {
+                    $effMaxDoc = intval($tenant['custom_lifetime_doctors']);
+                }
+            }
+            
+            if ($effMaxDoc > 0 && $effMaxDoc !== intval($tenant['max_doctors'] ?? 0)) {
+                $tenant['max_doctors'] = $effMaxDoc;
+                try {
+                    $stmtSync = $masterConn->prepare("UPDATE tenants SET max_doctors = ? WHERE id = ?");
+                    $stmtSync->execute([$effMaxDoc, $tenant['id']]);
+                } catch (Exception $e) {
+                    // Best effort sync
+                }
+            }
+            
             // Save tenant info globally accessible in the object
             $this->tenantInfo = $tenant;
             

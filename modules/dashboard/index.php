@@ -99,7 +99,45 @@ try {
             <i class="fas fa-user-plus"></i> Add Patient
         </a>
     </div>
+<?php if (in_array($role, [ROLE_SUPER_ADMIN, ROLE_ADMIN])): ?>
+<?php
+$dashTenant = $db->tenantInfo ?? [];
+$dashPlan = ucfirst(sanitizeOutput($dashTenant['plan_type'] ?? 'Trial'));
+$dashMaxDoc = intval($dashTenant['max_doctors'] ?? 0);
+$dashLife = !empty($dashTenant['is_lifetime']) || ($dashTenant['plan_type'] ?? '') === 'one_time';
+$dashEnd = !empty($dashTenant['subscription_ends_at']) ? strtotime($dashTenant['subscription_ends_at']) : null;
+$dashDays = $dashEnd ? max(0, ceil(($dashEnd - time()) / 86400)) : null;
+?>
+<div class="card mb-24" style="border: 1px solid rgba(0, 131, 143, 0.25); background: linear-gradient(135deg, #f0fdfa, #ffffff); border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 131, 143, 0.06);">
+    <div class="card-body" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(0, 131, 143, 0.12); display: flex; align-items: center; justify-content: center; font-size: 22px; color: #00838f;">
+                <i class="fas fa-crown"></i>
+            </div>
+            <div>
+                <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">Current Subscription Plan</div>
+                <div style="font-size: 15px; font-weight: 700; color: var(--text); display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="color: #00838f;"><?= $dashPlan ?> Plan</span>
+                    <span class="badge badge-success" style="font-size: 10px; padding: 2px 7px;">Active</span>
+                    <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">
+                        &bull; Doctor Quota: <strong><?= $activeDoctors ?> / <?= $dashMaxDoc > 0 ? $dashMaxDoc : '∞' ?> Doctors</strong>
+                        <?php if ($dashLife): ?>
+                            &bull; <strong>Lifetime Perpetual Access</strong>
+                        <?php elseif ($dashEnd): ?>
+                            &bull; Renews: <strong><?= date('d M Y', $dashEnd) ?> (<?= $dashDays ?> days left)</strong>
+                        <?php endif; ?>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-8">
+            <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-sm btn-primary" style="background: linear-gradient(135deg, #00838f, #00695c); border: none; font-weight: 700; padding: 8px 16px;">
+                <i class="fas fa-arrow-up"></i> Upgrade / Manage Plan
+            </a>
+        </div>
+    </div>
 </div>
+<?php endif; ?>
 
 <!-- Stats Cards -->
 <div class="grid-4 mb-24">

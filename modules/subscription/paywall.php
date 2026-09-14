@@ -24,6 +24,9 @@ foreach ($settingsRows as $row) {
 }
 
 // Read Custom Clinic Pricing (decided by Super Admin), falling back to global defaults
+$trialMonths = !empty($currentTenant['custom_trial_months']) ? intval($currentTenant['custom_trial_months']) : intval($settings['trial_duration_months'] ?? 1);
+$trialDoctors = !empty($currentTenant['custom_trial_doctors']) ? intval($currentTenant['custom_trial_doctors']) : intval($settings['trial_max_doctors'] ?? 2);
+
 $monthlyPrice = !empty($currentTenant['custom_monthly_price']) ? floatval($currentTenant['custom_monthly_price']) : floatval($settings['monthly_price'] ?? 1499);
 $monthlyDoctors = !empty($currentTenant['custom_monthly_doctors']) ? intval($currentTenant['custom_monthly_doctors']) : intval($settings['monthly_max_doctors'] ?? 3);
 
@@ -34,6 +37,26 @@ $totalYearlyMonths = 12 + $yearlyBonus;
 
 $lifetimePrice = !empty($currentTenant['custom_lifetime_price']) ? floatval($currentTenant['custom_lifetime_price']) : floatval($settings['one_time_price'] ?? 49999);
 $lifetimeDoctors = isset($currentTenant['custom_lifetime_doctors']) && $currentTenant['custom_lifetime_doctors'] !== null ? intval($currentTenant['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
+
+// Resolve current active doctor quota based on plan and custom/global settings
+$activePlanType = $currentTenant['plan_type'] ?? 'trial';
+$activeQuota = intval($currentTenant['max_doctors'] ?? 0);
+if ($activePlanType === 'trial') {
+    $activeQuota = $trialDoctors;
+} elseif ($activePlanType === 'monthly') {
+    $activeQuota = $monthlyDoctors;
+} elseif ($activePlanType === 'yearly') {
+    $activeQuota = $yearlyDoctors;
+} elseif ($activePlanType === 'one_time') {
+    $activeQuota = $lifetimeDoctors;
+}
+
+if ($activeQuota > 0 && $activeQuota !== intval($currentTenant['max_doctors'] ?? 0)) {
+    try {
+        $master->prepare("UPDATE tenants SET max_doctors = ? WHERE id = ?")->execute([$activeQuota, $currentTenant['id']]);
+        $currentTenant['max_doctors'] = $activeQuota;
+    } catch (Exception $e) {}
+}
 
 $razorpayKey = $settings['razorpay_key_id'] ?? '';
 $offlineContact = $settings['offline_payment_contact'] ?? 'Phone: +91 98765 43210';
@@ -93,7 +116,7 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
             <div>
                 <h4 style="margin: 0 0 4px; color: #15803d; font-size: 16px;">Current Plan: <span style="text-transform: capitalize;"><?= sanitizeOutput($currentTenant['plan_type']) ?></span></h4>
                 <p style="margin: 0; font-size: 13px; color: #166534;">
-                    Active until <strong><?= $endsAt ? date('d M Y', $endsAt) : 'Unlimited' ?></strong> &bull; Quota: <strong><?= $currentTenant['max_doctors'] > 0 ? $currentTenant['max_doctors'] . ' Doctors' : 'Unlimited' ?></strong>
+                    Active until <strong><?= $endsAt ? date('d M Y', $endsAt) : 'Unlimited' ?></strong> &bull; Quota: <strong><?= $activeQuota > 0 ? $activeQuota . ' Doctors' : 'Unlimited' ?></strong>
                 </p>
             </div>
         </div>
@@ -108,12 +131,18 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
 <div class="grid-3 gap-24 mb-32" style="align-items: stretch;">
 
     <!-- 1. Monthly Plan -->
-    <div class="card" style="border: 2px solid #e5e7eb; border-radius: 16px; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;">
+    <div class="card" style="border: 2px solid <?= $activePlanType === 'monthly' ? '#16a34a' : '#e5e7eb' ?>; border-radius: 16px; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;">
         <div class="card-body" style="padding: 32px 28px; flex: 1; display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <?php if ($activePlanType === 'monthly'): ?>
+                <span class="badge badge-success" style="font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
+                    <i class="fas fa-check-circle"></i> Your Current Plan
+                </span>
+                <?php else: ?>
                 <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
                     Monthly Flexibility
                 </span>
+                <?php endif; ?>
                 <i class="fas fa-calendar-alt" style="font-size: 22px; color: #059669;"></i>
             </div>
             
@@ -135,7 +164,7 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
             </ul>
 
             <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700;" onclick="selectPlan('monthly', <?= $monthlyPrice ?>, 'Monthly Plan')">
-                <i class="fas fa-bolt"></i> Choose Monthly
+                <i class="fas fa-<?= $activePlanType === 'monthly' ? 'sync-alt' : 'bolt' ?>"></i> <?= $activePlanType === 'monthly' ? 'Renew Monthly Plan' : 'Upgrade to Monthly' ?>
             </button>
         </div>
     </div>
@@ -143,14 +172,20 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
     <!-- 2. Yearly Plan (Featured) -->
     <div class="card" style="border: 2px solid #00838f; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 131, 143, 0.15); display: flex; flex-direction: column; position: relative;">
         <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #00838f, #00695c); color: white; padding: 4px 18px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
-            <i class="fas fa-star"></i> Most Popular &bull; <?= 12 + $yearlyBonus ?> Months Access
+            <i class="fas fa-star"></i> <?= $activePlanType === 'yearly' ? 'Your Current Plan' : 'Recommended Upgrade' ?> &bull; <?= 12 + $yearlyBonus ?> Months Access
         </div>
         
         <div class="card-body" style="padding: 36px 28px 32px; flex: 1; display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <?php if ($activePlanType === 'yearly'): ?>
+                <span class="badge badge-success" style="font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
+                    <i class="fas fa-check-circle"></i> Your Current Plan
+                </span>
+                <?php else: ?>
                 <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
                     Includes +<?= $yearlyBonus ?> Bonus Months
                 </span>
+                <?php endif; ?>
                 <i class="fas fa-crown" style="font-size: 24px; color: #d97706;"></i>
             </div>
             
@@ -172,18 +207,24 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
             </ul>
 
             <button type="button" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #00838f, #00695c); border: none;" onclick="selectPlan('yearly', <?= $yearlyPrice ?>, 'Yearly Plan (<?= $totalYearlyMonths ?> Months)')">
-                <i class="fas fa-crown"></i> Choose Yearly (<?= $totalYearlyMonths ?> Months)
+                <i class="fas fa-crown"></i> <?= $activePlanType === 'yearly' ? "Renew Yearly ({$totalYearlyMonths} Months)" : "Upgrade to Yearly ({$totalYearlyMonths} Months)" ?>
             </button>
         </div>
     </div>
 
     <!-- 3. One-Time Lifetime Plan -->
-    <div class="card" style="border: 2px solid #e5e7eb; border-radius: 16px; display: flex; flex-direction: column;">
+    <div class="card" style="border: 2px solid <?= $isLifetime ? '#0284c7' : '#e5e7eb' ?>; border-radius: 16px; display: flex; flex-direction: column;">
         <div class="card-body" style="padding: 32px 28px; flex: 1; display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <?php if ($isLifetime): ?>
+                <span class="badge badge-success" style="font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
+                    <i class="fas fa-check-circle"></i> Permanent Lifetime Active
+                </span>
+                <?php else: ?>
                 <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
                     Perpetual License
                 </span>
+                <?php endif; ?>
                 <i class="fas fa-infinity" style="font-size: 22px; color: #0284c7;"></i>
             </div>
             
@@ -204,9 +245,15 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
                 <li><i class="fas fa-check" style="color: #0284c7; margin-right: 10px;"></i> Dedicated Account Manager</li>
             </ul>
 
-            <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border-color: #0284c7; color: #0284c7;" onclick="selectPlan('one_time', <?= $lifetimePrice ?>, 'One-Time Lifetime License')">
-                <i class="fas fa-infinity"></i> Get Lifetime Access
+            <?php if ($isLifetime): ?>
+            <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border-color: #0284c7; color: #0284c7;" disabled>
+                <i class="fas fa-check-circle"></i> Permanent Lifetime Active
             </button>
+            <?php else: ?>
+            <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border-color: #0284c7; color: #0284c7;" onclick="selectPlan('one_time', <?= $lifetimePrice ?>, 'One-Time Lifetime License')">
+                <i class="fas fa-infinity"></i> Upgrade to Lifetime Access
+            </button>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -263,6 +310,76 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
         </div>
     </div>
 </div>
+
+<!-- ============================================ -->
+<!-- PAYMENT HISTORY & OFFICIAL RECEIPTS -->
+<!-- ============================================ -->
+<?php
+$stmtHist = $master->prepare("
+    SELECT * FROM tenant_subscription_payments 
+    WHERE tenant_id = ? 
+    ORDER BY id DESC
+");
+$stmtHist->execute([$currentTenant['id']]);
+$pastPayments = $stmtHist->fetchAll();
+?>
+<?php if (!empty($pastPayments)): ?>
+<div class="card mt-32" style="border-radius: 16px; border: 1px solid #e5e7eb;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; background: #fafafa; border-bottom: 1px solid #f0f0f0;">
+        <h3 style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-receipt" style="color: var(--primary);"></i> Subscription Payment History & Official Receipts
+        </h3>
+        <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700;"><?= count($pastPayments) ?> Invoices</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Receipt #</th>
+                        <th>Plan</th>
+                        <th>Validity Period</th>
+                        <th>Doctor Quota</th>
+                        <th>Amount Paid</th>
+                        <th>Payment Mode</th>
+                        <th>Date</th>
+                        <th>Official Receipt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($pastPayments as $p): ?>
+                    <tr>
+                        <td><strong><?= sanitizeOutput($p['payment_reference'] ?: ('REC-' . $p['id'])) ?></strong></td>
+                        <td>
+                            <span style="text-transform: capitalize; font-weight: 600;"><?= sanitizeOutput($p['plan_type']) ?> Plan</span>
+                            <?php if ($p['bonus_months_granted'] > 0): ?>
+                                <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 11px;">+<?= $p['bonus_months_granted'] ?>m Bonus</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($p['plan_type'] === 'one_time' || empty($p['period_end'])): ?>
+                                <span style="color: #059669; font-weight: 700;"><i class="fas fa-infinity"></i> Lifetime Perpetual</span>
+                            <?php else: ?>
+                                <?= date('d M Y', strtotime($p['period_start'])) ?> &rarr; <strong><?= date('d M Y', strtotime($p['period_end'])) ?></strong>
+                            <?php endif; ?>
+                        </td>
+                        <td><strong><?= $p['doctor_limit_granted'] > 0 ? $p['doctor_limit_granted'] . ' Doctors' : 'Unlimited' ?></strong></td>
+                        <td style="font-weight: 700; color: #059669;">₹<?= number_format($p['amount'], 2) ?></td>
+                        <td><span class="badge" style="background: #f3f4f6; text-transform: capitalize;"><?= str_replace('_', ' ', $p['payment_mode']) ?></span></td>
+                        <td><?= date('d M Y', strtotime($p['created_at'])) ?></td>
+                        <td>
+                            <a href="<?= BASE_URL ?>/modules/admin/print_subscription_receipt.php?id=<?= $p['id'] ?>" target="_blank" class="btn btn-sm btn-outline">
+                                <i class="fas fa-print"></i> View Receipt
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ============================================ -->
 <!-- CHECKOUT / PAYMENT MODAL -->

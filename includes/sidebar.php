@@ -9,7 +9,7 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
 $currentModule = '';
 $pathParts = explode('/', $_SERVER['REQUEST_URI'] ?? '');
 foreach ($pathParts as $part) {
-    if (in_array($part, ['dashboard','clinic','doctors','staff','patients','appointments','prescriptions','templates','billing','reports','dental','vaccination','calculators','communication','admin'])) {
+    if (in_array($part, ['dashboard','clinic','doctors','staff','patients','appointments','prescriptions','templates','billing','reports','dental','vaccination','calculators','communication','admin','subscription'])) {
         $currentModule = $part;
         break;
     }
@@ -235,6 +235,13 @@ $clinic = $db->fetch("SELECT name, logo FROM clinics WHERE id = ?", [getCurrentC
                 <a href="<?= BASE_URL ?>/modules/admin/users.php" class="nav-link <?= strpos($currentPage, 'users.php') !== false && $currentModule === 'admin' ? 'active' : '' ?>">
                     <i class="fas fa-users-cog"></i>
                     <span>Users</span>
+                </a>
+            </div>
+
+            <div class="nav-item">
+                <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="nav-link <?= strpos($_SERVER['REQUEST_URI'] ?? '', 'subscription') !== false ? 'active' : '' ?>">
+                    <i class="fas fa-crown" style="color: #f59e0b;"></i>
+                    <span>Plan & Upgrades</span>
                 </a>
             </div>
 

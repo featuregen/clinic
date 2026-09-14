@@ -5,12 +5,15 @@
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requireAuth();
-requireRole([ROLE_SUPER_ADMIN]);
+requireRole([ROLE_SUPER_ADMIN, ROLE_ADMIN]);
 
 $paymentId = intval($_GET['id'] ?? 0);
 if (!$paymentId) {
     die("Invalid Payment ID.");
 }
+
+$currentUserRole = getCurrentUserRole();
+$currentTenantId = intval(db()->tenantInfo['id'] ?? 0);
 
 $master = master_db();
 $stmt = $master->prepare("
@@ -24,6 +27,11 @@ $payment = $stmt->fetch();
 
 if (!$payment) {
     die("Payment record not found.");
+}
+
+// Security: If not Super Admin, ensure receipt belongs to current clinic tenant
+if ($currentUserRole !== ROLE_SUPER_ADMIN && intval($payment['tenant_id']) !== $currentTenantId) {
+    die("Access denied: You can only view receipts for your own clinic.");
 }
 
 $modeLabels = [
@@ -157,9 +165,15 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
 <body>
 
 <div class="actions-bar">
+    <?php if ($currentUserRole === ROLE_SUPER_ADMIN): ?>
     <a href="<?= BASE_URL ?>/modules/admin/subscriptions.php" class="btn btn-outline">
         <i class="fas fa-arrow-left"></i> Back to Subscriptions
     </a>
+    <?php else: ?>
+    <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Back to Plan & Billing
+    </a>
+    <?php endif; ?>
     <button onclick="window.print()" class="btn btn-primary">
         <i class="fas fa-print"></i> Print Official Receipt
     </button>

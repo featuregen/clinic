@@ -17,7 +17,7 @@ if (isset($_GET['id'])) {
     if ($staff) {
         if ($staff['role'] === 'super_admin') {
             setFlashMessage('error', 'Super Admin cannot be modified.');
-            header('Location: ' . BASE_URL . '/modules/admin/users.php');
+            header('Location: ' . BASE_URL . '/modules/staff/list.php');
             exit;
         }
         $isEdit = true;

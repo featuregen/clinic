@@ -7,10 +7,8 @@ $pageTitle = 'User Management';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 
 $role = getCurrentUserRole();
-if ($role !== ROLE_SUPER_ADMIN) {
-    header('Location: ' . BASE_URL . '/modules/auth/403.php');
-    exit;
-}
+requireRole([ROLE_SUPER_ADMIN, ROLE_ADMIN]);
+$isSuperAdmin = ($role === ROLE_SUPER_ADMIN);
 
 $db = db();
 $clinicId = getCurrentClinicId();
@@ -23,6 +21,11 @@ $page = max(1, intval($_GET['page'] ?? 1));
 
 $where = "WHERE u.clinic_id = ?";
 $params = [$clinicId];
+
+// Hide super_admin from clinic admin portal
+if (!$isSuperAdmin) {
+    $where .= " AND r.name != 'super_admin'";
+}
 
 if ($search) {
     $where .= " AND (u.full_name LIKE ? OR u.username LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)";
@@ -42,8 +45,11 @@ $users = $db->fetchAll(
      LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}", $params
 );
 
-// Get all roles for filter dropdown
-$allRoles = $db->fetchAll("SELECT name, display_name FROM roles WHERE is_active = 1 ORDER BY display_name");
+// Get all roles for filter dropdown (exclude super_admin for clinic admin)
+$rolesQuery = $isSuperAdmin 
+    ? "SELECT name, display_name FROM roles WHERE is_active = 1 ORDER BY display_name"
+    : "SELECT name, display_name FROM roles WHERE is_active = 1 AND name != 'super_admin' ORDER BY display_name";
+$allRoles = $db->fetchAll($rolesQuery);
 ?>
 
 <div class="content-header">
@@ -56,7 +62,9 @@ $allRoles = $db->fetchAll("SELECT name, display_name FROM roles WHERE is_active 
         <h1>User Management</h1>
     </div>
     <div class="d-flex gap-8">
+        <?php if ($isSuperAdmin): ?>
         <a href="<?= BASE_URL ?>/modules/admin/create_admin.php" class="btn btn-warning" style="background: #d97706; border-color: #b45309; color: white;"><i class="fas fa-user-shield"></i> Create Clinic Admin</a>
+        <?php endif; ?>
         <a href="<?= BASE_URL ?>/modules/staff/add.php" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add Staff</a>
         <a href="<?= BASE_URL ?>/modules/doctors/add.php" class="btn btn-success"><i class="fas fa-user-md"></i> Add Doctor</a>
     </div>

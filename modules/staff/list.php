@@ -14,7 +14,7 @@ $staff = $db->fetchAll(
      FROM users u
      JOIN roles r ON u.role_id = r.id
      LEFT JOIN branches b ON u.branch_id = b.id
-     WHERE u.clinic_id = ? ORDER BY u.full_name", [$clinicId]
+     WHERE u.clinic_id = ? AND r.name != 'super_admin' ORDER BY u.full_name", [$clinicId]
 );
 ?>
 

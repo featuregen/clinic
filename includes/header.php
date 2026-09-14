@@ -112,6 +112,19 @@ $currentUser = [
             </div>
             
             <div class="header-right">
+                <?php if (in_array(getCurrentUserRole(), [ROLE_SUPER_ADMIN, ROLE_ADMIN])): ?>
+                <?php
+                $hdrTenant = db()->tenantInfo ?? [];
+                $hdrPlan = ucfirst(sanitizeOutput($hdrTenant['plan_type'] ?? 'Trial'));
+                $hdrMaxDoc = intval($hdrTenant['max_doctors'] ?? 0);
+                ?>
+                <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="header-plan-badge" style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; text-decoration: none; background: rgba(0, 131, 143, 0.08); color: #00838f; border: 1px solid rgba(0, 131, 143, 0.25); transition: all 0.2s;" title="View Plan & Upgrade Options">
+                    <i class="fas fa-crown" style="color: #f59e0b; font-size: 13px;"></i>
+                    <span>Plan: <?= $hdrPlan ?></span>
+                    <span style="background: #00838f; color: white; padding: 1px 7px; border-radius: 10px; font-size: 10px; text-transform: uppercase;">Upgrade</span>
+                </a>
+                <?php endif; ?>
+
                 <button class="header-btn" title="Notifications" data-dropdown="notifDropdown">
                     <i class="fas fa-bell"></i>
                     <span class="notification-dot"></span>
@@ -136,6 +149,9 @@ $currentUser = [
                     <div class="dropdown-menu" id="userDropdown">
                         <a href="<?= BASE_URL ?>/modules/auth/profile.php" class="dropdown-item">
                             <i class="fas fa-user"></i> My Profile
+                        </a>
+                        <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="dropdown-item">
+                            <i class="fas fa-crown" style="color: #f59e0b;"></i> Plan & Subscription
                         </a>
                         <a href="<?= BASE_URL ?>/modules/clinic/settings.php" class="dropdown-item">
                             <i class="fas fa-cog"></i> Settings

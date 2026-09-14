@@ -67,6 +67,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $trialMonths = intval($_POST['custom_trial_months'] ?? $effTrialMonths);
         $trialDoctors = intval($_POST['custom_trial_doctors'] ?? $effTrialDoctors);
 
+        // Update active max_doctors immediately for the current plan
+        $currentPlanType = $t['plan_type'] ?? 'trial';
+        $newActiveMaxDoctors = intval($t['max_doctors']);
+        if ($currentPlanType === 'trial') {
+            $newActiveMaxDoctors = $trialDoctors;
+        } elseif ($currentPlanType === 'monthly') {
+            $newActiveMaxDoctors = $monthlyDoctors;
+        } elseif ($currentPlanType === 'yearly') {
+            $newActiveMaxDoctors = $yearlyDoctors;
+        } elseif ($currentPlanType === 'one_time') {
+            $newActiveMaxDoctors = $lifetimeDoctors;
+        }
+
         try {
             $stmt = $master->prepare("
                 UPDATE tenants 
@@ -79,16 +92,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     custom_lifetime_doctors = ?,
                     custom_trial_months = ?,
                     custom_trial_doctors = ?,
+                    max_doctors = ?,
                     updated_at = NOW()
                 WHERE id = ?
             ");
             $stmt->execute([
                 $monthlyPrice, $monthlyDoctors, $yearlyPrice, $yearlyDoctors,
                 $yearlyBonus, $lifetimePrice, $lifetimeDoctors, $trialMonths,
-                $trialDoctors, $t['id']
+                $trialDoctors, $newActiveMaxDoctors, $t['id']
             ]);
             
-            setFlashMessage('success', "Custom plans & pricing for {$t['clinic_name']} saved successfully! Future renewals and billing for this clinic will use these exact rates.");
+            setFlashMessage('success', "Custom plans & pricing for {$t['clinic_name']} saved successfully! Active doctor quota updated to {$newActiveMaxDoctors} doctors.");
             header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=plan");
             exit;
         } catch (Exception $e) {
@@ -101,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tier = sanitize($_POST['tier'] ?? 'monthly');
         $extendMode = sanitize($_POST['extend_mode'] ?? 'now');
         $recordPayment = isset($_POST['record_cash_payment']) ? 1 : 0;
+        $passedDoctorLimit = isset($_POST['doctor_limit']) ? intval($_POST['doctor_limit']) : null;
         
         $now = time();
         $currentEnd = !empty($t['subscription_ends_at']) ? strtotime($t['subscription_ends_at']) : 0;
@@ -118,22 +133,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($tier === 'trial') {
             $trialMonths = !empty($t['custom_trial_months']) ? intval($t['custom_trial_months']) : intval($settings['trial_duration_months'] ?? 1);
             $newEnd = date('Y-m-d 23:59:59', strtotime("+{$trialMonths} month", $startTs));
-            $doctorLimit = !empty($t['custom_trial_doctors']) ? intval($t['custom_trial_doctors']) : intval($settings['trial_max_doctors'] ?? 2);
+            $doctorLimit = ($passedDoctorLimit !== null && $passedDoctorLimit > 0) ? $passedDoctorLimit : (!empty($t['custom_trial_doctors']) ? intval($t['custom_trial_doctors']) : intval($settings['trial_max_doctors'] ?? 2));
             $planPrice = 0.00;
         } elseif ($tier === 'monthly') {
             $newEnd = date('Y-m-d 23:59:59', strtotime("+1 month", $startTs));
-            $doctorLimit = !empty($t['custom_monthly_doctors']) ? intval($t['custom_monthly_doctors']) : intval($settings['monthly_max_doctors'] ?? 3);
+            $doctorLimit = ($passedDoctorLimit !== null && $passedDoctorLimit > 0) ? $passedDoctorLimit : (!empty($t['custom_monthly_doctors']) ? intval($t['custom_monthly_doctors']) : intval($settings['monthly_max_doctors'] ?? 3));
             $planPrice = !empty($t['custom_monthly_price']) ? floatval($t['custom_monthly_price']) : floatval($settings['monthly_price'] ?? 1499);
         } elseif ($tier === 'yearly') {
             $bonusGranted = isset($t['custom_yearly_bonus_months']) && $t['custom_yearly_bonus_months'] !== null ? intval($t['custom_yearly_bonus_months']) : intval($settings['yearly_default_bonus_months'] ?? 2);
             $totalMonths = 12 + $bonusGranted;
             $newEnd = date('Y-m-d 23:59:59', strtotime("+{$totalMonths} month", $startTs));
-            $doctorLimit = !empty($t['custom_yearly_doctors']) ? intval($t['custom_yearly_doctors']) : intval($settings['yearly_max_doctors'] ?? 10);
+            $doctorLimit = ($passedDoctorLimit !== null && $passedDoctorLimit > 0) ? $passedDoctorLimit : (!empty($t['custom_yearly_doctors']) ? intval($t['custom_yearly_doctors']) : intval($settings['yearly_max_doctors'] ?? 10));
             $planPrice = !empty($t['custom_yearly_price']) ? floatval($t['custom_yearly_price']) : floatval($settings['yearly_price'] ?? 14999);
         } elseif ($tier === 'one_time') {
             $isLifetime = 1;
             $newEnd = null;
-            $doctorLimit = isset($t['custom_lifetime_doctors']) && $t['custom_lifetime_doctors'] !== null ? intval($t['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
+            $doctorLimit = ($passedDoctorLimit !== null) ? $passedDoctorLimit : (isset($t['custom_lifetime_doctors']) && $t['custom_lifetime_doctors'] !== null ? intval($t['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0));
             $planPrice = !empty($t['custom_lifetime_price']) ? floatval($t['custom_lifetime_price']) : floatval($settings['one_time_price'] ?? 49999);
             $billingCycle = 'one_time';
         }
