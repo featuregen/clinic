@@ -3,13 +3,178 @@
  * Clinic Subscription Paywall & Upgrade Portal
  * Feature Gen Care
  */
-$pageTitle = 'Subscription & Renewal';
-require_once dirname(dirname(__DIR__)) . '/includes/header.php';
+require_once dirname(dirname(__DIR__)) . '/config/session.php';
+requireAuth();
 
 $master = master_db();
 $tenant = db()->tenantInfo;
 $clinicId = getCurrentClinicId();
 $currentUserRole = getCurrentUserRole();
+$isSuperAdmin = ($currentUserRole === ROLE_SUPER_ADMIN);
+
+// Handle Direct Activation / Offline Payment Recording by Super Admin (COD, UPI, Net Banking, Cheque) - Razorpay Not Required
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'super_admin_direct_payment') {
+    if (!$isSuperAdmin) {
+        die("Access denied: Only Super Admin can record direct payments.");
+    }
+
+    $planType = sanitize($_POST['plan_type'] ?? 'yearly');
+    $addonDoctors = intval($_POST['addon_doctors'] ?? 0);
+    $paymentMode = sanitize($_POST['payment_mode'] ?? 'cash_on_hand');
+    if (!in_array($paymentMode, ['cash_on_hand', 'upi', 'bank_transfer', 'cheque'])) {
+        $paymentMode = 'cash_on_hand';
+    }
+    $paymentRef = sanitize(trim($_POST['payment_reference'] ?? ''));
+    $userNotes = sanitize(trim($_POST['payment_notes'] ?? ''));
+
+    // Fetch tenant and global settings
+    $stmtT = $master->prepare("SELECT * FROM tenants WHERE id = ?");
+    $stmtT->execute([$tenant['id']]);
+    $t = $stmtT->fetch();
+
+    $settingsRows = $master->query("SELECT setting_key, setting_value FROM saas_global_settings")->fetchAll();
+    $settings = [];
+    foreach ($settingsRows as $row) {
+        $settings[$row['setting_key']] = $row['setting_value'];
+    }
+
+    try {
+        $master->beginTransaction();
+
+        $now = time();
+        $currentEnd = !empty($t['subscription_ends_at']) ? strtotime($t['subscription_ends_at']) : 0;
+        $periodStart = ($currentEnd > $now) ? date('Y-m-d H:i:s', $currentEnd) : date('Y-m-d H:i:s');
+        $startTs = strtotime($periodStart);
+
+        if (empty($paymentRef)) {
+            $prefix = ($paymentMode === 'upi') ? 'UPI' : (($paymentMode === 'bank_transfer') ? 'NEFT' : (($paymentMode === 'cheque') ? 'CHQ' : 'COD'));
+            $paymentRef = $prefix . '-' . date('Y') . '-' . rand(1000, 9999);
+        }
+
+        if ($planType === 'doctor_addon') {
+            if ($addonDoctors < 1) $addonDoctors = 1;
+            
+            $currPlan = $t['plan_type'] ?? 'yearly';
+            $isYearly = ($currPlan === 'yearly' || $currPlan === 'one_time');
+            $customRate = $isYearly ? ($t['custom_addon_doctor_yearly_price'] ?? null) : ($t['custom_addon_doctor_monthly_price'] ?? null);
+            if ($customRate !== null && floatval($customRate) > 0) {
+                $ratePerDoc = floatval($customRate);
+            } else {
+                $ratePerDoc = $isYearly ? floatval($settings['addon_doctor_yearly_price'] ?? 250) : floatval($settings['addon_doctor_monthly_price'] ?? 25);
+            }
+            $baseAmount = round($addonDoctors * $ratePerDoc, 2);
+            $gstAmount = round($baseAmount * 0.18, 2);
+            $totalAmount = $baseAmount + $gstAmount;
+            
+            $currentLimit = intval($t['max_doctors'] ?? 2);
+            $newLimit = $currentLimit + $addonDoctors;
+            $periodEnd = $t['subscription_ends_at'];
+            
+            $paymentNotes = "Doctor Capacity Add-On: +{$addonDoctors} slot(s) recorded via " . strtoupper(str_replace('_', ' ', $paymentMode)) . " by Super Admin. " . $userNotes;
+
+            $stmtP = $master->prepare("
+                INSERT INTO tenant_subscription_payments (
+                    tenant_id, plan_type, amount, base_amount, gst_rate, gst_amount,
+                    payment_mode, payment_reference, collected_by, period_start, period_end,
+                    bonus_months_granted, doctor_limit_granted, status, notes, created_at
+                ) VALUES (?, 'doctor_addon', ?, ?, 18.00, ?, ?, ?, ?, NOW(), ?, 0, ?, 'completed', ?, NOW())
+            ");
+            $stmtP->execute([
+                $t['id'], $totalAmount, $baseAmount, $gstAmount,
+                $paymentMode, $paymentRef, getSession('full_name', 'Super Admin'),
+                $periodEnd, $addonDoctors, $paymentNotes
+            ]);
+            $issuedPaymentId = $master->lastInsertId();
+
+            $stmtU = $master->prepare("
+                UPDATE tenants 
+                SET max_doctors = ?,
+                    addon_doctors = COALESCE(addon_doctors, 0) + ?,
+                    updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmtU->execute([$newLimit, $addonDoctors, $t['id']]);
+
+            $master->commit();
+            setFlashMessage('success', "Doctor Add-On (+{$addonDoctors} slots) activated and " . strtoupper(str_replace('_', ' ', $paymentMode)) . " payment of ₹" . number_format($totalAmount, 2) . " recorded!");
+            header("Location: " . BASE_URL . "/modules/admin/print_subscription_receipt.php?id=" . $issuedPaymentId);
+            exit;
+
+        } else {
+            // Subscription Plan (monthly, yearly, one_time)
+            $isLifetime = 0;
+            $bonusMonths = 0;
+            $newEnd = null;
+            $billingCycle = $planType;
+
+            if ($planType === 'monthly') {
+                $baseAmount = isset($t['custom_monthly_price']) && $t['custom_monthly_price'] !== null ? floatval($t['custom_monthly_price']) : floatval($settings['monthly_price'] ?? 600);
+                $doctorLimit = !empty($t['custom_monthly_doctors']) ? intval($t['custom_monthly_doctors']) : intval($settings['monthly_max_doctors'] ?? 3);
+                $newEnd = date('Y-m-d 23:59:59', strtotime("+1 month", $startTs));
+            } elseif ($planType === 'yearly') {
+                $baseAmount = isset($t['custom_yearly_price']) && $t['custom_yearly_price'] !== null ? floatval($t['custom_yearly_price']) : floatval($settings['yearly_price'] ?? 6000);
+                $doctorLimit = !empty($t['custom_yearly_doctors']) ? intval($t['custom_yearly_doctors']) : intval($settings['yearly_max_doctors'] ?? 10);
+                $bonusMonths = isset($t['custom_yearly_bonus_months']) && $t['custom_yearly_bonus_months'] !== null ? intval($t['custom_yearly_bonus_months']) : intval($settings['yearly_default_bonus_months'] ?? 2);
+                $totalMonths = 12 + $bonusMonths;
+                $newEnd = date('Y-m-d 23:59:59', strtotime("+{$totalMonths} month", $startTs));
+            } elseif ($planType === 'one_time') {
+                $baseAmount = isset($t['custom_lifetime_price']) && $t['custom_lifetime_price'] !== null ? floatval($t['custom_lifetime_price']) : floatval($settings['one_time_price'] ?? 49999);
+                $doctorLimit = isset($t['custom_lifetime_doctors']) && $t['custom_lifetime_doctors'] !== null ? intval($t['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
+                $isLifetime = 1;
+                $newEnd = null;
+            }
+
+            $gstAmount = round($baseAmount * 0.18, 2);
+            $totalAmount = $baseAmount + $gstAmount;
+            $paymentNotes = "Subscription plan activated via Super Admin direct " . strtoupper(str_replace('_', ' ', $paymentMode)) . " logging. " . $userNotes;
+
+            $stmtP = $master->prepare("
+                INSERT INTO tenant_subscription_payments (
+                    tenant_id, plan_type, amount, base_amount, gst_rate, gst_amount,
+                    payment_mode, payment_reference, collected_by, period_start, period_end,
+                    bonus_months_granted, doctor_limit_granted, status, notes, created_at
+                ) VALUES (?, ?, ?, ?, 18.00, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
+            ");
+            $stmtP->execute([
+                $t['id'], $planType, $totalAmount, $baseAmount, $gstAmount,
+                $paymentMode, $paymentRef, getSession('full_name', 'Super Admin'),
+                $periodStart, $newEnd, $bonusMonths, $doctorLimit, $paymentNotes
+            ]);
+            $issuedPaymentId = $master->lastInsertId();
+
+            $stmtU = $master->prepare("
+                UPDATE tenants 
+                SET plan_type = ?,
+                    billing_cycle = ?,
+                    max_doctors = ?,
+                    bonus_months = ?,
+                    plan_amount = ?,
+                    is_lifetime = ?,
+                    subscription_starts_at = COALESCE(subscription_starts_at, NOW()),
+                    subscription_ends_at = ?,
+                    subscription_status = 'active',
+                    status = 'active',
+                    updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmtU->execute([
+                $planType, $billingCycle, $doctorLimit, $bonusMonths, $baseAmount,
+                $isLifetime, $newEnd, $t['id']
+            ]);
+
+            $master->commit();
+            setFlashMessage('success', ucfirst($planType) . " Plan activated and " . strtoupper(str_replace('_', ' ', $paymentMode)) . " payment of ₹" . number_format($totalAmount, 2) . " recorded!");
+            header("Location: " . BASE_URL . "/modules/admin/print_subscription_receipt.php?id=" . $issuedPaymentId);
+            exit;
+        }
+    } catch (Exception $e) {
+        $master->rollBack();
+        setFlashMessage('error', 'Error recording direct payment: ' . $e->getMessage());
+    }
+}
+
+$pageTitle = 'Subscription & Renewal';
+require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 
 // Fetch latest tenant info from Master DB
 $stmtT = $master->prepare("SELECT * FROM tenants WHERE id = ?");
@@ -606,6 +771,70 @@ $pastPayments = $stmtHist->fetchAll();
                 </div>
             </div>
 
+            <?php if ($isSuperAdmin): ?>
+            <!-- SUPER ADMIN DIRECT PAYMENT OPTIONS (COD, UPI, NET BANKING, CHEQUE) - RAZORPAY NOT REQUIRED -->
+            <form method="POST" action="<?= BASE_URL ?>/modules/subscription/paywall.php" id="superAdminPaymentForm">
+                <input type="hidden" name="action" value="super_admin_direct_payment">
+                <input type="hidden" name="plan_type" id="saFormPlanType" value="yearly">
+                <input type="hidden" name="addon_doctors" id="saFormAddonDoctors" value="0">
+                
+                <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 16px; margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 13px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fas fa-shield-alt"></i> Super Admin Direct Payment
+                        </span>
+                        <span style="font-size: 10.5px; background: #dcfce7; color: #166534; font-weight: 700; padding: 2px 8px; border-radius: 12px;">
+                            Razorpay Not Required
+                        </span>
+                    </div>
+
+                    <div class="form-group mb-12">
+                        <label style="display: block; font-size: 11.5px; font-weight: 700; color: #374151; margin-bottom: 6px;">
+                            Select Payment Mode:
+                        </label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; background: white; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                <input type="radio" name="payment_mode" value="cash_on_hand" checked onchange="updateRefPlaceholder(this.value)">
+                                <span>💵 COD (Cash on Hand)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; background: white; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                <input type="radio" name="payment_mode" value="upi" onchange="updateRefPlaceholder(this.value)">
+                                <span>📱 UPI (GPay / PhonePe)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; background: white; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                <input type="radio" name="payment_mode" value="bank_transfer" onchange="updateRefPlaceholder(this.value)">
+                                <span>🏦 Net Banking / IMPS</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; background: white; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                <input type="radio" name="payment_mode" value="cheque" onchange="updateRefPlaceholder(this.value)">
+                                <span>📝 Cheque / DD</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-12">
+                        <label style="display: block; font-size: 11.5px; font-weight: 700; color: #374151; margin-bottom: 4px;">
+                            Reference / Receipt / UTR No:
+                        </label>
+                        <input type="text" name="payment_reference" id="saPaymentRef" class="form-control" placeholder="e.g. COD-<?= date('Y') ?>-<?= rand(1000, 9999) ?>" style="font-size: 13px; background: white;">
+                        <small style="color: #64748b; font-size: 11px;">Leave blank to auto-generate official tax invoice receipt reference.</small>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label style="display: block; font-size: 11.5px; font-weight: 700; color: #374151; margin-bottom: 4px;">
+                            Admin Notes (Optional):
+                        </label>
+                        <input type="text" name="payment_notes" class="form-control" placeholder="e.g. Payment received and verified directly" style="font-size: 13px; background: white;">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success" style="width: 100%; padding: 14px; font-size: 15px; font-weight: 700; background: #059669; border: none; border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; cursor: pointer;">
+                    <i class="fas fa-check-circle"></i> Complete Renewal & Record Payment (<span id="saBtnTotal">₹0.00</span>)
+                </button>
+            </form>
+
+            <?php else: ?>
+            <!-- REGULAR CLINIC ADMIN: RAZORPAY GATEWAY & OFFLINE CONTACT -->
             <?php if (!empty($razorpayKey)): ?>
             <div class="mb-20">
                 <div id="razorpayErrorAlert" style="display: none; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; color: #991b1b; font-size: 13px; line-height: 1.45;">
@@ -627,7 +856,7 @@ $pastPayments = $stmtHist->fetchAll();
                     <i class="fas fa-bolt" style="color: #0891b2;"></i> Online Gateway Offline
                 </div>
                 <div style="font-size: 12px; color: #64748b;">
-                    Razorpay Key has not been entered yet. Contact administrator to configure your Razorpay Key ID or use direct transfer below.
+                    Contact administrator for direct handover or wire transfer below.
                 </div>
             </div>
             <?php endif; ?>
@@ -646,6 +875,7 @@ $pastPayments = $stmtHist->fetchAll();
                     </a>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -671,6 +901,15 @@ function selectPlan(type, basePrice, gstAmount, totalPrice, name) {
     const cashTotal = document.getElementById('modalCashTotal');
     if (cashTotal) cashTotal.textContent = '₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
+    const saBtnTotal = document.getElementById('saBtnTotal');
+    if (saBtnTotal) saBtnTotal.textContent = '₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const saPlanType = document.getElementById('saFormPlanType');
+    if (saPlanType) saPlanType.value = type;
+
+    const saAddonDocs = document.getElementById('saFormAddonDoctors');
+    if (saAddonDocs) saAddonDocs.value = 0;
+    
     const rzpText = document.getElementById('razorpayBtnText');
     if (rzpText) rzpText.textContent = 'Pay ₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Online via Razorpay';
     
@@ -694,10 +933,30 @@ function selectAddon(count, basePrice, gstAmount, totalPrice, name) {
     const cashTotal = document.getElementById('modalCashTotal');
     if (cashTotal) cashTotal.textContent = '₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
+    const saBtnTotal = document.getElementById('saBtnTotal');
+    if (saBtnTotal) saBtnTotal.textContent = '₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const saPlanType = document.getElementById('saFormPlanType');
+    if (saPlanType) saPlanType.value = 'doctor_addon';
+
+    const saAddonDocs = document.getElementById('saFormAddonDoctors');
+    if (saAddonDocs) saAddonDocs.value = count;
+    
     const rzpText = document.getElementById('razorpayBtnText');
     if (rzpText) rzpText.textContent = 'Pay ₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Online via Razorpay';
     
     document.getElementById('checkoutModal').style.display = 'flex';
+}
+
+function updateRefPlaceholder(mode) {
+    const input = document.getElementById('saPaymentRef');
+    if (!input) return;
+    const year = new Date().getFullYear();
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    if (mode === 'upi') input.placeholder = 'e.g. UPI-' + year + '-' + rand + ' or UTR Number';
+    else if (mode === 'bank_transfer') input.placeholder = 'e.g. NEFT-' + year + '-' + rand + ' or IMPS Ref';
+    else if (mode === 'cheque') input.placeholder = 'e.g. CHQ-' + rand + ' (Bank Name)';
+    else input.placeholder = 'e.g. COD-' + year + '-' + rand;
 }
 
 function closeCheckoutModal() {

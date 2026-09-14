@@ -84,6 +84,9 @@ if (empty($payment['clinic_gstin']) || empty($payment['clinic_address'])) {
 
 $modeLabels = [
     'cash_on_hand' => 'COD (Cash on Hand / Direct Handover)',
+    'upi' => 'UPI (Instant Transfer / QR / VPA)',
+    'bank_transfer' => 'Net Banking / Direct Bank Transfer (IMPS / NEFT)',
+    'cheque' => 'Cheque / Demand Draft',
     'razorpay' => 'Razorpay Online Gateway'
 ];
 $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', ' ', $payment['payment_mode']));

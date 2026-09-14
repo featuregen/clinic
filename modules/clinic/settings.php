@@ -8,7 +8,16 @@ requireRole([ROLE_SUPER_ADMIN, ROLE_ADMIN]);
 
 $db = db();
 $clinicId = getCurrentClinicId();
-$clinic = $db->fetch("SELECT * FROM clinics WHERE id = ?", [$clinicId]) ?? [];
+$clinic = $db->fetch("SELECT * FROM clinics WHERE id = ?", [$clinicId]);
+if (!$clinic) {
+    $clinic = $db->fetch("SELECT * FROM clinics ORDER BY id ASC LIMIT 1");
+    if ($clinic) {
+        $clinicId = intval($clinic['id']);
+        $_SESSION['clinic_id'] = $clinicId;
+    } else {
+        $clinic = [];
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -22,33 +31,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $db->query(
-            "UPDATE clinics SET name=?, email=?, phone=?, address=?, city=?, state=?, pincode=?, website=?, pan_number=?, gst_number=?, logo=? WHERE id=?",
-            [
-                sanitize($_POST['name']), sanitize($_POST['email'] ?? ''), sanitize($_POST['phone'] ?? ''),
-                sanitize($_POST['address'] ?? ''), sanitize($_POST['city'] ?? ''), sanitize($_POST['state'] ?? ''),
-                sanitize($_POST['pincode'] ?? ''), sanitize($_POST['website'] ?? ''),
-                sanitize($_POST['pan_number'] ?? ''), sanitize($_POST['gst_number'] ?? ''),
-                $logoFilename, $clinicId
-            ]
-        );
+        $name = sanitize($_POST['name'] ?? '');
+        $email = sanitize($_POST['email'] ?? '');
+        $phone = sanitize($_POST['phone'] ?? '');
+        $address = sanitize($_POST['address'] ?? '');
+        $city = sanitize($_POST['city'] ?? '');
+        $state = sanitize($_POST['state'] ?? '');
+        $pincode = sanitize($_POST['pincode'] ?? '');
+        $website = sanitize($_POST['website'] ?? '');
+        $panNumber = strtoupper(sanitize(trim($_POST['pan_number'] ?? '')));
+        $gstNumber = strtoupper(sanitize(trim($_POST['gst_number'] ?? '')));
 
-        // Sync clinic tax & address details to Master DB tenants table for subscription tax invoices
+        // Check if clinic record exists to UPDATE, otherwise INSERT
+        $existingClinic = $db->fetch("SELECT id FROM clinics WHERE id = ?", [$clinicId]);
+        if (!$existingClinic) {
+            $existingClinic = $db->fetch("SELECT id FROM clinics ORDER BY id ASC LIMIT 1");
+        }
+
+        if ($existingClinic) {
+            $targetClinicId = intval($existingClinic['id']);
+            $db->query(
+                "UPDATE clinics SET name=?, email=?, phone=?, address=?, city=?, state=?, pincode=?, website=?, pan_number=?, gst_number=?, logo=? WHERE id=?",
+                [
+                    $name, $email, $phone, $address, $city, $state,
+                    $pincode, $website, $panNumber, $gstNumber,
+                    $logoFilename, $targetClinicId
+                ]
+            );
+            $_SESSION['clinic_id'] = $targetClinicId;
+        } else {
+            $db->query(
+                "INSERT INTO clinics (name, email, phone, address, city, state, pincode, website, pan_number, gst_number, logo) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                    $name, $email, $phone, $address, $city, $state,
+                    $pincode, $website, $panNumber, $gstNumber,
+                    $logoFilename
+                ]
+            );
+            $targetClinicId = intval($db->lastInsertId());
+            $_SESSION['clinic_id'] = $targetClinicId;
+        }
+
+        // Sync clinic name, tax & address details to Master DB tenants table for subscription tax invoices
         $tenantId = intval(db()->tenantInfo['id'] ?? 0);
         if ($tenantId > 0) {
             try {
                 $master = master_db();
-                $master->prepare("UPDATE tenants SET gst_number = ?, pan_number = ?, billing_address = ? WHERE id = ?")
+                $master->prepare("UPDATE tenants SET clinic_name = COALESCE(NULLIF(?, ''), clinic_name), gst_number = ?, pan_number = ?, billing_address = ? WHERE id = ?")
                        ->execute([
-                           strtoupper(sanitize(trim($_POST['gst_number'] ?? ''))),
-                           strtoupper(sanitize(trim($_POST['pan_number'] ?? ''))),
-                           sanitize($_POST['address'] ?? ''),
+                           $name,
+                           $gstNumber,
+                           $panNumber,
+                           $address,
                            $tenantId
                        ]);
             } catch (Exception $e) {}
         }
 
-        logAudit('update', 'settings', 'clinic', $clinicId);
+        logAudit('update', 'settings', 'clinic', $targetClinicId ?? $clinicId);
         setFlashMessage('success', 'Clinic settings updated successfully.');
         header('Location: ' . BASE_URL . '/modules/clinic/settings.php');
         exit;
