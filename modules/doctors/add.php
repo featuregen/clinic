@@ -53,7 +53,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slotDuration = intval($_POST['default_slot_duration'] ?? 15);
     $isAvailable = isset($_POST['is_available']) ? 1 : 0;
     $bio = sanitize($_POST['bio'] ?? '');
+    $branches = $db->fetchAll("SELECT id, name FROM branches WHERE clinic_id = ? AND is_active = 1 ORDER BY name", [$clinicId]);
+    $branchCount = count($branches);
     $branchId = intval($_POST['branch_id'] ?? 0) ?: null;
+
+    // Auto-assign single branch without user interaction
+    if (!$branchId && $branchCount === 1) {
+        $branchId = $branches[0]['id'];
+    }
 
     try {
         $db->beginTransaction();
@@ -305,6 +312,7 @@ $branches = $db->fetchAll("SELECT id, name FROM branches WHERE clinic_id = ? AND
                     <span>Available for appointments</span>
                 </label>
             </div>
+            <?php if (count($branches) > 1): ?>
             <div class="form-group">
                 <label class="form-label">Branch Location</label>
                 <select name="branch_id" id="doctorBranchSelect" class="form-control">
@@ -314,6 +322,9 @@ $branches = $db->fetchAll("SELECT id, name FROM branches WHERE clinic_id = ? AND
                     <?php endforeach; ?>
                 </select>
             </div>
+            <?php else: ?>
+                <input type="hidden" name="branch_id" value="<?= $branches[0]['id'] ?? '' ?>">
+            <?php endif; ?>
         </div>
 
         <!-- Bio -->

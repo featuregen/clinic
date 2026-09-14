@@ -56,6 +56,7 @@ $allRoles = $db->fetchAll("SELECT name, display_name FROM roles WHERE is_active 
         <h1>User Management</h1>
     </div>
     <div class="d-flex gap-8">
+        <a href="<?= BASE_URL ?>/modules/admin/create_admin.php" class="btn btn-warning" style="background: #d97706; border-color: #b45309; color: white;"><i class="fas fa-user-shield"></i> Create Clinic Admin</a>
         <a href="<?= BASE_URL ?>/modules/staff/add.php" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add Staff</a>
         <a href="<?= BASE_URL ?>/modules/doctors/add.php" class="btn btn-success"><i class="fas fa-user-md"></i> Add Doctor</a>
     </div>
