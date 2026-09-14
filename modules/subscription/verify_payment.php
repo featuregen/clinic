@@ -13,6 +13,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $paymentId = sanitize($_POST['razorpay_payment_id'] ?? '');
 $planType = sanitize($_POST['plan_type'] ?? 'yearly');
 $amount = floatval($_POST['amount'] ?? 0);
+$baseAmount = floatval($_POST['base_amount'] ?? 0);
+$gstRate = floatval($_POST['gst_rate'] ?? 18.00);
+$gstAmount = floatval($_POST['gst_amount'] ?? 0);
+
+if ($baseAmount <= 0 && $amount > 0) {
+    $baseAmount = round($amount / (1 + ($gstRate / 100)), 2);
+    $gstAmount = round($amount - $baseAmount, 2);
+}
 
 if (empty($paymentId)) {
     setFlashMessage('error', 'Payment verification failed: Missing transaction ID.');
@@ -66,17 +74,18 @@ try {
         $billingCycle = 'yearly';
     }
     
-    // 1. Insert payment record
+    // 1. Insert payment record (Includes Option A 18% GST breakdown)
+    $paymentNotes = "Online renewal via Razorpay (Base: ₹" . number_format($baseAmount, 2) . " + 18% GST: ₹" . number_format($gstAmount, 2) . ")";
     $stmtP = $master->prepare("
         INSERT INTO tenant_subscription_payments (
-            tenant_id, plan_type, amount, payment_mode, payment_reference,
-            collected_by, period_start, period_end, bonus_months_granted,
-            doctor_limit_granted, status, notes, created_at
-        ) VALUES (?, ?, ?, 'razorpay', ?, 'Razorpay Online', ?, ?, ?, ?, 'completed', 'Online renewal via Razorpay', NOW())
+            tenant_id, plan_type, amount, base_amount, gst_rate, gst_amount,
+            payment_mode, payment_reference, collected_by, period_start, period_end,
+            bonus_months_granted, doctor_limit_granted, status, notes, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'razorpay', ?, 'Razorpay Online', ?, ?, ?, ?, 'completed', ?, NOW())
     ");
     $stmtP->execute([
-        $tenantId, $planType, $amount, $paymentId,
-        $periodStart, $newEnd, $bonusMonths, $doctorLimit
+        $tenantId, $planType, $amount, $baseAmount, $gstRate, $gstAmount,
+        $paymentId, $periodStart, $newEnd, $bonusMonths, $doctorLimit, $paymentNotes
     ]);
     
     // 2. Update tenant in Master DB

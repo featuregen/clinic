@@ -247,6 +247,15 @@ class Database {
                 INDEX idx_tenant (tenant_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             
+            // Check if gst_amount column exists in tenant_subscription_payments
+            $colGstCheck = $masterConn->query("SHOW COLUMNS FROM tenant_subscription_payments LIKE 'gst_amount'")->fetch();
+            if (!$colGstCheck) {
+                $masterConn->exec("ALTER TABLE tenant_subscription_payments 
+                    ADD COLUMN base_amount DECIMAL(10,2) DEFAULT 0.00 AFTER amount,
+                    ADD COLUMN gst_rate DECIMAL(5,2) DEFAULT 18.00 AFTER base_amount,
+                    ADD COLUMN gst_amount DECIMAL(10,2) DEFAULT 0.00 AFTER gst_rate");
+            }
+            
             // Ensure saas_global_settings exists
             $masterConn->exec("CREATE TABLE IF NOT EXISTS saas_global_settings (
                 id INT AUTO_INCREMENT PRIMARY KEY,

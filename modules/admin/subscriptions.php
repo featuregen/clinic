@@ -180,19 +180,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // 2. Optionally record payment if requested
             $issuedPaymentId = null;
             if ($recordPayment && $planPrice > 0) {
+                $baseAmount = $planPrice;
+                $gstRate = 18.00;
+                $gstAmount = round($baseAmount * ($gstRate / 100), 2);
+                $totalAmount = $baseAmount + $gstAmount;
+
                 $ref = 'REC-' . date('Y') . '-' . rand(1000, 9999);
                 $stmtP = $master->prepare("
                     INSERT INTO tenant_subscription_payments (
-                        tenant_id, plan_type, amount, payment_mode, payment_reference,
-                        collected_by, period_start, period_end, bonus_months_granted,
-                        doctor_limit_granted, status, notes, created_at
-                    ) VALUES (?, ?, ?, 'cash_on_hand', ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
+                        tenant_id, plan_type, amount, base_amount, gst_rate, gst_amount,
+                        payment_mode, payment_reference, collected_by, period_start, period_end,
+                        bonus_months_granted, doctor_limit_granted, status, notes, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'cash_on_hand', ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
                 ");
                 $stmtP->execute([
-                    $t['id'], $planType, $planPrice, $ref,
+                    $t['id'], $planType, $totalAmount, $baseAmount, $gstRate, $gstAmount, $ref,
                     getSession('full_name', 'Super Admin'),
                     $periodStart, $newEnd, $bonusGranted, $doctorLimit,
-                    "Plan activated via Super Admin control panel with direct cash logging."
+                    "Plan activated via Super Admin control panel with direct cash logging (Base: ₹" . number_format($baseAmount, 2) . " + 18% GST: ₹" . number_format($gstAmount, 2) . ")."
                 ]);
                 $issuedPaymentId = $master->lastInsertId();
             }
@@ -200,7 +205,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $master->commit();
             
             if ($issuedPaymentId) {
-                setFlashMessage('success', "Plan activated and Cash on Hand payment of ₹" . number_format($planPrice, 2) . " recorded!");
+                $totalPaidDisplay = isset($totalAmount) ? $totalAmount : $planPrice;
+                setFlashMessage('success', "Plan activated and Cash on Hand payment of ₹" . number_format($totalPaidDisplay, 2) . " (Base ₹" . number_format($planPrice, 2) . " + 18% GST) recorded!");
                 header("Location: " . BASE_URL . "/modules/admin/print_subscription_receipt.php?id=" . $issuedPaymentId);
                 exit;
             } else {
@@ -217,6 +223,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 3. RECORD PAYMENT (Cash on Hand, Bank Transfer, Cheque, UPI, Razorpay)
     elseif ($action === 'record_payment') {
         $amount = floatval($_POST['amount'] ?? 0);
+        $baseAmount = floatval($_POST['base_amount'] ?? 0);
+        $gstRate = floatval($_POST['gst_rate'] ?? 18.00);
+        $gstAmount = floatval($_POST['gst_amount'] ?? 0);
+
+        if ($baseAmount <= 0 && $amount > 0) {
+            $baseAmount = round($amount / (1 + ($gstRate / 100)), 2);
+            $gstAmount = round($amount - $baseAmount, 2);
+        } elseif ($gstAmount <= 0 && $baseAmount > 0) {
+            $gstAmount = round($baseAmount * ($gstRate / 100), 2);
+            if ($amount <= 0) {
+                $amount = $baseAmount + $gstAmount;
+            }
+        }
+
         $paymentMode = sanitize($_POST['payment_mode'] ?? 'cash_on_hand');
         $reference = sanitize($_POST['payment_reference'] ?? '');
         $collectedBy = sanitize($_POST['collected_by'] ?? '');
@@ -257,18 +277,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $newEnd = date('Y-m-d 23:59:59', strtotime("+{$customDays} days", $startTs));
             }
             
-            // Insert Payment record
+            // Insert Payment record with Option A GST breakdown
             $stmtP = $master->prepare("
                 INSERT INTO tenant_subscription_payments (
-                    tenant_id, plan_type, amount, payment_mode, payment_reference,
-                    collected_by, period_start, period_end, bonus_months_granted,
-                    doctor_limit_granted, status, notes, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)
+                    tenant_id, plan_type, amount, base_amount, gst_rate, gst_amount,
+                    payment_mode, payment_reference, collected_by, period_start, period_end,
+                    bonus_months_granted, doctor_limit_granted, status, notes, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)
             ");
             $stmtP->execute([
-                $t['id'], $planType, $amount, $paymentMode, $reference,
-                $collectedBy, $periodStart, $newEnd, $bonusMonths,
-                $doctorLimit, $notes, $paymentDate . ' ' . date('H:i:s')
+                $t['id'], $planType, $amount, $baseAmount, $gstRate, $gstAmount,
+                $paymentMode, $reference, $collectedBy, $periodStart, $newEnd,
+                $bonusMonths, $doctorLimit, $notes, $paymentDate . ' ' . date('H:i:s')
             ]);
             $newPaymentId = $master->lastInsertId();
             
@@ -683,6 +703,11 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         </td>
                         <td>
                             <span style="font-size: 15px; font-weight: 800; color: #059669;">₹<?= number_format($p['amount'], 2) ?></span>
+                            <?php if (!empty($p['gst_amount']) && $p['gst_amount'] > 0): ?>
+                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">
+                                Base: ₹<?= number_format($p['base_amount'], 2) ?> + 18% GST: ₹<?= number_format($p['gst_amount'], 2) ?>
+                            </div>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?= $modePills[$p['payment_mode']] ?? ucfirst(str_replace('_', ' ', $p['payment_mode'])) ?>
@@ -836,15 +861,23 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         <div style="font-size: 14px; font-weight: 600; color: #00838f;" id="actPlanTitle">Yearly Plan</div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px;">
                         <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                            <div style="font-size: 11px; color: #64748b;">Plan Fee</div>
-                            <div style="font-size: 16px; font-weight: 800; color: #059669;" id="actPlanPriceDisplay">₹14,999.00</div>
+                            <div style="font-size: 11px; color: #64748b;">Base Fee</div>
+                            <div style="font-size: 15px; font-weight: 800; color: var(--text);" id="actPlanBaseDisplay">₹14,999.00</div>
                         </div>
                         <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                            <div style="font-size: 11px; color: #64748b;">Doctor Quota</div>
-                            <div style="font-size: 16px; font-weight: 800; color: #0284c7;" id="actPlanDoctorDisplay">10 Doctors</div>
+                            <div style="font-size: 11px; color: #64748b;">+ 18% GST</div>
+                            <div style="font-size: 15px; font-weight: 800; color: #d97706;" id="actPlanGstDisplay">₹2,699.82</div>
                         </div>
+                        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 11px; color: #64748b;">Total Due</div>
+                            <div style="font-size: 15px; font-weight: 800; color: #00838f;" id="actPlanPriceDisplay">₹17,698.82</div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #475569;">Doctor Quota: <strong id="actPlanDoctorDisplay">10 Doctors</strong></span>
+                        <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 11px;">SAC: 998314</span>
                     </div>
 
                     <div class="form-group mb-16">
@@ -902,20 +935,31 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         <div style="font-size: 12px; color: var(--text-muted);"><i class="fas fa-globe"></i> <?= sanitizeOutput($t['subdomain']) ?>.featuregen.com</div>
                     </div>
 
-                    <div class="grid-2 gap-16 mb-16">
-                        <div class="form-group">
-                            <label class="form-label font-semibold">Payment Mode <span class="required">*</span></label>
-                            <select name="payment_mode" class="form-control" required>
-                                <option value="cash_on_hand" selected>💵 Cash on Hand (Direct Handover)</option>
-                                <option value="bank_transfer">🏦 Bank Transfer / NEFT / IMPS</option>
-                                <option value="upi">📱 UPI (GPay / PhonePe / Paytm)</option>
-                                <option value="cheque">📝 Cheque / Demand Draft</option>
-                                <option value="razorpay">⚡ Razorpay Online</option>
-                            </select>
+                    <div class="form-group mb-16">
+                        <label class="form-label font-semibold">Payment Mode <span class="required">*</span></label>
+                        <select name="payment_mode" class="form-control" required>
+                            <option value="cash_on_hand" selected>💵 Cash on Hand (Direct Handover)</option>
+                            <option value="bank_transfer">🏦 Bank Transfer / NEFT / IMPS</option>
+                            <option value="upi">📱 UPI (GPay / PhonePe / Paytm)</option>
+                            <option value="cheque">📝 Cheque / Demand Draft</option>
+                            <option value="razorpay">⚡ Razorpay Online</option>
+                        </select>
+                    </div>
+
+                    <!-- Option A: Base + 18% GST = Total Payable -->
+                    <div class="grid-3 gap-12 mb-16" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div class="form-group mb-0">
+                            <label class="form-label font-semibold" style="font-size: 12px;">Base Fee (₹) <span class="required">*</span></label>
+                            <input type="number" name="base_amount" id="payBaseAmount" class="form-control" step="0.01" value="<?= $effYearlyPrice ?>" required oninput="calcPaymentGst('base')">
                         </div>
-                        <div class="form-group">
-                            <label class="form-label font-semibold">Amount Collected (₹) <span class="required">*</span></label>
-                            <input type="number" name="amount" id="payAmount" class="form-control" step="0.01" value="<?= $effYearlyPrice ?>" placeholder="e.g. 15000" required>
+                        <div class="form-group mb-0">
+                            <label class="form-label font-semibold" style="font-size: 12px;">18% GST (SAC 998314)</label>
+                            <input type="number" name="gst_amount" id="payGstAmount" class="form-control" step="0.01" value="<?= round($effYearlyPrice * 0.18, 2) ?>" readonly style="background: #f1f5f9; color: #b45309; font-weight: 600;">
+                            <input type="hidden" name="gst_rate" value="18.00">
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="form-label font-semibold" style="font-size: 12px; color: #00838f;">Total Collected (₹) <span class="required">*</span></label>
+                            <input type="number" name="amount" id="payAmount" class="form-control" step="0.01" value="<?= round($effYearlyPrice * 1.18, 2) ?>" required oninput="calcPaymentGst('total')" style="font-weight: 800; color: #00838f;">
                         </div>
                     </div>
 
@@ -1102,9 +1146,15 @@ if (custYearlyPriceInput && custYearlyBonusInput) {
 
 // Open Activate Plan Modal
 function triggerActivatePlan(tier, title, price, doctors, bonus) {
+    const base = parseFloat(price) || 0;
+    const gst = Math.round(base * 18) / 100;
+    const total = Math.round((base + gst) * 100) / 100;
+
     document.getElementById('actTier').value = tier;
     document.getElementById('actPlanTitle').textContent = title;
-    document.getElementById('actPlanPriceDisplay').textContent = '₹' + parseFloat(price).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    document.getElementById('actPlanBaseDisplay').textContent = '₹' + base.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    document.getElementById('actPlanGstDisplay').textContent = '₹' + gst.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    document.getElementById('actPlanPriceDisplay').textContent = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2 });
     document.getElementById('actPlanDoctorDisplay').textContent = (doctors > 0 ? doctors + ' Doctors' : 'Unlimited Doctors') + (bonus > 0 ? ' (+' + bonus + 'm Bonus)' : '');
     
     const cashGroup = document.getElementById('actCashOptionGroup');
@@ -1165,25 +1215,51 @@ const clinicCustomRates = {
     lifetimeDoctors: <?= json_encode($effLifetimeDoctors) ?>
 };
 
+function calcPaymentGst(source) {
+    const baseInput = document.getElementById('payBaseAmount');
+    const gstInput = document.getElementById('payGstAmount');
+    const totalInput = document.getElementById('payAmount');
+    
+    if (!baseInput || !gstInput || !totalInput) return;
+    
+    if (source === 'base') {
+        const base = parseFloat(baseInput.value) || 0;
+        const gst = Math.round(base * 18) / 100;
+        const total = Math.round((base + gst) * 100) / 100;
+        gstInput.value = gst.toFixed(2);
+        totalInput.value = total.toFixed(2);
+    } else {
+        const total = parseFloat(totalInput.value) || 0;
+        const base = Math.round((total / 1.18) * 100) / 100;
+        const gst = Math.round((total - base) * 100) / 100;
+        baseInput.value = base.toFixed(2);
+        gstInput.value = gst.toFixed(2);
+    }
+}
+
 function handlePaymentPeriodChange() {
     const period = document.getElementById('payPeriodType').value;
     const bonusGroup = document.getElementById('payBonusGroup');
+    let base = 0;
     if (period === '12_months') {
         bonusGroup.style.display = 'block';
-        document.getElementById('payAmount').value = clinicCustomRates.yearlyPrice;
+        base = clinicCustomRates.yearlyPrice;
         document.getElementById('payBonusMonths').value = clinicCustomRates.yearlyBonus;
         document.getElementById('payDoctorLimit').value = clinicCustomRates.yearlyDoctors;
     } else if (period === '1_month') {
         bonusGroup.style.display = 'none';
-        document.getElementById('payAmount').value = clinicCustomRates.monthlyPrice;
+        base = clinicCustomRates.monthlyPrice;
         document.getElementById('payDoctorLimit').value = clinicCustomRates.monthlyDoctors;
     } else if (period === 'lifetime') {
         bonusGroup.style.display = 'none';
-        document.getElementById('payAmount').value = clinicCustomRates.lifetimePrice;
+        base = clinicCustomRates.lifetimePrice;
         document.getElementById('payDoctorLimit').value = clinicCustomRates.lifetimeDoctors;
     } else {
         bonusGroup.style.display = 'none';
+        base = parseFloat(document.getElementById('payBaseAmount').value) || 0;
     }
+    document.getElementById('payBaseAmount').value = base.toFixed(2);
+    calcPaymentGst('base');
 }
 </script>
 

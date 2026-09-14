@@ -42,19 +42,38 @@ $modeLabels = [
     'razorpay' => 'Razorpay Online Gateway'
 ];
 $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', ' ', $payment['payment_mode']));
+
+// Option A: Indian SaaS GST Calculation (SAC 998314 - 18% GST)
+$totalPaid = floatval($payment['amount'] ?? 0);
+$baseAmount = !empty($payment['base_amount']) && floatval($payment['base_amount']) > 0 
+    ? floatval($payment['base_amount']) 
+    : round($totalPaid / 1.18, 2);
+
+$gstRate = !empty($payment['gst_rate']) && floatval($payment['gst_rate']) > 0 
+    ? floatval($payment['gst_rate']) 
+    : 18.00;
+
+$gstAmount = !empty($payment['gst_amount']) && floatval($payment['gst_amount']) > 0 
+    ? floatval($payment['gst_amount']) 
+    : round($totalPaid - $baseAmount, 2);
+
+$cgstRate = round($gstRate / 2, 2); // 9%
+$sgstRate = round($gstRate / 2, 2); // 9%
+$cgstAmount = round($gstAmount / 2, 2);
+$sgstAmount = round($gstAmount - $cgstAmount, 2);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subscription Receipt - <?= sanitizeOutput($payment['payment_reference'] ?: ('REC-' . $payment['id'])) ?> - Feature Gen Care</title>
+    <title>Tax Invoice & Receipt - <?= sanitizeOutput($payment['payment_reference'] ?: ('REC-' . $payment['id'])) ?> - Feature Gen Care</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
         body { background: #f3f4f6; padding: 30px 15px; color: #1f2937; }
         .receipt-card {
-            max-width: 720px;
+            max-width: 760px;
             margin: 0 auto;
             background: #ffffff;
             border-radius: 12px;
@@ -72,13 +91,13 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
             align-items: center;
         }
         .brand-title { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
-        .brand-subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+        .brand-subtitle { font-size: 12px; opacity: 0.9; margin-top: 3px; }
         .receipt-badge {
             background: rgba(255,255,255,0.2);
             padding: 6px 14px;
             border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -89,24 +108,25 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
         .table-receipt {
             width: 100%;
             border-collapse: collapse;
-            margin: 24px 0;
+            margin: 24px 0 16px;
         }
         .table-receipt th {
             background: #f9fafb;
             text-align: left;
-            padding: 12px 16px;
-            font-size: 12px;
+            padding: 12px 14px;
+            font-size: 11px;
             text-transform: uppercase;
             color: #4b5563;
             border-bottom: 1px solid #e5e7eb;
+            letter-spacing: 0.5px;
         }
         .table-receipt td {
-            padding: 14px 16px;
+            padding: 14px;
             border-bottom: 1px solid #f3f4f6;
-            font-size: 14px;
+            font-size: 13px;
         }
         .amount-highlight {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 800;
             color: #00838f;
         }
@@ -117,9 +137,9 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
             border-radius: 8px;
             font-weight: 800;
             text-transform: uppercase;
-            font-size: 14px;
+            font-size: 13px;
             display: inline-block;
-            transform: rotate(-4deg);
+            transform: rotate(-3deg);
         }
         .receipt-footer {
             background: #f9fafb;
@@ -132,7 +152,7 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
             color: #6b7280;
         }
         .actions-bar {
-            max-width: 720px;
+            max-width: 760px;
             margin: 20px auto 0;
             display: flex;
             justify-content: space-between;
@@ -175,7 +195,7 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
     </a>
     <?php endif; ?>
     <button onclick="window.print()" class="btn btn-primary">
-        <i class="fas fa-print"></i> Print Official Receipt
+        <i class="fas fa-print"></i> Print Tax Invoice Receipt
     </button>
 </div>
 
@@ -183,10 +203,10 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
     <div class="receipt-header">
         <div>
             <div class="brand-title"><i class="fas fa-heartbeat"></i> Feature Gen Care</div>
-            <div class="brand-subtitle">Cloud Clinic Management Platform &bull; Official Subscription Receipt</div>
+            <div class="brand-subtitle">Cloud Healthcare ERP & SaaS Platform &bull; Official Tax Invoice (SAC: 998314)</div>
         </div>
         <div class="receipt-badge">
-            <i class="fas fa-check-circle"></i> Official Receipt
+            <i class="fas fa-check-circle"></i> Tax Invoice &bull; Paid
         </div>
     </div>
     
@@ -194,7 +214,7 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
         <div class="grid-2">
             <div>
                 <div class="info-group">
-                    <label>Billed To (Clinic)</label>
+                    <label>Billed To (Client Clinic)</label>
                     <p style="font-size: 16px; color: #00838f;"><?= sanitizeOutput($payment['clinic_name']) ?></p>
                     <p style="font-size: 13px; font-weight: 500; color: #6b7280; margin-top: 2px;">
                         Portal: <strong><?= sanitizeOutput($payment['subdomain']) ?></strong>.featuregen.com
@@ -203,7 +223,7 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
             </div>
             <div>
                 <div class="info-group">
-                    <label>Receipt Number</label>
+                    <label>Invoice / Receipt Number</label>
                     <p><?= sanitizeOutput($payment['payment_reference'] ?: ('REC-' . date('Y') . '-' . str_pad($payment['id'], 4, '0', STR_PAD_LEFT))) ?></p>
                 </div>
                 <div class="info-group" style="margin-top: 12px;">
@@ -213,7 +233,7 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
             </div>
         </div>
         
-        <div class="grid-2" style="background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #f3f4f6;">
+        <div class="grid-2" style="background: #f9fafb; padding: 14px 18px; border-radius: 8px; border: 1px solid #f3f4f6;">
             <div class="info-group">
                 <label>Payment Mode</label>
                 <p><i class="fas fa-money-bill-wave" style="color: #059669; margin-right: 4px;"></i> <?= $modeLabel ?></p>
@@ -227,21 +247,28 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
         <table class="table-receipt">
             <thead>
                 <tr>
-                    <th>Subscription Plan Details</th>
+                    <th>Item Description</th>
+                    <th>SAC</th>
                     <th>Doctor Quota</th>
                     <th>Validity Period</th>
-                    <th style="text-align: right;">Total Amount</th>
+                    <th style="text-align: right;">Taxable Amount</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>
-                        <strong style="text-transform: capitalize;"><?= sanitizeOutput($payment['plan_type']) ?> Plan</strong>
+                        <strong style="text-transform: capitalize; font-size: 14px;"><?= sanitizeOutput($payment['plan_type']) ?> Plan Subscription</strong>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                            Feature Gen Care Cloud Clinic Suite
+                        </div>
                         <?php if ($payment['bonus_months_granted'] > 0): ?>
                         <div style="font-size: 12px; color: #059669; font-weight: 600; margin-top: 2px;">
-                            +<?= $payment['bonus_months_granted'] ?> Bonus Months Included
+                            <i class="fas fa-gift"></i> +<?= $payment['bonus_months_granted'] ?> Bonus Months Included
                         </div>
                         <?php endif; ?>
+                    </td>
+                    <td>
+                        <span style="font-weight: 700; color: #475569; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 12px;">998314</span>
                     </td>
                     <td>
                         <strong><?= $payment['doctor_limit_granted'] > 0 ? $payment['doctor_limit_granted'] . ' Doctors' : 'Unlimited' ?></strong>
@@ -250,15 +277,41 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
                         <?php if ($payment['plan_type'] === 'one_time' || empty($payment['period_end'])): ?>
                             <span style="color: #059669; font-weight: 700;"><i class="fas fa-infinity"></i> Lifetime Perpetual</span>
                         <?php else: ?>
-                            <?= date('d M Y', strtotime($payment['period_start'])) ?> &rarr; <strong><?= date('d M Y', strtotime($payment['period_end'])) ?></strong>
+                            <?= date('d M Y', strtotime($payment['period_start'])) ?> &rarr;<br><strong><?= date('d M Y', strtotime($payment['period_end'])) ?></strong>
                         <?php endif; ?>
                     </td>
-                    <td style="text-align: right;">
-                        <span class="amount-highlight">₹<?= number_format($payment['amount'], 2) ?></span>
+                    <td style="text-align: right; font-weight: 700; font-size: 15px;">
+                        ₹<?= number_format($baseAmount, 2) ?>
                     </td>
                 </tr>
             </tbody>
         </table>
+
+        <!-- Indian B2B SaaS Tax Computation Summary Box -->
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
+            <div style="width: 340px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: #4b5563;">
+                    <span>Taxable Base Value:</span>
+                    <strong style="color: #111827;">₹<?= number_format($baseAmount, 2) ?></strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; color: #4b5563;">
+                    <span>CGST @ <?= number_format($cgstRate, 1) ?>%:</span>
+                    <span>₹<?= number_format($cgstAmount, 2) ?></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: #4b5563;">
+                    <span>SGST @ <?= number_format($sgstRate, 1) ?>%:</span>
+                    <span>₹<?= number_format($sgstAmount, 2) ?></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px; color: #0284c7; padding-bottom: 8px; border-bottom: 1px dashed #d1d5db;">
+                    <span>Total 18% GST (SAC: 998314):</span>
+                    <span style="font-weight: 700;">₹<?= number_format($gstAmount, 2) ?></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px;">
+                    <span style="font-size: 14px; font-weight: 800; color: #111827;">Grand Total Paid:</span>
+                    <span class="amount-highlight">₹<?= number_format($totalPaid, 2) ?></span>
+                </div>
+            </div>
+        </div>
         
         <?php if (!empty($payment['notes'])): ?>
         <div style="margin-bottom: 24px; padding: 12px 16px; background: #fffbeb; border-radius: 6px; border-left: 3px solid #f59e0b; font-size: 13px;">
@@ -266,12 +319,12 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
         </div>
         <?php endif; ?>
         
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 36px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
             <div class="stamp-box">
                 <i class="fas fa-check-circle"></i> PAYMENT RECEIVED - PAID IN FULL
             </div>
             <div style="text-align: right;">
-                <div style="height: 40px; font-style: italic; font-family: cursive; font-size: 18px; color: #374151;">
+                <div style="height: 36px; font-style: italic; font-family: cursive; font-size: 18px; color: #374151;">
                     Feature Gen Care
                 </div>
                 <div style="border-top: 1px solid #9ca3af; width: 180px; margin-left: auto; padding-top: 4px; font-size: 11px; color: #6b7280; font-weight: 600;">
@@ -282,7 +335,7 @@ $modeLabel = $modeLabels[$payment['payment_mode']] ?? ucfirst(str_replace('_', '
     </div>
     
     <div class="receipt-footer">
-        <div>Thank you for choosing Feature Gen Care. This is a computer-generated receipt.</div>
+        <div>Thank you for choosing Feature Gen Care. This is a computer-generated tax invoice & receipt.</div>
         <div>Support: support@featuregen.com</div>
     </div>
 </div>

@@ -38,6 +38,21 @@ $totalYearlyMonths = 12 + $yearlyBonus;
 $lifetimePrice = !empty($currentTenant['custom_lifetime_price']) ? floatval($currentTenant['custom_lifetime_price']) : floatval($settings['one_time_price'] ?? 49999);
 $lifetimeDoctors = isset($currentTenant['custom_lifetime_doctors']) && $currentTenant['custom_lifetime_doctors'] !== null ? intval($currentTenant['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
 
+// Option A: Pricing is Exclusive of 18% GST (Standard Indian B2B SaaS SAC: 998314)
+$gstRate = 18.00;
+
+$monthlyBase = $monthlyPrice;
+$monthlyGst = round($monthlyBase * ($gstRate / 100), 2);
+$monthlyTotal = $monthlyBase + $monthlyGst;
+
+$yearlyBase = $yearlyPrice;
+$yearlyGst = round($yearlyBase * ($gstRate / 100), 2);
+$yearlyTotal = $yearlyBase + $yearlyGst;
+
+$lifetimeBase = $lifetimePrice;
+$lifetimeGst = round($lifetimeBase * ($gstRate / 100), 2);
+$lifetimeTotal = $lifetimeBase + $lifetimeGst;
+
 // Resolve current active doctor quota based on plan and custom/global settings
 $activePlanType = $currentTenant['plan_type'] ?? 'trial';
 $activeQuota = intval($currentTenant['max_doctors'] ?? 0);
@@ -149,9 +164,13 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
             <h3 style="font-size: 22px; margin: 0 0 8px; color: var(--text);">Monthly Plan</h3>
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Ideal for smaller clinics seeking month-to-month flexibility.</p>
             
-            <div style="margin-bottom: 24px;">
-                <span style="font-size: 36px; font-weight: 800; color: var(--text);">₹<?= number_format($monthlyPrice, 0) ?></span>
+            <div style="margin-bottom: 20px;">
+                <span style="font-size: 34px; font-weight: 800; color: var(--text);">₹<?= number_format($monthlyBase, 0) ?></span>
                 <span style="font-size: 14px; color: var(--text-muted);">/ month</span>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4;">
+                    <span>+ 18% GST (₹<?= number_format($monthlyGst, 2) ?>)</span> &bull; 
+                    <strong style="color: var(--text);">Total: ₹<?= number_format($monthlyTotal, 2) ?></strong>
+                </div>
             </div>
 
             <ul style="list-style: none; padding: 0; margin: 0 0 32px; flex: 1; font-size: 14px; line-height: 2;">
@@ -163,7 +182,7 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
                 <li><i class="fas fa-check" style="color: #059669; margin-right: 10px;"></i> WhatsApp & SMS Notifications</li>
             </ul>
 
-            <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700;" onclick="selectPlan('monthly', <?= $monthlyPrice ?>, 'Monthly Plan')">
+            <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700;" onclick="selectPlan('monthly', <?= $monthlyBase ?>, <?= $monthlyGst ?>, <?= $monthlyTotal ?>, 'Monthly Plan')">
                 <i class="fas fa-<?= $activePlanType === 'monthly' ? 'sync-alt' : 'bolt' ?>"></i> <?= $activePlanType === 'monthly' ? 'Renew Monthly Plan' : 'Upgrade to Monthly' ?>
             </button>
         </div>
@@ -196,9 +215,13 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
             <h3 style="font-size: 22px; margin: 0 0 8px; color: var(--text);">Yearly Plan</h3>
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Complete hospital & clinic suite <?= $yearlyBonus > 0 ? "with {$yearlyBonus} months free bonus access." : "for a full year." ?></p>
             
-            <div style="margin-bottom: 24px;">
-                <span style="font-size: 36px; font-weight: 800; color: #00838f;">₹<?= number_format($yearlyPrice, 0) ?></span>
+            <div style="margin-bottom: 20px;">
+                <span style="font-size: 34px; font-weight: 800; color: #00838f;">₹<?= number_format($yearlyBase, 0) ?></span>
                 <span style="font-size: 14px; color: var(--text-muted);">/ year (<?= $totalYearlyMonths ?> Months)</span>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4;">
+                    <span>+ 18% GST (₹<?= number_format($yearlyGst, 2) ?>)</span> &bull; 
+                    <strong style="color: #00838f;">Total: ₹<?= number_format($yearlyTotal, 2) ?></strong>
+                </div>
             </div>
 
             <ul style="list-style: none; padding: 0; margin: 0 0 32px; flex: 1; font-size: 14px; line-height: 2;">
@@ -210,7 +233,7 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
                 <li><i class="fas fa-check" style="color: #00838f; margin-right: 10px;"></i> Priority 24/7 Technical Support</li>
             </ul>
 
-            <button type="button" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #00838f, #00695c); border: none;" onclick="selectPlan('yearly', <?= $yearlyPrice ?>, 'Yearly Plan (<?= $totalYearlyMonths ?> Months)')">
+            <button type="button" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #00838f, #00695c); border: none;" onclick="selectPlan('yearly', <?= $yearlyBase ?>, <?= $yearlyGst ?>, <?= $yearlyTotal ?>, 'Yearly Plan (<?= $totalYearlyMonths ?> Months)')">
                 <i class="fas fa-crown"></i> <?= $activePlanType === 'yearly' ? "Renew Yearly ({$totalYearlyMonths} Months)" : "Upgrade to Yearly ({$totalYearlyMonths} Months)" ?>
             </button>
         </div>
@@ -235,9 +258,13 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
             <h3 style="font-size: 22px; margin: 0 0 8px; color: var(--text);">One-Time Lifetime</h3>
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Pay once and own forever. Zero renewals. Unlimited forever.</p>
             
-            <div style="margin-bottom: 24px;">
-                <span style="font-size: 36px; font-weight: 800; color: #0284c7;">₹<?= number_format($lifetimePrice, 0) ?></span>
+            <div style="margin-bottom: 20px;">
+                <span style="font-size: 34px; font-weight: 800; color: #0284c7;">₹<?= number_format($lifetimeBase, 0) ?></span>
                 <span style="font-size: 14px; color: var(--text-muted);">one-time</span>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4;">
+                    <span>+ 18% GST (₹<?= number_format($lifetimeGst, 2) ?>)</span> &bull; 
+                    <strong style="color: #0284c7;">Total: ₹<?= number_format($lifetimeTotal, 2) ?></strong>
+                </div>
             </div>
 
             <ul style="list-style: none; padding: 0; margin: 0 0 32px; flex: 1; font-size: 14px; line-height: 2;">
@@ -254,7 +281,7 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
                 <i class="fas fa-check-circle"></i> Permanent Lifetime Active
             </button>
             <?php else: ?>
-            <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border-color: #0284c7; color: #0284c7;" onclick="selectPlan('one_time', <?= $lifetimePrice ?>, 'One-Time Lifetime License')">
+            <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border-color: #0284c7; color: #0284c7;" onclick="selectPlan('one_time', <?= $lifetimeBase ?>, <?= $lifetimeGst ?>, <?= $lifetimeTotal ?>, 'One-Time Lifetime License')">
                 <i class="fas fa-infinity"></i> Upgrade to Lifetime Access
             </button>
             <?php endif; ?>
@@ -368,7 +395,14 @@ $pastPayments = $stmtHist->fetchAll();
                             <?php endif; ?>
                         </td>
                         <td><strong><?= $p['doctor_limit_granted'] > 0 ? $p['doctor_limit_granted'] . ' Doctors' : 'Unlimited' ?></strong></td>
-                        <td style="font-weight: 700; color: #059669;">₹<?= number_format($p['amount'], 2) ?></td>
+                        <td style="font-weight: 700; color: #059669;">
+                            ₹<?= number_format($p['amount'], 2) ?>
+                            <?php if (!empty($p['gst_amount']) && $p['gst_amount'] > 0): ?>
+                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">
+                                Base: ₹<?= number_format($p['base_amount'], 2) ?> + 18% GST: ₹<?= number_format($p['gst_amount'], 2) ?>
+                            </div>
+                            <?php endif; ?>
+                        </td>
                         <td><span class="badge" style="background: #f3f4f6; text-transform: capitalize;"><?= str_replace('_', ' ', $p['payment_mode']) ?></span></td>
                         <td><?= date('d M Y', strtotime($p['created_at'])) ?></td>
                         <td>
@@ -389,26 +423,40 @@ $pastPayments = $stmtHist->fetchAll();
 <!-- CHECKOUT / PAYMENT MODAL -->
 <!-- ============================================ -->
 <div id="checkoutModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
-    <div class="card" style="width: 520px; max-width: 95vw; animation: slideUp 0.2s ease;">
+    <div class="card" style="width: 540px; max-width: 95vw; animation: slideUp 0.2s ease;">
         <div class="card-header">
             <h3><i class="fas fa-shopping-cart" style="color: var(--primary);"></i> Complete Subscription Renewal</h3>
             <button type="button" class="btn btn-sm btn-ghost" onclick="closeCheckoutModal()" style="font-size: 20px;">&times;</button>
         </div>
         <div class="card-body">
-            <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 14px; font-weight: 600;" id="modalPlanName">Yearly Plan</span>
-                    <span style="font-size: 22px; font-weight: 800; color: #00838f;" id="modalPlanPrice">₹14,999.00</span>
+            <div style="background: var(--bg-secondary); padding: 18px 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 16px; font-weight: 700;" id="modalPlanName">Yearly Plan</span>
+                    <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 11px;">SAC: 998314</span>
                 </div>
-                <div style="font-size: 12px; color: var(--text-muted);">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--border-color);">
                     Tenant Clinic: <strong><?= sanitizeOutput($currentTenant['clinic_name']) ?></strong> (<?= sanitizeOutput($currentTenant['subdomain']) ?>.featuregen.com)
+                </div>
+
+                <!-- Tax Breakdown Lines (Option A: Exclusive of GST) -->
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: var(--text);">
+                    <span>Base Subscription Fee:</span>
+                    <span id="modalBasePrice" style="font-weight: 600;">₹0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">
+                    <span>GST @ 18% (SAC 998314 - SaaS Services):</span>
+                    <span id="modalGstAmount" style="font-weight: 600;">₹0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--border-color);">
+                    <span style="font-size: 14px; font-weight: 700; color: var(--text);">Total Payable Amount Due:</span>
+                    <span style="font-size: 22px; font-weight: 800; color: #00838f;" id="modalTotalPrice">₹0.00</span>
                 </div>
             </div>
 
             <?php if (!empty($razorpayKey)): ?>
             <div class="mb-20">
                 <button type="button" id="razorpayBtn" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 700; background: #00838f;">
-                    <i class="fas fa-bolt"></i> Pay Online via Razorpay
+                    <i class="fas fa-bolt"></i> <span id="razorpayBtnText">Pay Online via Razorpay</span>
                 </button>
                 <div style="text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-muted);">
                     Supports UPI, Credit/Debit Cards, Net Banking, and Wallets
@@ -418,8 +466,8 @@ $pastPayments = $stmtHist->fetchAll();
 
             <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
                 <h4 style="font-size: 14px; margin: 0 0 8px;"><i class="fas fa-hand-holding-usd" style="color: #059669;"></i> Paying via Cash on Hand or Direct Transfer?</h4>
-                <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 12px;">
-                    Please contact your Feature Gen Care administrator directly. Once cash is collected, your subscription is immediately updated.
+                <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 12px; line-height: 1.5;">
+                    Total Payable: <strong style="color: #059669;" id="modalCashTotal">₹0.00</strong> (Includes 18% GST). Contact your Feature Gen Care administrator to collect payment and issue your official tax invoice receipt.
                 </p>
                 <div style="display: flex; gap: 8px;">
                     <a href="tel:<?= preg_replace('/[^0-9\+]/', '', $offlineContact) ?>" class="btn btn-sm btn-outline" style="flex: 1; justify-content: center;">
@@ -438,14 +486,25 @@ $pastPayments = $stmtHist->fetchAll();
 <script>
 let selectedPlan = {
     type: 'yearly',
-    price: <?= $yearlyPrice ?>,
+    basePrice: <?= $yearlyBase ?>,
+    gstAmount: <?= $yearlyGst ?>,
+    totalPrice: <?= $yearlyTotal ?>,
     name: 'Yearly Plan (<?= $totalYearlyMonths ?> Months)'
 };
 
-function selectPlan(type, price, name) {
-    selectedPlan = { type, price, name };
+function selectPlan(type, basePrice, gstAmount, totalPrice, name) {
+    selectedPlan = { type, basePrice, gstAmount, totalPrice, name };
     document.getElementById('modalPlanName').textContent = name;
-    document.getElementById('modalPlanPrice').textContent = '₹' + price.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    document.getElementById('modalBasePrice').textContent = '₹' + basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('modalGstAmount').textContent = '₹' + gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('modalTotalPrice').textContent = '₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    const cashTotal = document.getElementById('modalCashTotal');
+    if (cashTotal) cashTotal.textContent = '₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    const rzpText = document.getElementById('razorpayBtnText');
+    if (rzpText) rzpText.textContent = 'Pay ₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Online via Razorpay';
+    
     document.getElementById('checkoutModal').style.display = 'flex';
 }
 
@@ -460,10 +519,10 @@ if (razorpayBtn && rzpKey) {
     razorpayBtn.addEventListener('click', function() {
         const options = {
             "key": rzpKey,
-            "amount": Math.round(selectedPlan.price * 100),
+            "amount": Math.round(selectedPlan.totalPrice * 100),
             "currency": "INR",
             "name": "Feature Gen Care",
-            "description": selectedPlan.name + " - Subscription Renewal",
+            "description": selectedPlan.name + " - Subscription Renewal (Incl. 18% GST)",
             "image": "<?= ASSETS_URL ?>/images/favicon.svg",
             "handler": function (response) {
                 // Post to verification script
@@ -474,7 +533,10 @@ if (razorpayBtn && rzpKey) {
                 const fields = {
                     razorpay_payment_id: response.razorpay_payment_id,
                     plan_type: selectedPlan.type,
-                    amount: selectedPlan.price
+                    amount: selectedPlan.totalPrice,
+                    base_amount: selectedPlan.basePrice,
+                    gst_rate: 18.00,
+                    gst_amount: selectedPlan.gstAmount
                 };
                 
                 for (const key in fields) {
