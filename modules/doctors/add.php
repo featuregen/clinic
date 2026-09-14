@@ -62,6 +62,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $branchId = $branches[0]['id'];
     }
 
+    // Subscription Doctor Quota Check
+    $tenantData = $db->tenantInfo ?? [];
+    $maxDoctors = isset($tenantData['max_doctors']) ? intval($tenantData['max_doctors']) : 0; // 0 = unlimited
+    $activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors WHERE clinic_id = ?", [$clinicId])['c'] ?? 0;
+    $isQuotaReached = (!$isEdit && $maxDoctors > 0 && $activeDocCount >= $maxDoctors);
+
+    if ($isQuotaReached) {
+        setFlashMessage('error', "Doctor limit reached: Your subscription plan allows a maximum of {$maxDoctors} doctor(s) (currently using {$activeDocCount}/{$maxDoctors}). Please upgrade your plan to register additional doctors.");
+        header('Location: ' . BASE_URL . '/modules/doctors/list.php');
+        exit;
+    }
+
     try {
         $db->beginTransaction();
 
@@ -145,6 +157,11 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 $specialties = $db->fetchAll("SELECT id, name FROM specialties WHERE is_active = 1 ORDER BY name");
 $departments = $db->fetchAll("SELECT id, name FROM departments WHERE clinic_id = ? AND is_active = 1 ORDER BY name", [$clinicId]);
 $branches = $db->fetchAll("SELECT id, name FROM branches WHERE clinic_id = ? AND is_active = 1 ORDER BY name", [$clinicId]);
+
+$tenantData = $db->tenantInfo ?? [];
+$maxDoctors = isset($tenantData['max_doctors']) ? intval($tenantData['max_doctors']) : 0;
+$activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors WHERE clinic_id = ?", [$clinicId])['c'] ?? 0;
+$isQuotaReached = (!$isEdit && $maxDoctors > 0 && $activeDocCount >= $maxDoctors);
 ?>
 
 <div class="content-header">
@@ -157,6 +174,24 @@ $branches = $db->fetchAll("SELECT id, name FROM branches WHERE clinic_id = ? AND
         <h1><?= $isEdit ? 'Edit Doctor' : 'Register New Doctor' ?></h1>
     </div>
 </div>
+
+<?php if ($isQuotaReached): ?>
+<div class="alert alert-warning" style="display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #f59e0b; background: #fffbeb; color: #92400e; padding: 18px 22px; border-radius: 10px; margin-bottom: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    <div style="display: flex; align-items: flex-start; gap: 14px;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #d97706; margin-top: 2px;"></i>
+        <div>
+            <h4 style="margin: 0 0 6px; font-size: 15px; color: #92400e; font-weight: 700;">Doctor Quota Limit Reached</h4>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5;">
+                Your current subscription allows a maximum of <strong><?= $maxDoctors ?> doctor(s)</strong> (currently using <strong><?= $activeDocCount ?> / <?= $maxDoctors ?></strong>). 
+                To register more doctors, please upgrade your subscription plan or contact your administrator.
+            </p>
+        </div>
+    </div>
+    <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-warning btn-sm" style="white-space: nowrap; background: #d97706; border: none; color: white; font-weight: 600; padding: 8px 16px; border-radius: 6px; text-decoration: none;">
+        <i class="fas fa-arrow-circle-up"></i> Upgrade Plan
+    </a>
+</div>
+<?php endif; ?>
 
 <form method="POST" action="" class="card">
     <div class="card-body">
@@ -339,7 +374,7 @@ $branches = $db->fetchAll("SELECT id, name FROM branches WHERE clinic_id = ? AND
 
     <div class="card-footer d-flex justify-end gap-12">
         <a href="<?= BASE_URL ?>/modules/doctors/list.php" class="btn btn-outline">Cancel</a>
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary" <?= $isQuotaReached ? 'disabled style="opacity: 0.5; cursor: not-allowed;" title="Doctor limit reached. Upgrade plan to register doctors."' : '' ?>>
             <i class="fas fa-<?= $isEdit ? 'save' : 'user-md' ?>"></i>
             <?= $isEdit ? 'Update Doctor' : 'Register Doctor' ?>
         </button>

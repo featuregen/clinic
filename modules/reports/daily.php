@@ -37,23 +37,101 @@ try {
         "SELECT payment_mode, COUNT(*) as count, SUM(amount) as total FROM payments WHERE clinic_id=? AND payment_date BETWEEN ? AND ? GROUP BY payment_mode",
         [$clinicId, $fromDate, $toDate]
     );
+
+    $clinic = $db->fetch("SELECT * FROM clinics WHERE id = ?", [$clinicId]);
 } catch (Exception $e) {
     $dayAppts = ['total' => 0, 'completed' => 0, 'cancelled' => 0];
     $dayRevenue = $dayPatients = 0;
     $dayInvoices = ['billed' => 0, 'collected' => 0, 'due' => 0];
     $monthlyRevenue = $doctorRevenue = $paymentModes = [];
+    $clinic = null;
 }
 ?>
 
-<div class="content-header">
+<style>
+@media print {
+    .sidebar, .header, .sidebar-overlay, .breadcrumb, .no-print, form, .btn {
+        display: none !important;
+    }
+    .app-wrapper, .main-content, .content-area {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        background: #fff !important;
+    }
+    .print-only-header {
+        display: block !important;
+    }
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #e5e7eb !important;
+        break-inside: avoid;
+        margin-bottom: 16px !important;
+    }
+    .stat-card {
+        border: 1px solid #d1d5db !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+        padding: 12px !important;
+    }
+    .table th, .table td {
+        padding: 8px 10px !important;
+        border: 1px solid #e5e7eb !important;
+    }
+    .grid-4 {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 12px !important;
+    }
+    .grid-2 {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 16px !important;
+    }
+    body {
+        font-size: 12px !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+}
+</style>
+
+<!-- Print Only Header -->
+<div class="print-only-header" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00838f; padding-bottom: 16px; margin-bottom: 20px;">
+        <div>
+            <h1 style="font-size: 22px; color: #00838f; margin: 0 0 4px; font-weight: 800;"><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></h1>
+            <p style="margin: 0; font-size: 12px; color: #4b5563;">
+                <?= sanitizeOutput($clinic['address'] ?? '') ?> 
+                <?= !empty($clinic['phone']) ? ' &bull; Phone: ' . sanitizeOutput($clinic['phone']) : '' ?>
+                <?= !empty($clinic['email']) ? ' &bull; Email: ' . sanitizeOutput($clinic['email']) : '' ?>
+            </p>
+        </div>
+        <div style="text-align: right;">
+            <h3 style="margin: 0 0 4px; font-size: 15px; text-transform: uppercase; color: #111827; font-weight: 700;">Performance Summary Report</h3>
+            <p style="margin: 0; font-size: 12px; color: #4b5563;">
+                Period: <strong><?= formatDate($fromDate) ?></strong> to <strong><?= formatDate($toDate) ?></strong>
+            </p>
+            <p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">
+                Generated: <?= date('d M Y, h:i A') ?> by <?= sanitizeOutput(getSession('full_name', 'User')) ?>
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="content-header no-print">
     <div>
         <ul class="breadcrumb"><li><a href="<?= BASE_URL ?>/modules/dashboard/index.php">Dashboard</a></li><li>Reports</li></ul>
         <h1>Reports & Analytics</h1>
     </div>
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Report
+    </button>
 </div>
 
 <!-- Date Filters -->
-<div class="card mb-24">
+<div class="card mb-24 no-print">
     <div class="card-body">
         <form method="GET" class="d-flex gap-12 align-center flex-wrap">
             <label class="form-label mb-0">Date Range:</label>

@@ -240,6 +240,12 @@ $clinic = $db->fetch("SELECT name, logo FROM clinics WHERE id = ?", [getCurrentC
 
             <?php if ($role === ROLE_SUPER_ADMIN): ?>
             <div class="nav-item">
+                <a href="<?= BASE_URL ?>/modules/admin/subscriptions.php" class="nav-link <?= strpos($currentPage, 'subscriptions.php') !== false ? 'active' : '' ?>">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Subscriptions & Billing</span>
+                </a>
+            </div>
+            <div class="nav-item">
                 <a href="<?= BASE_URL ?>/modules/admin/index.php" class="nav-link <?= isActiveMenu('admin') ?>">
                     <i class="fas fa-cogs"></i>
                     <span>System Admin</span>

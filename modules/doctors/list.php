@@ -22,6 +22,11 @@ $doctors = $db->fetchAll(
      WHERE d.clinic_id = ?
      ORDER BY u.full_name", [$clinicId]
 );
+
+$tenantData = $db->tenantInfo ?? [];
+$maxDoctors = isset($tenantData['max_doctors']) ? intval($tenantData['max_doctors']) : 0;
+$totalDocs = count($doctors);
+$isQuotaFull = ($maxDoctors > 0 && $totalDocs >= $maxDoctors);
 ?>
 
 <div class="content-header">
@@ -30,11 +35,30 @@ $doctors = $db->fetchAll(
             <li><a href="<?= BASE_URL ?>/modules/dashboard/index.php">Dashboard</a></li>
             <li>Doctors</li>
         </ul>
-        <h1>Doctor Management</h1>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <h1 style="margin-bottom: 0;">Doctor Management</h1>
+            <span class="badge <?= $isQuotaFull ? 'badge-danger' : 'badge-success' ?>" style="font-size: 12px; padding: 4px 10px; border-radius: 20px;">
+                <i class="fas fa-user-md"></i> <?= $totalDocs ?> / <?= $maxDoctors > 0 ? $maxDoctors : '∞' ?> Slots
+            </span>
+            <?php if ($isQuotaFull): ?>
+            <span style="font-size: 12px; color: #dc2626; font-weight: 600;">
+                (Limit Reached)
+            </span>
+            <?php endif; ?>
+        </div>
     </div>
-    <?php if (hasPermission('doctors.create')): ?>
-    <a href="<?= BASE_URL ?>/modules/doctors/add.php" class="btn btn-primary"><i class="fas fa-user-md"></i> Add Doctor</a>
-    <?php endif; ?>
+    <div class="d-flex gap-8 align-items-center">
+        <?php if ($isQuotaFull): ?>
+        <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-warning btn-sm" style="background: #d97706; color: white; border: none;">
+            <i class="fas fa-arrow-circle-up"></i> Upgrade Plan
+        </a>
+        <?php endif; ?>
+        <?php if (hasPermission('doctors.create')): ?>
+        <a href="<?= BASE_URL ?>/modules/doctors/add.php" class="btn btn-primary" <?= $isQuotaFull ? 'style="opacity: 0.7;" title="Limit reached"' : '' ?>>
+            <i class="fas fa-user-md"></i> Add Doctor
+        </a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="grid-3 gap-24">

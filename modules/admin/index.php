@@ -46,6 +46,7 @@ try {
         <h1><i class="fas fa-cogs" style="color: var(--primary);"></i> System Administration</h1>
     </div>
     <div class="d-flex gap-8">
+        <a href="<?= BASE_URL ?>/modules/admin/subscriptions.php" class="btn btn-success" style="background: #059669; border-color: #047857; color: white;"><i class="fas fa-credit-card"></i> Subscriptions & Billing</a>
         <a href="<?= BASE_URL ?>/modules/admin/create_admin.php" class="btn btn-warning" style="background: #d97706; border-color: #b45309; color: white;"><i class="fas fa-user-shield"></i> Create Clinic Admin</a>
         <a href="<?= BASE_URL ?>/modules/clinic/branches.php" class="btn btn-primary"><i class="fas fa-code-branch"></i> Manage Branches</a>
     </div>

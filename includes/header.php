@@ -9,6 +9,56 @@ if (!defined('BASE_URL')) {
 }
 requireAuth();
 
+// ============================================
+// SUBSCRIPTION GATEKEEPER & EXPIRATION CHECK
+// ============================================
+$tenantData = db()->tenantInfo;
+$userRole = getCurrentUserRole();
+$scriptPath = $_SERVER['PHP_SELF'] ?? '';
+
+$isExpired = !empty($tenantData['is_expired']);
+$isSuperAdmin = ($userRole === ROLE_SUPER_ADMIN);
+
+// Allowed pages during paywall/expiration
+$allowedPaywallPages = [
+    'paywall.php',
+    'verify_payment.php',
+    'logout.php',
+    'subscriptions.php'
+];
+
+$isPaywallPage = false;
+foreach ($allowedPaywallPages as $page) {
+    if (strpos($scriptPath, $page) !== false) {
+        $isPaywallPage = true;
+        break;
+    }
+}
+
+// If clinic is expired and user is not Super Admin, redirect to paywall
+if ($isExpired && !$isSuperAdmin && !$isPaywallPage) {
+    header('Location: ' . BASE_URL . '/modules/subscription/paywall.php');
+    exit;
+}
+
+// Expiration Warning Banner logic (if <= 7 days remaining and not lifetime)
+$showExpiryBanner = false;
+$daysRemaining = null;
+$expiryTimestamp = null;
+if (!$isExpired && !empty($tenantData) && empty($tenantData['is_lifetime']) && ($tenantData['plan_type'] ?? '') !== 'one_time') {
+    $expiryTimestamp = !empty($tenantData['subscription_ends_at']) 
+        ? strtotime($tenantData['subscription_ends_at']) 
+        : (!empty($tenantData['trial_ends_at']) ? strtotime($tenantData['trial_ends_at']) : null);
+    
+    if ($expiryTimestamp) {
+        $secondsLeft = $expiryTimestamp - time();
+        if ($secondsLeft > 0 && $secondsLeft <= (7 * 86400)) {
+            $daysRemaining = max(1, ceil($secondsLeft / 86400));
+            $showExpiryBanner = true;
+        }
+    }
+}
+
 $currentUser = [
     'id' => getCurrentUserId(),
     'name' => getSession('full_name', 'User'),
@@ -118,5 +168,17 @@ $currentUser = [
             <div class="alert alert-<?= $flash['type'] ?>" data-auto-dismiss="5000">
                 <i class="fas fa-<?= $flash['type'] === 'success' ? 'check-circle' : ($flash['type'] === 'error' ? 'times-circle' : 'info-circle') ?>"></i>
                 <?= sanitizeOutput($flash['message']) ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($showExpiryBanner && $userRole !== ROLE_SUPER_ADMIN): ?>
+            <div class="alert alert-warning" style="display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #f59e0b; background: #fffbeb; color: #92400e; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-clock" style="font-size: 20px; color: #d97706;"></i>
+                    <div style="font-size: 13px;">
+                        <strong>Subscription Expiring Soon:</strong> Your clinic plan expires in <strong><?= $daysRemaining ?> day<?= $daysRemaining > 1 ? 's' : '' ?></strong> (<?= date('d M Y', $expiryTimestamp) ?>). Renew now to prevent service interruption.
+                    </div>
+                </div>
+                <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-sm btn-warning" style="white-space: nowrap; background: #d97706; color: white; border: none; font-weight: 600; padding: 6px 14px; border-radius: 6px; text-decoration: none;">Renew Plan</a>
             </div>
             <?php endif; ?>
