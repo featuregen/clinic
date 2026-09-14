@@ -1,6 +1,6 @@
 <?php
 /**
- * User-Level Permission Overrides - Advanced Clinic Suite
+ * User-Level Permission Overrides - Feature Gen Care
  * Admin can grant/deny specific permissions for individual users,
  * overriding what their role normally allows.
  */

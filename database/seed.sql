@@ -1,5 +1,5 @@
 -- ============================================
--- Advanced Clinic Suite - Seed Data
+-- Feature Gen Care - Seed Data
 -- ============================================
 
 USE clinic_suite;
@@ -8,7 +8,7 @@ USE clinic_suite;
 -- 1. Default Clinic
 -- ============================================
 INSERT INTO clinics (name, tagline, email, phone, address, city, state, pincode, registration_no)
-VALUES ('Advanced Clinic Suite', 'Your Health, Our Priority', 'admin@clinicsuite.com', '+91 9876543210',
+VALUES ('Feature Gen Care', 'Your Health, Our Priority', 'admin@clinicsuite.com', '+91 9876543210',
         '123 Medical Plaza, Health Street', 'Mumbai', 'Maharashtra', '400001', 'CLN-2025-001');
 
 -- ============================================

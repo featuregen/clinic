@@ -1,7 +1,7 @@
 <?php
 /**
  * Database Configuration & Connection
- * Advanced Clinic Suite
+ * Feature Gen Care
  */
 
 class Database {

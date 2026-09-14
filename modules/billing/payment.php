@@ -1,6 +1,6 @@
 <?php
 /**
- * Record Payment - Advanced Clinic Suite
+ * Record Payment - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requireAuth();

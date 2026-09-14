@@ -1,7 +1,7 @@
 <?php
 /**
  * Complete Migration & Master Data Seeder
- * Advanced Clinic Suite
+ * Feature Gen Care
  * 
  * Run once: http://localhost:8888/Clinic/clinic-web/migrate.php
  * Safe to re-run — all statements use IF NOT EXISTS / INSERT IGNORE

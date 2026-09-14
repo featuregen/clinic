@@ -1,11 +1,11 @@
 <?php
 /**
  * Application Constants
- * Advanced Clinic Suite
+ * Feature Gen Care
  */
 
 // Application Info
-define('APP_NAME', 'Advanced Clinic Suite');
+define('APP_NAME', 'Feature Gen Care');
 define('APP_VERSION', '1.0.0');
 define('APP_TAGLINE', 'Multi-Specialty Clinic Management Platform');
 

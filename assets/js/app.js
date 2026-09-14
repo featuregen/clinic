@@ -1,5 +1,5 @@
 /**
- * Advanced Clinic Suite - Main Application JavaScript
+ * Feature Gen Care - Main Application JavaScript
  * Sidebar, Notifications, AJAX, Modals, Search
  */
 

@@ -1,7 +1,7 @@
 <?php
 /**
  * Sidebar Navigation
- * Advanced Clinic Suite - Role-Based Menu
+ * Feature Gen Care - Role-Based Menu
  */
 
 $role = getCurrentUserRole();

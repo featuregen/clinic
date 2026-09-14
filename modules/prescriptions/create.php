@@ -1,6 +1,6 @@
 <?php
 /**
- * Create/Edit Prescription - Advanced Clinic Suite
+ * Create/Edit Prescription - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requireAuth();

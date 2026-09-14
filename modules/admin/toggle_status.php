@@ -1,6 +1,6 @@
 <?php
 /**
- * Toggle User Status AJAX - Advanced Clinic Suite
+ * Toggle User Status AJAX - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/database.php';
 require_once dirname(dirname(__DIR__)) . '/config/constants.php';

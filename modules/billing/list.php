@@ -1,6 +1,6 @@
 <?php
 /**
- * Billing - Invoice List - Advanced Clinic Suite
+ * Billing - Invoice List - Feature Gen Care
  */
 $pageTitle = 'Billing';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

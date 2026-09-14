@@ -1,7 +1,7 @@
 <?php
 /**
  * Prescription Print View
- * Advanced Clinic Suite
+ * Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requirePermission('prescriptions.view');

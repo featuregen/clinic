@@ -1,6 +1,6 @@
 <?php
 /**
- * Dashboard - Advanced Clinic Suite
+ * Dashboard - Feature Gen Care
  * Real-time stats, charts, and today's overview
  */
 

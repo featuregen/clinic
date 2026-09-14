@@ -1,5 +1,5 @@
 -- ============================================
--- Advanced Clinic Suite - Database Schema
+-- Feature Gen Care - Database Schema
 -- Version: 1.0.0
 -- ============================================
 

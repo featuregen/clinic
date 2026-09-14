@@ -1,6 +1,6 @@
 <?php
 /**
- * Patient Profile View - Advanced Clinic Suite
+ * Patient Profile View - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requirePermission('patients.view');

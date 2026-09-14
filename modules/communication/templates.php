@@ -1,6 +1,6 @@
 <?php
 /**
- * Message Templates - Advanced Clinic Suite
+ * Message Templates - Feature Gen Care
  */
 $pageTitle = 'Message Templates';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

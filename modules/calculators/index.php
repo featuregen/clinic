@@ -1,6 +1,6 @@
 <?php
 /**
- * Medical Calculators - Advanced Clinic Suite
+ * Medical Calculators - Feature Gen Care
  */
 $pageTitle = 'Medical Calculators';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

@@ -1,7 +1,7 @@
 <?php
 /**
  * Session Management
- * Advanced Clinic Suite
+ * Feature Gen Care
  */
 
 require_once __DIR__ . '/constants.php';

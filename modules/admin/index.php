@@ -1,6 +1,6 @@
 <?php
 /**
- * System Admin Dashboard - Advanced Clinic Suite
+ * System Admin Dashboard - Feature Gen Care
  * Super Admin Only
  */
 $pageTitle = 'System Admin';

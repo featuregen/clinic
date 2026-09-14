@@ -1,6 +1,6 @@
 <?php
 /**
- * Create Invoice - Advanced Clinic Suite
+ * Create Invoice - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requireAuth();

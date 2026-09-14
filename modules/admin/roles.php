@@ -1,6 +1,6 @@
 <?php
 /**
- * Role Permissions Manager - Advanced Clinic Suite
+ * Role Permissions Manager - Feature Gen Care
  * Admin can grant/revoke permissions per role using a visual matrix.
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';

@@ -1,6 +1,6 @@
 <?php
 /**
- * Master Data Management - Advanced Clinic Suite
+ * Master Data Management - Feature Gen Care
  * Manages: Departments, Specialties, Medicines, Diagnoses, Lab Tests
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';

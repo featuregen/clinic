@@ -1,7 +1,7 @@
 <?php
 /**
  * Header Component
- * Advanced Clinic Suite
+ * Feature Gen Care
  */
 
 if (!defined('BASE_URL')) {

@@ -1,7 +1,7 @@
 <?php
 /**
  * Create Tenant Script (CLI or Admin Use)
- * Advanced Clinic Suite
+ * Feature Gen Care
  * 
  * Usage from CLI: php create_tenant.php "Clinic Name" "subdomain"
  */

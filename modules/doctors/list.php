@@ -1,6 +1,6 @@
 <?php
 /**
- * Doctor List - Advanced Clinic Suite
+ * Doctor List - Feature Gen Care
  */
 $pageTitle = 'Doctors';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

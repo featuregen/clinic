@@ -1,6 +1,6 @@
 <?php
 /**
- * Seed Departments - Advanced Clinic Suite
+ * Seed Departments - Feature Gen Care
  */
 require_once __DIR__ . '/config/database.php';
 

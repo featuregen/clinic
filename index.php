@@ -1,6 +1,6 @@
 <?php
 /**
- * Login Page - Advanced Clinic Suite
+ * Login Page - Feature Gen Care
  */
 
 require_once __DIR__ . '/config/session.php';
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?= APP_NAME ?></title>
-    <meta name="description" content="Advanced Clinic Suite - Multi-Specialty Clinic Management Platform">
+    <meta name="description" content="Feature Gen Care - Multi-Specialty Clinic Management Platform">
     <link rel="icon" type="image/svg+xml" href="<?= ASSETS_URL ?>/images/favicon.svg">
     <link rel="stylesheet" href="<?= ASSETS_URL ?>/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -377,7 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="hero-icon">
                     <i class="fas fa-stethoscope"></i>
                 </div>
-                <h2>Welcome to Clinic Suite</h2>
+                <h2>Welcome to Feature Gen Care</h2>
                 <p>Manage your clinic efficiently with our comprehensive healthcare management platform.</p>
             </div>
         </div>

@@ -1,7 +1,7 @@
 <?php
 /**
  * 403 Forbidden Page
- * Advanced Clinic Suite
+ * Feature Gen Care
  */
 $pageTitle = 'Access Denied';
 ?>

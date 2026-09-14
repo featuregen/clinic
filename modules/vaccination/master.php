@@ -1,6 +1,6 @@
 <?php
 /**
- * Vaccine Master Data - Advanced Clinic Suite
+ * Vaccine Master Data - Feature Gen Care
  * Manages: Vaccines, Vaccine Schedules
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';

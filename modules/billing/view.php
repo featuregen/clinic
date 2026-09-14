@@ -1,6 +1,6 @@
 <?php
 /**
- * Invoice View / Print - Advanced Clinic Suite
+ * Invoice View / Print - Feature Gen Care
  */
 $pageTitle = 'Invoice Details';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

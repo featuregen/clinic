@@ -1,6 +1,6 @@
 <?php
 /**
- * Appointment List & Calendar - Advanced Clinic Suite
+ * Appointment List & Calendar - Feature Gen Care
  */
 $pageTitle = 'Appointments';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

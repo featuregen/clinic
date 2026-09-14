@@ -1,6 +1,6 @@
 <?php
 /**
- * User Profile - Advanced Clinic Suite
+ * User Profile - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requireAuth();

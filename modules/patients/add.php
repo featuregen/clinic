@@ -1,6 +1,6 @@
 <?php
 /**
- * Add/Edit Patient - Advanced Clinic Suite
+ * Add/Edit Patient - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requireAuth();

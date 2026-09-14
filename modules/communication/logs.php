@@ -1,6 +1,6 @@
 <?php
 /**
- * Communication Logs - Advanced Clinic Suite
+ * Communication Logs - Feature Gen Care
  */
 $pageTitle = 'Communication Logs';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

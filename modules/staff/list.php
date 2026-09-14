@@ -1,6 +1,6 @@
 <?php
 /**
- * Staff List - Advanced Clinic Suite
+ * Staff List - Feature Gen Care
  */
 $pageTitle = 'Staff';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

@@ -1,6 +1,6 @@
 <?php
 /**
- * Patient Search AJAX - Advanced Clinic Suite
+ * Patient Search AJAX - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 require_once dirname(dirname(__DIR__)) . '/config/database.php';

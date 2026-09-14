@@ -1,6 +1,6 @@
 <?php
 /**
- * Dental Chart - Advanced Clinic Suite
+ * Dental Chart - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requirePermission('dental.view');

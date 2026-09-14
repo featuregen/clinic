@@ -1,6 +1,6 @@
 <?php
 /**
- * Vaccination Schedule - Advanced Clinic Suite
+ * Vaccination Schedule - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requirePermission('vaccination.view');

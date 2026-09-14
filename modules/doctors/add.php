@@ -1,6 +1,6 @@
 <?php
 /**
- * Add/Edit Doctor - Advanced Clinic Suite
+ * Add/Edit Doctor - Feature Gen Care
  * Dual-table: users + doctors
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';

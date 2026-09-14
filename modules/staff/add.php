@@ -1,6 +1,6 @@
 <?php
 /**
- * Add/Edit Staff - Advanced Clinic Suite
+ * Add/Edit Staff - Feature Gen Care
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requireAuth();

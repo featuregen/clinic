@@ -1,6 +1,6 @@
 <?php
 /**
- * Reports - Daily Summary - Advanced Clinic Suite
+ * Reports - Daily Summary - Feature Gen Care
  */
 $pageTitle = 'Reports';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

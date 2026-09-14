@@ -1,6 +1,6 @@
 <?php
 /**
- * Prescription List - Advanced Clinic Suite
+ * Prescription List - Feature Gen Care
  */
 $pageTitle = 'Prescriptions';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';

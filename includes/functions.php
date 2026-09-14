@@ -1,7 +1,7 @@
 <?php
 /**
  * Utility Functions
- * Advanced Clinic Suite
+ * Feature Gen Care
  */
 
 require_once __DIR__ . '/../config/database.php';

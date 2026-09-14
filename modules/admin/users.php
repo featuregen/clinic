@@ -1,6 +1,6 @@
 <?php
 /**
- * User Management - Advanced Clinic Suite
+ * User Management - Feature Gen Care
  * Super Admin Only
  */
 $pageTitle = 'User Management';

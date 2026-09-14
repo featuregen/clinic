@@ -1,7 +1,7 @@
 <?php
 /**
  * Logout Handler
- * Advanced Clinic Suite
+ * Feature Gen Care
  */
 
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
