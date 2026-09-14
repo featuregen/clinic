@@ -52,17 +52,17 @@ try {
     if ($planType === 'one_time') {
         $isLifetime = 1;
         $newEnd = null;
-        $doctorLimit = intval($settings['one_time_max_doctors'] ?? 0);
+        $doctorLimit = isset($currentTenant['custom_lifetime_doctors']) && $currentTenant['custom_lifetime_doctors'] !== null ? intval($currentTenant['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
         $billingCycle = 'one_time';
     } elseif ($planType === 'monthly') {
         $newEnd = date('Y-m-d 23:59:59', strtotime("+1 month", $startTs));
-        $doctorLimit = intval($settings['monthly_max_doctors'] ?? 3);
+        $doctorLimit = !empty($currentTenant['custom_monthly_doctors']) ? intval($currentTenant['custom_monthly_doctors']) : intval($settings['monthly_max_doctors'] ?? 3);
         $billingCycle = 'monthly';
     } elseif ($planType === 'yearly') {
-        $bonusMonths = intval($settings['yearly_default_bonus_months'] ?? 2);
+        $bonusMonths = isset($currentTenant['custom_yearly_bonus_months']) && $currentTenant['custom_yearly_bonus_months'] !== null ? intval($currentTenant['custom_yearly_bonus_months']) : intval($settings['yearly_default_bonus_months'] ?? 2);
         $totalMonths = 12 + $bonusMonths;
         $newEnd = date('Y-m-d 23:59:59', strtotime("+{$totalMonths} month", $startTs));
-        $doctorLimit = intval($settings['yearly_max_doctors'] ?? 10);
+        $doctorLimit = !empty($currentTenant['custom_yearly_doctors']) ? intval($currentTenant['custom_yearly_doctors']) : intval($settings['yearly_max_doctors'] ?? 10);
         $billingCycle = 'yearly';
     }
     

@@ -15,7 +15,16 @@ ALTER TABLE tenants
     ADD COLUMN IF NOT EXISTS bonus_months INT DEFAULT 0 COMMENT 'Negotiated bonus months' AFTER is_lifetime,
     ADD COLUMN IF NOT EXISTS plan_amount DECIMAL(10,2) DEFAULT 0.00 AFTER bonus_months,
     ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'INR' AFTER plan_amount,
-    ADD COLUMN IF NOT EXISTS subscription_status ENUM('trial', 'active', 'expired', 'grace_period', 'suspended') DEFAULT 'trial' AFTER currency;
+    ADD COLUMN IF NOT EXISTS subscription_status ENUM('trial', 'active', 'expired', 'grace_period', 'suspended') DEFAULT 'trial' AFTER currency,
+    ADD COLUMN IF NOT EXISTS custom_monthly_price DECIMAL(10,2) NULL AFTER subscription_status,
+    ADD COLUMN IF NOT EXISTS custom_monthly_doctors INT NULL AFTER custom_monthly_price,
+    ADD COLUMN IF NOT EXISTS custom_yearly_price DECIMAL(10,2) NULL AFTER custom_monthly_doctors,
+    ADD COLUMN IF NOT EXISTS custom_yearly_doctors INT NULL AFTER custom_yearly_price,
+    ADD COLUMN IF NOT EXISTS custom_yearly_bonus_months INT NULL AFTER custom_yearly_doctors,
+    ADD COLUMN IF NOT EXISTS custom_lifetime_price DECIMAL(10,2) NULL AFTER custom_yearly_bonus_months,
+    ADD COLUMN IF NOT EXISTS custom_lifetime_doctors INT NULL AFTER custom_lifetime_price,
+    ADD COLUMN IF NOT EXISTS custom_trial_months INT NULL AFTER custom_lifetime_doctors,
+    ADD COLUMN IF NOT EXISTS custom_trial_doctors INT NULL AFTER custom_trial_months;
 
 -- 2. Create `tenant_subscription_payments`
 CREATE TABLE IF NOT EXISTS tenant_subscription_payments (

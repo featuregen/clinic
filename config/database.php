@@ -174,6 +174,21 @@ class Database {
                     WHERE subscription_ends_at IS NULL AND is_lifetime = 0");
             }
             
+            // Check if custom clinic plan pricing columns exist
+            $colCustomCheck = $masterConn->query("SHOW COLUMNS FROM tenants LIKE 'custom_monthly_price'")->fetch();
+            if (!$colCustomCheck) {
+                $masterConn->exec("ALTER TABLE tenants 
+                    ADD COLUMN custom_monthly_price DECIMAL(10,2) NULL,
+                    ADD COLUMN custom_monthly_doctors INT NULL,
+                    ADD COLUMN custom_yearly_price DECIMAL(10,2) NULL,
+                    ADD COLUMN custom_yearly_doctors INT NULL,
+                    ADD COLUMN custom_yearly_bonus_months INT NULL,
+                    ADD COLUMN custom_lifetime_price DECIMAL(10,2) NULL,
+                    ADD COLUMN custom_lifetime_doctors INT NULL,
+                    ADD COLUMN custom_trial_months INT NULL,
+                    ADD COLUMN custom_trial_doctors INT NULL");
+            }
+            
             // Ensure tenant_subscription_payments exists
             $masterConn->exec("CREATE TABLE IF NOT EXISTS tenant_subscription_payments (
                 id INT AUTO_INCREMENT PRIMARY KEY,

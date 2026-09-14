@@ -23,15 +23,16 @@ foreach ($settingsRows as $row) {
     $settings[$row['setting_key']] = $row['setting_value'];
 }
 
-$monthlyPrice = floatval($settings['monthly_price'] ?? 1499);
-$monthlyDoctors = intval($settings['monthly_max_doctors'] ?? 3);
+// Read Custom Clinic Pricing (decided by Super Admin), falling back to global defaults
+$monthlyPrice = !empty($currentTenant['custom_monthly_price']) ? floatval($currentTenant['custom_monthly_price']) : floatval($settings['monthly_price'] ?? 1499);
+$monthlyDoctors = !empty($currentTenant['custom_monthly_doctors']) ? intval($currentTenant['custom_monthly_doctors']) : intval($settings['monthly_max_doctors'] ?? 3);
 
-$yearlyPrice = floatval($settings['yearly_price'] ?? 14999);
-$yearlyDoctors = intval($settings['yearly_max_doctors'] ?? 10);
-$yearlyBonus = intval($settings['yearly_default_bonus_months'] ?? 2);
+$yearlyPrice = !empty($currentTenant['custom_yearly_price']) ? floatval($currentTenant['custom_yearly_price']) : floatval($settings['yearly_price'] ?? 14999);
+$yearlyDoctors = !empty($currentTenant['custom_yearly_doctors']) ? intval($currentTenant['custom_yearly_doctors']) : intval($settings['yearly_max_doctors'] ?? 10);
+$yearlyBonus = isset($currentTenant['custom_yearly_bonus_months']) && $currentTenant['custom_yearly_bonus_months'] !== null ? intval($currentTenant['custom_yearly_bonus_months']) : intval($settings['yearly_default_bonus_months'] ?? 2);
 
-$lifetimePrice = floatval($settings['one_time_price'] ?? 49999);
-$lifetimeDoctors = intval($settings['one_time_max_doctors'] ?? 0);
+$lifetimePrice = !empty($currentTenant['custom_lifetime_price']) ? floatval($currentTenant['custom_lifetime_price']) : floatval($settings['one_time_price'] ?? 49999);
+$lifetimeDoctors = isset($currentTenant['custom_lifetime_doctors']) && $currentTenant['custom_lifetime_doctors'] !== null ? intval($currentTenant['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
 
 $razorpayKey = $settings['razorpay_key_id'] ?? '';
 $offlineContact = $settings['offline_payment_contact'] ?? 'Phone: +91 98765 43210';

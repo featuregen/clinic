@@ -1,9 +1,9 @@
 <?php
 /**
- * Subscription & Billing Control Plane - Feature Gen Care
+ * Subscription & Custom Plan Decision Screen - Feature Gen Care
  * Super Admin Only - Scoped to Current Clinic Tenant
  */
-$pageTitle = 'Subscriptions & Billing';
+$pageTitle = 'Decide Clinic Plan & Pricing';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 
 $role = getCurrentUserRole();
@@ -15,7 +15,7 @@ if ($role !== ROLE_SUPER_ADMIN) {
 $master = master_db();
 $tenantInfo = db()->tenantInfo;
 $currentTenantId = intval($tenantInfo['id'] ?? 0);
-$currentTab = sanitize($_GET['tab'] ?? 'tenants');
+$currentTab = sanitize($_GET['tab'] ?? 'plan');
 $successMsg = '';
 $errorMsg = '';
 
@@ -31,7 +31,27 @@ if (!$thisTenant && !empty($tenantInfo['subdomain'])) {
 }
 
 $t = $thisTenant ?: $tenantInfo;
-$tenants = $thisTenant ? [$thisTenant] : [];
+
+// Fetch SaaS Global Fallback Settings
+$settingsRows = $master->query("SELECT setting_key, setting_value FROM saas_global_settings")->fetchAll();
+$settings = [];
+foreach ($settingsRows as $row) {
+    $settings[$row['setting_key']] = $row['setting_value'];
+}
+
+// Active plan effective values for this clinic
+$effMonthlyPrice = !empty($t['custom_monthly_price']) ? floatval($t['custom_monthly_price']) : floatval($settings['monthly_price'] ?? 1499);
+$effMonthlyDoctors = !empty($t['custom_monthly_doctors']) ? intval($t['custom_monthly_doctors']) : intval($settings['monthly_max_doctors'] ?? 3);
+
+$effYearlyPrice = !empty($t['custom_yearly_price']) ? floatval($t['custom_yearly_price']) : floatval($settings['yearly_price'] ?? 14999);
+$effYearlyDoctors = !empty($t['custom_yearly_doctors']) ? intval($t['custom_yearly_doctors']) : intval($settings['yearly_max_doctors'] ?? 10);
+$effYearlyBonus = isset($t['custom_yearly_bonus_months']) && $t['custom_yearly_bonus_months'] !== null ? intval($t['custom_yearly_bonus_months']) : intval($settings['yearly_default_bonus_months'] ?? 2);
+
+$effLifetimePrice = !empty($t['custom_lifetime_price']) ? floatval($t['custom_lifetime_price']) : floatval($settings['one_time_price'] ?? 49999);
+$effLifetimeDoctors = isset($t['custom_lifetime_doctors']) && $t['custom_lifetime_doctors'] !== null ? intval($t['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
+
+$effTrialMonths = !empty($t['custom_trial_months']) ? intval($t['custom_trial_months']) : intval($settings['trial_duration_months'] ?? 1);
+$effTrialDoctors = !empty($t['custom_trial_doctors']) ? intval($t['custom_trial_doctors']) : intval($settings['trial_max_doctors'] ?? 2);
 
 // ============================================
 // POST ACTION HANDLERS
@@ -39,26 +59,94 @@ $tenants = $thisTenant ? [$thisTenant] : [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = sanitize($_POST['action'] ?? '');
     
-    // 1. UPDATE TENANT PLAN & DOCTOR LIMITS
-    if ($action === 'update_plan') {
-        $tenantId = intval($_POST['tenant_id'] ?? $t['id']);
-        $planType = sanitize($_POST['plan_type'] ?? 'trial');
-        $billingCycle = sanitize($_POST['billing_cycle'] ?? 'trial');
-        $maxDoctors = intval($_POST['max_doctors'] ?? 2);
-        $bonusMonths = intval($_POST['bonus_months'] ?? 0);
-        $planAmount = floatval($_POST['plan_amount'] ?? 0);
-        $isLifetime = isset($_POST['is_lifetime']) ? 1 : 0;
-        $subStatus = sanitize($_POST['subscription_status'] ?? 'active');
-        $expiryDate = !empty($_POST['subscription_ends_at']) ? $_POST['subscription_ends_at'] . ' 23:59:59' : null;
+    // 1. SAVE CUSTOM CLINIC PLANS & PRICING
+    if ($action === 'save_clinic_custom_plans') {
+        $monthlyPrice = floatval($_POST['custom_monthly_price'] ?? $effMonthlyPrice);
+        $monthlyDoctors = intval($_POST['custom_monthly_doctors'] ?? $effMonthlyDoctors);
+        $yearlyPrice = floatval($_POST['custom_yearly_price'] ?? $effYearlyPrice);
+        $yearlyDoctors = intval($_POST['custom_yearly_doctors'] ?? $effYearlyDoctors);
+        $yearlyBonus = intval($_POST['custom_yearly_bonus_months'] ?? $effYearlyBonus);
+        $lifetimePrice = floatval($_POST['custom_lifetime_price'] ?? $effLifetimePrice);
+        $lifetimeDoctors = intval($_POST['custom_lifetime_doctors'] ?? $effLifetimeDoctors);
+        $trialMonths = intval($_POST['custom_trial_months'] ?? $effTrialMonths);
+        $trialDoctors = intval($_POST['custom_trial_doctors'] ?? $effTrialDoctors);
+
+        try {
+            $stmt = $master->prepare("
+                UPDATE tenants 
+                SET custom_monthly_price = ?,
+                    custom_monthly_doctors = ?,
+                    custom_yearly_price = ?,
+                    custom_yearly_doctors = ?,
+                    custom_yearly_bonus_months = ?,
+                    custom_lifetime_price = ?,
+                    custom_lifetime_doctors = ?,
+                    custom_trial_months = ?,
+                    custom_trial_doctors = ?,
+                    updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $monthlyPrice, $monthlyDoctors, $yearlyPrice, $yearlyDoctors,
+                $yearlyBonus, $lifetimePrice, $lifetimeDoctors, $trialMonths,
+                $trialDoctors, $t['id']
+            ]);
+            
+            setFlashMessage('success', "Custom plans & pricing for {$t['clinic_name']} saved successfully! Future renewals and billing for this clinic will use these exact rates.");
+            header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=plan");
+            exit;
+        } catch (Exception $e) {
+            $errorMsg = 'Error saving custom pricing: ' . $e->getMessage();
+        }
+    }
+    
+    // 2. ACTIVATE SPECIFIC PLAN FOR CLINIC DIRECTLY
+    elseif ($action === 'activate_plan_tier') {
+        $tier = sanitize($_POST['tier'] ?? 'monthly');
+        $extendMode = sanitize($_POST['extend_mode'] ?? 'now');
+        $recordPayment = isset($_POST['record_cash_payment']) ? 1 : 0;
         
-        if ($isLifetime || $planType === 'one_time') {
+        $now = time();
+        $currentEnd = !empty($t['subscription_ends_at']) ? strtotime($t['subscription_ends_at']) : 0;
+        $startTs = ($extendMode === 'extend' && $currentEnd > $now) ? $currentEnd : $now;
+        $periodStart = date('Y-m-d H:i:s', $startTs);
+        
+        $newEnd = null;
+        $isLifetime = 0;
+        $planType = $tier;
+        $billingCycle = $tier;
+        $doctorLimit = 2;
+        $bonusGranted = 0;
+        $planPrice = 0.00;
+        
+        if ($tier === 'trial') {
+            $trialMonths = !empty($t['custom_trial_months']) ? intval($t['custom_trial_months']) : intval($settings['trial_duration_months'] ?? 1);
+            $newEnd = date('Y-m-d 23:59:59', strtotime("+{$trialMonths} month", $startTs));
+            $doctorLimit = !empty($t['custom_trial_doctors']) ? intval($t['custom_trial_doctors']) : intval($settings['trial_max_doctors'] ?? 2);
+            $planPrice = 0.00;
+        } elseif ($tier === 'monthly') {
+            $newEnd = date('Y-m-d 23:59:59', strtotime("+1 month", $startTs));
+            $doctorLimit = !empty($t['custom_monthly_doctors']) ? intval($t['custom_monthly_doctors']) : intval($settings['monthly_max_doctors'] ?? 3);
+            $planPrice = !empty($t['custom_monthly_price']) ? floatval($t['custom_monthly_price']) : floatval($settings['monthly_price'] ?? 1499);
+        } elseif ($tier === 'yearly') {
+            $bonusGranted = isset($t['custom_yearly_bonus_months']) && $t['custom_yearly_bonus_months'] !== null ? intval($t['custom_yearly_bonus_months']) : intval($settings['yearly_default_bonus_months'] ?? 2);
+            $totalMonths = 12 + $bonusGranted;
+            $newEnd = date('Y-m-d 23:59:59', strtotime("+{$totalMonths} month", $startTs));
+            $doctorLimit = !empty($t['custom_yearly_doctors']) ? intval($t['custom_yearly_doctors']) : intval($settings['yearly_max_doctors'] ?? 10);
+            $planPrice = !empty($t['custom_yearly_price']) ? floatval($t['custom_yearly_price']) : floatval($settings['yearly_price'] ?? 14999);
+        } elseif ($tier === 'one_time') {
             $isLifetime = 1;
-            $expiryDate = null;
-            $subStatus = 'active';
+            $newEnd = null;
+            $doctorLimit = isset($t['custom_lifetime_doctors']) && $t['custom_lifetime_doctors'] !== null ? intval($t['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);
+            $planPrice = !empty($t['custom_lifetime_price']) ? floatval($t['custom_lifetime_price']) : floatval($settings['one_time_price'] ?? 49999);
+            $billingCycle = 'one_time';
         }
         
         try {
-            $stmt = $master->prepare("
+            $master->beginTransaction();
+            
+            // 1. Update Tenant
+            $stmtU = $master->prepare("
                 UPDATE tenants 
                 SET plan_type = ?,
                     billing_cycle = ?,
@@ -66,28 +154,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     bonus_months = ?,
                     plan_amount = ?,
                     is_lifetime = ?,
+                    subscription_starts_at = NOW(),
                     subscription_ends_at = ?,
-                    subscription_status = ?,
+                    subscription_status = 'active',
                     status = 'active',
                     updated_at = NOW()
                 WHERE id = ?
             ");
-            $stmt->execute([
-                $planType, $billingCycle, $maxDoctors, $bonusMonths, $planAmount,
-                $isLifetime, $expiryDate, $subStatus, $tenantId
+            $stmtU->execute([
+                $planType, $billingCycle, $doctorLimit, $bonusGranted, $planPrice,
+                $isLifetime, $newEnd, $t['id']
             ]);
             
-            setFlashMessage('success', 'Clinic subscription plan updated successfully.');
-            header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=tenants");
-            exit;
+            // 2. Optionally record payment if requested
+            $issuedPaymentId = null;
+            if ($recordPayment && $planPrice > 0) {
+                $ref = 'REC-' . date('Y') . '-' . rand(1000, 9999);
+                $stmtP = $master->prepare("
+                    INSERT INTO tenant_subscription_payments (
+                        tenant_id, plan_type, amount, payment_mode, payment_reference,
+                        collected_by, period_start, period_end, bonus_months_granted,
+                        doctor_limit_granted, status, notes, created_at
+                    ) VALUES (?, ?, ?, 'cash_on_hand', ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
+                ");
+                $stmtP->execute([
+                    $t['id'], $planType, $planPrice, $ref,
+                    getSession('full_name', 'Super Admin'),
+                    $periodStart, $newEnd, $bonusGranted, $doctorLimit,
+                    "Plan activated via Super Admin control panel with direct cash logging."
+                ]);
+                $issuedPaymentId = $master->lastInsertId();
+            }
+            
+            $master->commit();
+            
+            if ($issuedPaymentId) {
+                setFlashMessage('success', "Plan activated and Cash on Hand payment of ₹" . number_format($planPrice, 2) . " recorded!");
+                header("Location: " . BASE_URL . "/modules/admin/print_subscription_receipt.php?id=" . $issuedPaymentId);
+                exit;
+            } else {
+                setFlashMessage('success', "Plan successfully updated and activated for {$t['clinic_name']}!");
+                header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=plan");
+                exit;
+            }
         } catch (Exception $e) {
-            $errorMsg = 'Error updating plan: ' . $e->getMessage();
+            $master->rollBack();
+            $errorMsg = 'Error activating plan: ' . $e->getMessage();
         }
     }
     
-    // 2. RECORD PAYMENT (Cash on Hand, Bank Transfer, Cheque, UPI, Razorpay)
+    // 3. RECORD PAYMENT (Cash on Hand, Bank Transfer, Cheque, UPI, Razorpay)
     elseif ($action === 'record_payment') {
-        $tenantId = intval($_POST['tenant_id'] ?? $t['id']);
         $amount = floatval($_POST['amount'] ?? 0);
         $paymentMode = sanitize($_POST['payment_mode'] ?? 'cash_on_hand');
         $reference = sanitize($_POST['payment_reference'] ?? '');
@@ -105,21 +222,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $master->beginTransaction();
             
-            $stmtT = $master->prepare("SELECT * FROM tenants WHERE id = ?");
-            $stmtT->execute([$tenantId]);
-            $tenantRow = $stmtT->fetch();
-            
-            if (!$tenantRow) {
-                throw new Exception("Clinic tenant not found.");
-            }
-            
             $now = time();
-            $currentEnd = !empty($tenantRow['subscription_ends_at']) ? strtotime($tenantRow['subscription_ends_at']) : 0;
+            $currentEnd = !empty($t['subscription_ends_at']) ? strtotime($t['subscription_ends_at']) : 0;
             $periodStart = ($currentEnd > $now) ? date('Y-m-d H:i:s', $currentEnd) : date('Y-m-d H:i:s');
             $startTs = strtotime($periodStart);
             $newEnd = null;
             $isLifetime = 0;
-            $planType = $tenantRow['plan_type'];
+            $planType = $t['plan_type'];
             
             if ($periodType === 'lifetime') {
                 $isLifetime = 1;
@@ -146,7 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)
             ");
             $stmtP->execute([
-                $tenantId, $planType, $amount, $paymentMode, $reference,
+                $t['id'], $planType, $amount, $paymentMode, $reference,
                 $collectedBy, $periodStart, $newEnd, $bonusMonths,
                 $doctorLimit, $notes, $paymentDate . ' ' . date('H:i:s')
             ]);
@@ -170,7 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $billingCycle = ($periodType === 'lifetime') ? 'one_time' : (($periodType === '1_month') ? 'monthly' : 'yearly');
             $stmtU->execute([
                 $planType, $billingCycle, $doctorLimit, $bonusMonths, $amount,
-                $isLifetime, $newEnd, $tenantId
+                $isLifetime, $newEnd, $t['id']
             ]);
             
             $master->commit();
@@ -183,8 +292,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // 3. UPDATE SAAS GLOBAL SETTINGS
-    elseif ($action === 'update_settings') {
+    // 4. UPDATE SAAS GLOBAL PLATFORM DEFAULTS
+    elseif ($action === 'update_global_settings') {
         $settingsToSave = [
             'trial_duration_months' => sanitize($_POST['trial_duration_months'] ?? '1'),
             'trial_max_doctors' => sanitize($_POST['trial_max_doctors'] ?? '2'),
@@ -210,11 +319,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($settingsToSave as $k => $v) {
                 $stmtSet->execute([$k, $v]);
             }
-            setFlashMessage('success', 'SaaS Global Settings updated successfully.');
+            setFlashMessage('success', 'SaaS Global Platform Defaults updated successfully.');
             header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=settings");
             exit;
         } catch (Exception $e) {
-            $errorMsg = 'Error saving settings: ' . $e->getMessage();
+            $errorMsg = 'Error saving defaults: ' . $e->getMessage();
         }
     }
 }
@@ -222,14 +331,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ============================================
 // FETCH DATA FOR DISPLAY (CURRENT CLINIC ONLY)
 // ============================================
-// 1. SaaS Settings
-$settingsRows = $master->query("SELECT setting_key, setting_value FROM saas_global_settings")->fetchAll();
-$settings = [];
-foreach ($settingsRows as $row) {
-    $settings[$row['setting_key']] = $row['setting_value'];
-}
-
-// 2. Payment History Ledger for THIS clinic only
+// Payment History Ledger for THIS clinic only
 $stmtPay = $master->prepare("
     SELECT p.*, t.clinic_name, t.subdomain 
     FROM tenant_subscription_payments p 
@@ -238,10 +340,10 @@ $stmtPay = $master->prepare("
     ORDER BY p.id DESC 
     LIMIT 100
 ");
-$stmtPay->execute([$t['id'] ?? $currentTenantId]);
+$stmtPay->execute([$t['id']]);
 $payments = $stmtPay->fetchAll();
 
-// 3. Stats for THIS clinic
+// Stats for THIS clinic
 $now = time();
 $isLife = !empty($t['is_lifetime']) && $t['is_lifetime'] == 1;
 $endsAt = !empty($t['subscription_ends_at']) ? strtotime($t['subscription_ends_at']) : null;
@@ -254,7 +356,7 @@ $currentClinicId = getCurrentClinicId();
 $activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors WHERE clinic_id = ?", [$currentClinicId])['c'] ?? 0;
 
 $stmtRev = $master->prepare("SELECT COALESCE(SUM(amount), 0) as tot FROM tenant_subscription_payments WHERE tenant_id = ? AND status = 'completed'");
-$stmtRev->execute([$t['id'] ?? $currentTenantId]);
+$stmtRev->execute([$t['id']]);
 $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
 ?>
 
@@ -263,13 +365,15 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
         <ul class="breadcrumb">
             <li><a href="<?= BASE_URL ?>/modules/dashboard/index.php">Dashboard</a></li>
             <li><a href="<?= BASE_URL ?>/modules/admin/index.php">System Admin</a></li>
-            <li>Subscriptions & Billing</li>
+            <li>Subscription Decision</li>
         </ul>
-        <h1><i class="fas fa-credit-card" style="color: var(--primary);"></i> <?= sanitizeOutput($t['clinic_name']) ?> &bull; Subscription & Billing</h1>
+        <h1><i class="fas fa-handshake" style="color: var(--primary);"></i> <?= sanitizeOutput($t['clinic_name']) ?> &bull; Subscription & Pricing Control</h1>
     </div>
     <div class="d-flex gap-8">
         <button class="btn btn-success" onclick="openPaymentModal()"><i class="fas fa-hand-holding-usd"></i> Record Payment (Cash on Hand)</button>
-        <button class="btn btn-primary" onclick='openPlanModal(<?= json_encode($t) ?>)'><i class="fas fa-sliders-h"></i> Change Plan & Quota</button>
+        <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" target="_blank" class="btn btn-outline" title="Preview what this clinic sees when renewing">
+            <i class="fas fa-eye"></i> View Clinic Paywall
+        </a>
     </div>
 </div>
 
@@ -282,10 +386,10 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
     <div class="stat-card">
         <div class="stat-icon primary"><i class="fas fa-crown"></i></div>
         <div class="stat-details">
-            <div class="stat-label">Active Plan Tier</div>
+            <div class="stat-label">Currently Active Plan</div>
             <div class="stat-value" style="font-size: 20px; text-transform: capitalize;">
                 <?= sanitizeOutput($t['plan_type'] ?? 'trial') ?>
-                <?= ($t['bonus_months'] ?? 0) > 0 ? '(+' . $t['bonus_months'] . 'm)' : '' ?>
+                <?= ($t['bonus_months'] ?? 0) > 0 ? '(+' . $t['bonus_months'] . 'm Bonus)' : '' ?>
             </div>
             <div class="stat-change">
                 <?php if ($isExp): ?>
@@ -299,7 +403,7 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
     <div class="stat-card">
         <div class="stat-icon info"><i class="fas fa-user-md"></i></div>
         <div class="stat-details">
-            <div class="stat-label">Doctor Slots Quota</div>
+            <div class="stat-label">Doctor Slots Used</div>
             <div class="stat-value"><?= $activeDocCount ?> / <?= ($t['max_doctors'] > 0 ? $t['max_doctors'] : '∞') ?></div>
             <div class="stat-change">
                 <?= $t['max_doctors'] > 0 ? max(0, $t['max_doctors'] - $activeDocCount) . ' slots remaining' : 'Unlimited slots' ?>
@@ -309,7 +413,7 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
     <div class="stat-card">
         <div class="stat-icon <?= $isExp ? 'danger' : 'warning' ?>"><i class="fas fa-clock"></i></div>
         <div class="stat-details">
-            <div class="stat-label">Plan Validity / Expiry</div>
+            <div class="stat-label">Current Validity</div>
             <div class="stat-value" style="font-size: 19px; color: <?= $isExp ? '#dc2626' : '#d97706' ?>;">
                 <?= $isLife ? 'Lifetime' : ($endsAt ? date('d M Y', $endsAt) : 'Trial Period') ?>
             </div>
@@ -337,104 +441,196 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
 <!-- Tabs Navigation -->
 <div class="card mb-24">
     <div style="display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: 12px 12px 0 0;">
-        <a href="?tab=tenants" class="tab-link <?= $currentTab === 'tenants' ? 'active' : '' ?>">
-            <i class="fas fa-building"></i> Clinic Subscription
+        <a href="?tab=plan" class="tab-link <?= $currentTab === 'plan' ? 'active' : '' ?>">
+            <i class="fas fa-sliders-h"></i> Decide Clinic Plan & Pricing
         </a>
         <a href="?tab=payments" class="tab-link <?= $currentTab === 'payments' ? 'active' : '' ?>">
             <i class="fas fa-receipt"></i> Payment Receipts (<?= count($payments) ?>)
         </a>
         <a href="?tab=settings" class="tab-link <?= $currentTab === 'settings' ? 'active' : '' ?>">
-            <i class="fas fa-sliders-h"></i> SaaS Global Settings & Plans
+            <i class="fas fa-globe"></i> SaaS Global Platform Defaults
         </a>
     </div>
 
-    <!-- TAB 1: CLINIC SUBSCRIPTION (THIS CLINIC ONLY) -->
-    <?php if ($currentTab === 'tenants'): ?>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table" style="margin: 0;">
-                <thead>
-                    <tr>
-                        <th>Clinic & Subdomain</th>
-                        <th>Current Plan</th>
-                        <th>Doctor Quota</th>
-                        <th>Validity / Expiration</th>
-                        <th>Status</th>
-                        <th style="text-align: right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <strong style="font-size: 15px; color: var(--primary);"><?= sanitizeOutput($t['clinic_name']) ?></strong>
-                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                                <i class="fas fa-globe"></i> <strong><?= sanitizeOutput($t['subdomain']) ?></strong>.featuregen.com
-                            </div>
-                        </td>
-                        <td>
-                            <?php if ($isLife || ($t['plan_type'] ?? '') === 'one_time'): ?>
-                                <span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 700;">
-                                    <i class="fas fa-infinity"></i> Lifetime
-                                </span>
-                            <?php elseif (($t['plan_type'] ?? '') === 'yearly'): ?>
-                                <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700;">
-                                    <i class="fas fa-crown"></i> Yearly <?= ($t['bonus_months'] ?? 0) > 0 ? '(+' . $t['bonus_months'] . 'm Bonus)' : '' ?>
-                                </span>
-                            <?php elseif (($t['plan_type'] ?? '') === 'monthly'): ?>
-                                <span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700;">
-                                    <i class="fas fa-calendar-alt"></i> Monthly
-                                </span>
-                            <?php else: ?>
-                                <span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; font-weight: 700;">
-                                    <i class="fas fa-vial"></i> Free Trial
-                                </span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <span class="badge badge-info" style="font-size: 12px; padding: 5px 12px;">
-                                <i class="fas fa-user-md"></i> <?= $t['max_doctors'] > 0 ? $t['max_doctors'] . ' Doctors Max' : '∞ Unlimited' ?>
-                            </span>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-                                Currently using: <strong><?= $activeDocCount ?></strong>
-                            </div>
-                        </td>
-                        <td>
-                            <?php if ($isLife): ?>
-                                <span style="color: #0369a1; font-weight: 700;"><i class="fas fa-check-circle"></i> Never Expires</span>
-                            <?php elseif ($endsAt): ?>
-                                <div><strong><?= date('d M Y', $endsAt) ?></strong></div>
-                                <?php if ($isExp): ?>
-                                    <span class="badge badge-danger" style="font-size: 11px;">Expired <?= abs($daysLeft) ?>d ago</span>
-                                <?php elseif ($daysLeft <= 7): ?>
-                                    <span class="badge badge-warning" style="font-size: 11px;"><?= $daysLeft ?> days left</span>
-                                <?php else: ?>
-                                    <span class="badge badge-success" style="font-size: 11px;"><?= $daysLeft ?> days remaining</span>
-                                <?php endif; ?>
-                            <?php else: ?>
-                                <span class="text-muted">Not Set</span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php if ($isExp): ?>
-                                <span class="badge badge-danger"><i class="fas fa-ban"></i> Expired</span>
-                            <?php elseif (($t['status'] ?? '') === 'suspended'): ?>
-                                <span class="badge badge-danger"><i class="fas fa-lock"></i> Suspended</span>
-                            <?php else: ?>
-                                <span class="badge badge-success"><i class="fas fa-check-circle"></i> Active</span>
-                            <?php endif; ?>
-                        </td>
-                        <td style="text-align: right; white-space: nowrap;">
-                            <button class="btn btn-sm btn-outline" onclick='openPlanModal(<?= json_encode($t) ?>)'>
-                                <i class="fas fa-sliders-h"></i> Plan & Quota
-                            </button>
-                            <button class="btn btn-sm btn-success" onclick="openPaymentModal()" style="background: #059669; color: white;">
-                                <i class="fas fa-money-bill-wave"></i> Record Cash
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- TAB 1: DECIDE PLAN & PRICING FOR THIS INDIVIDUAL CLINIC -->
+    <?php if ($currentTab === 'plan'): ?>
+    <div class="card-body" style="padding: 32px 28px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <h3 style="margin: 0 0 6px; font-size: 20px; color: var(--text);">
+                    <i class="fas fa-handshake" style="color: var(--primary);"></i> Configure Custom Pricing & Bonus Months for <?= sanitizeOutput($t['clinic_name']) ?>
+                </h3>
+                <p style="margin: 0; font-size: 14px; color: var(--text-muted);">
+                    Set negotiated rates and bonus months specifically for this clinic. Billing, self-serve paywall, and cash collection for this clinic will happen strictly based on these customized terms.
+                </p>
+            </div>
+            <span class="badge badge-info" style="font-size: 13px; padding: 6px 14px;">
+                Portal: <strong><?= sanitizeOutput($t['subdomain']) ?></strong>.featuregen.com
+            </span>
         </div>
+
+        <form method="POST" action="">
+            <input type="hidden" name="action" value="save_clinic_custom_plans">
+
+            <div class="grid-2 gap-24 mb-32">
+                <!-- 1. FREE TRIAL CONFIG -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid var(--border-color); border-radius: 12px; display: flex; flex-direction: column;">
+                    <div class="card-body" style="padding: 24px; flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h4 style="margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-vial" style="color: #64748b;"></i> 1. Free Trial Tier
+                            </h4>
+                            <?php if (($t['plan_type'] ?? '') === 'trial'): ?>
+                                <span class="badge badge-primary" style="font-size: 11px;">Currently Active</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            Introductory trial access before billing starts.
+                        </p>
+
+                        <div class="grid-2 gap-16 mb-20">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Trial Duration (Months)</label>
+                                <input type="number" name="custom_trial_months" class="form-control" value="<?= $effTrialMonths ?>" min="1" max="12" required>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Doctor Limit Quota</label>
+                                <input type="number" name="custom_trial_doctors" class="form-control" value="<?= $effTrialDoctors ?>" min="1" required>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: auto;">
+                            <button type="button" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;" onclick="triggerActivatePlan('trial', 'Free Trial', 0, <?= $effTrialDoctors ?>, 0)">
+                                <i class="fas fa-play"></i> Activate Free Trial For Clinic
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. MONTHLY PLAN CONFIG -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid var(--border-color); border-radius: 12px; display: flex; flex-direction: column;">
+                    <div class="card-body" style="padding: 24px; flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h4 style="margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-calendar-alt" style="color: #059669;"></i> 2. Monthly Plan Tier
+                            </h4>
+                            <?php if (($t['plan_type'] ?? '') === 'monthly'): ?>
+                                <span class="badge badge-success" style="font-size: 11px;">Currently Active</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            Custom negotiated monthly recurring fee for this clinic.
+                        </p>
+
+                        <div class="grid-2 gap-16 mb-20">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Agreed Monthly Price (₹)</label>
+                                <input type="number" name="custom_monthly_price" id="custMonthlyPrice" class="form-control" value="<?= $effMonthlyPrice ?>" step="0.01" required>
+                                <small class="text-muted">Global default: ₹<?= number_format($settings['monthly_price'] ?? 1499, 2) ?></small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Doctor Limit Quota</label>
+                                <input type="number" name="custom_monthly_doctors" id="custMonthlyDoctors" class="form-control" value="<?= $effMonthlyDoctors ?>" min="1" required>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: auto;">
+                            <button type="button" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center;" onclick="triggerActivatePlan('monthly', 'Monthly Plan', document.getElementById('custMonthlyPrice').value, document.getElementById('custMonthlyDoctors').value, 0)">
+                                <i class="fas fa-play"></i> Activate Monthly Plan For Clinic
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. YEARLY PLAN CONFIG (WITH ADDITIONAL FREE MONTHS) -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid #d97706; border-radius: 12px; display: flex; flex-direction: column;">
+                    <div class="card-body" style="padding: 24px; flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h4 style="margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-crown" style="color: #d97706;"></i> 3. Yearly Plan & Bonus Months
+                            </h4>
+                            <?php if (($t['plan_type'] ?? '') === 'yearly'): ?>
+                                <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 11px;">Currently Active</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            Custom yearly rate + <strong>negotiated free additional months</strong> for this clinic.
+                        </p>
+
+                        <div class="grid-3 gap-12 mb-20">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Yearly Price (₹)</label>
+                                <input type="number" name="custom_yearly_price" id="custYearlyPrice" class="form-control" value="<?= $effYearlyPrice ?>" step="0.01" required>
+                                <small class="text-muted">Default: ₹<?= number_format($settings['yearly_price'] ?? 14999, 2) ?></small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold" style="color: #b45309;">+ Extra Free Months</label>
+                                <input type="number" name="custom_yearly_bonus_months" id="custYearlyBonus" class="form-control" value="<?= $effYearlyBonus ?>" min="0" required style="border-color: #d97706; font-weight: 700;">
+                                <small class="text-muted">e.g. +2 = 14m access</small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Doctor Limit</label>
+                                <input type="number" name="custom_yearly_doctors" id="custYearlyDoctors" class="form-control" value="<?= $effYearlyDoctors ?>" min="1" required>
+                            </div>
+                        </div>
+
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 10px 14px; border-radius: 8px; margin-bottom: 18px; font-size: 13px; color: #92400e;">
+                            <i class="fas fa-gift"></i> Client gets <strong>12 + <span id="previewBonusMonths"><?= $effYearlyBonus ?></span> = <span id="previewTotalMonths"><?= 12 + $effYearlyBonus ?></span> months</strong> validity for ₹<span id="previewYearlyPrice"><?= number_format($effYearlyPrice, 0) ?></span>.
+                        </div>
+
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: auto;">
+                            <button type="button" class="btn btn-warning btn-sm" style="width: 100%; justify-content: center; background: #d97706; color: white; border: none;" onclick="triggerActivatePlan('yearly', 'Yearly Plan (+Bonus)', document.getElementById('custYearlyPrice').value, document.getElementById('custYearlyDoctors').value, document.getElementById('custYearlyBonus').value)">
+                                <i class="fas fa-play"></i> Activate Yearly (+Bonus) For Clinic
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. ONE-TIME COST LIFETIME CONFIG -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid var(--border-color); border-radius: 12px; display: flex; flex-direction: column;">
+                    <div class="card-body" style="padding: 24px; flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h4 style="margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-infinity" style="color: #0284c7;"></i> 4. One-Time Lifetime License
+                            </h4>
+                            <?php if ($isLife || ($t['plan_type'] ?? '') === 'one_time'): ?>
+                                <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 11px;">Currently Active</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            One-time perpetual purchase for this clinic. Never expires.
+                        </p>
+
+                        <div class="grid-2 gap-16 mb-20">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Agreed Lifetime Price (₹)</label>
+                                <input type="number" name="custom_lifetime_price" id="custLifetimePrice" class="form-control" value="<?= $effLifetimePrice ?>" step="0.01" required>
+                                <small class="text-muted">Global default: ₹<?= number_format($settings['one_time_price'] ?? 49999, 2) ?></small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Doctor Limit (0 = Unlimited)</label>
+                                <input type="number" name="custom_lifetime_doctors" id="custLifetimeDoctors" class="form-control" value="<?= $effLifetimeDoctors ?>" min="0" required>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: auto;">
+                            <button type="button" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; color: #0284c7; border-color: #0284c7;" onclick="triggerActivatePlan('one_time', 'Lifetime License', document.getElementById('custLifetimePrice').value, document.getElementById('custLifetimeDoctors').value, 0)">
+                                <i class="fas fa-play"></i> Activate Lifetime License For Clinic
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                <div style="font-size: 13px; color: var(--text-muted);">
+                    <i class="fas fa-info-circle"></i> Saving updates the customized pricing rates that this clinic sees on their renewal portal and paywall.
+                </div>
+                <button type="submit" class="btn btn-primary" style="padding: 12px 24px; font-weight: 700;">
+                    <i class="fas fa-save"></i> Save Customized Pricing for This Clinic
+                </button>
+            </div>
+        </form>
     </div>
     <?php endif; ?>
 
@@ -505,19 +701,19 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
     </div>
     <?php endif; ?>
 
-    <!-- TAB 3: SAAS GLOBAL SETTINGS -->
+    <!-- TAB 3: SAAS GLOBAL PLATFORM DEFAULTS -->
     <?php if ($currentTab === 'settings'): ?>
     <div class="card-body">
         <form method="POST" action="">
-            <input type="hidden" name="action" value="update_settings">
+            <input type="hidden" name="action" value="update_global_settings">
             
-            <h4 class="mb-16" style="color: var(--primary);"><i class="fas fa-tags"></i> Default SaaS Plan Pricing & Doctor Quotas</h4>
+            <h4 class="mb-16" style="color: var(--primary);"><i class="fas fa-globe"></i> Global Default Plan Pricing & Quotas (Fallback for New Clinics)</h4>
             <div class="grid-2 gap-24 mb-24">
                 <!-- Free Trial -->
                 <div class="card" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                     <div class="card-body">
                         <h4 style="margin: 0 0 12px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-vial" style="color: #64748b;"></i> 1. Free Trial Tier
+                            <i class="fas fa-vial" style="color: #64748b;"></i> Default Trial Tier
                         </h4>
                         <div class="grid-2 gap-12">
                             <div class="form-group">
@@ -525,7 +721,7 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
                                 <input type="number" name="trial_duration_months" class="form-control" value="<?= sanitizeOutput($settings['trial_duration_months'] ?? '1') ?>" min="1" max="12" required>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Max Doctors Quota</label>
+                                <label class="form-label">Max Doctors</label>
                                 <input type="number" name="trial_max_doctors" class="form-control" value="<?= sanitizeOutput($settings['trial_max_doctors'] ?? '2') ?>" min="1" required>
                             </div>
                         </div>
@@ -536,7 +732,7 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
                 <div class="card" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                     <div class="card-body">
                         <h4 style="margin: 0 0 12px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-calendar-alt" style="color: #059669;"></i> 2. Monthly Plan Tier
+                            <i class="fas fa-calendar-alt" style="color: #059669;"></i> Default Monthly Tier
                         </h4>
                         <div class="grid-2 gap-12">
                             <div class="form-group">
@@ -544,7 +740,7 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
                                 <input type="number" name="monthly_price" class="form-control" value="<?= sanitizeOutput($settings['monthly_price'] ?? '1499') ?>" step="0.01" required>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Max Doctors Quota</label>
+                                <label class="form-label">Max Doctors</label>
                                 <input type="number" name="monthly_max_doctors" class="form-control" value="<?= sanitizeOutput($settings['monthly_max_doctors'] ?? '3') ?>" min="1" required>
                             </div>
                         </div>
@@ -555,7 +751,7 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
                 <div class="card" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                     <div class="card-body">
                         <h4 style="margin: 0 0 12px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-crown" style="color: #d97706;"></i> 3. Yearly Plan Tier (+Bonus Months)
+                            <i class="fas fa-crown" style="color: #d97706;"></i> Default Yearly Tier (+Bonus)
                         </h4>
                         <div class="grid-3 gap-12">
                             <div class="form-group">
@@ -563,7 +759,7 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
                                 <input type="number" name="yearly_price" class="form-control" value="<?= sanitizeOutput($settings['yearly_price'] ?? '14999') ?>" step="0.01" required>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Bonus Months</label>
+                                <label class="form-label">Default Bonus Months</label>
                                 <input type="number" name="yearly_default_bonus_months" class="form-control" value="<?= sanitizeOutput($settings['yearly_default_bonus_months'] ?? '2') ?>" min="0">
                             </div>
                             <div class="form-group">
@@ -578,15 +774,15 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
                 <div class="card" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                     <div class="card-body">
                         <h4 style="margin: 0 0 12px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-infinity" style="color: #0284c7;"></i> 4. One-Time Lifetime License Tier
+                            <i class="fas fa-infinity" style="color: #0284c7;"></i> Default Lifetime Tier
                         </h4>
                         <div class="grid-2 gap-12">
                             <div class="form-group">
-                                <label class="form-label">One-Time Cost (₹)</label>
+                                <label class="form-label">Lifetime Price (₹)</label>
                                 <input type="number" name="one_time_price" class="form-control" value="<?= sanitizeOutput($settings['one_time_price'] ?? '49999') ?>" step="0.01" required>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Max Doctors (0 = Unlimited)</label>
+                                <label class="form-label">Max Doctors (0=Unlimited)</label>
                                 <input type="number" name="one_time_max_doctors" class="form-control" value="<?= sanitizeOutput($settings['one_time_max_doctors'] ?? '0') ?>" min="0" required>
                             </div>
                         </div>
@@ -594,35 +790,9 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
                 </div>
             </div>
 
-            <!-- Razorpay Gateway Integration -->
-            <h4 class="mb-16" style="color: var(--primary);"><i class="fas fa-bolt"></i> Razorpay Payment Gateway Settings</h4>
-            <div class="grid-2 gap-24 mb-24">
-                <div class="form-group">
-                    <label class="form-label">Razorpay Key ID</label>
-                    <input type="text" name="razorpay_key_id" class="form-control" value="<?= sanitizeOutput($settings['razorpay_key_id'] ?? '') ?>" placeholder="rzp_live_xxxxxxxx">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Razorpay Key Secret</label>
-                    <input type="password" name="razorpay_key_secret" class="form-control" value="<?= sanitizeOutput($settings['razorpay_key_secret'] ?? '') ?>" placeholder="Secret Key">
-                </div>
-            </div>
-
-            <!-- Offline Payment Instructions -->
-            <h4 class="mb-16" style="color: var(--primary);"><i class="fas fa-university"></i> Cash on Hand & Bank Transfer Info (Shown on Paywall)</h4>
-            <div class="grid-2 gap-24 mb-24">
-                <div class="form-group">
-                    <label class="form-label">Contact Details (Phone / WhatsApp)</label>
-                    <input type="text" name="offline_payment_contact" class="form-control" value="<?= sanitizeOutput($settings['offline_payment_contact'] ?? '') ?>" placeholder="Phone: +91 98765 43210 | WhatsApp: +91 98765 43210">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Bank Details & UPI ID</label>
-                    <textarea name="offline_bank_details" class="form-control" rows="3" placeholder="Account Name, Number, IFSC, UPI ID"><?= sanitizeOutput($settings['offline_bank_details'] ?? '') ?></textarea>
-                </div>
-            </div>
-
             <div class="d-flex justify-end">
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Save SaaS Settings
+                    <i class="fas fa-save"></i> Save Platform Defaults
                 </button>
             </div>
         </form>
@@ -631,84 +801,63 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
 </div>
 
 <!-- ============================================ -->
-<!-- MODAL 1: PLAN & DOCTOR LIMIT ADJUSTER -->
-<!-- Fully Scrollable & Always Centered/Closeable -->
+<!-- MODAL: ACTIVATE PLAN CONFIRMATION -->
 <!-- ============================================ -->
-<div id="planModal" class="custom-modal-backdrop" style="display:none;">
-    <div class="custom-modal-dialog" style="width: 580px;">
+<div id="activatePlanModal" class="custom-modal-backdrop" style="display:none;">
+    <div class="custom-modal-dialog" style="width: 520px;">
         <div class="card modal-card">
-            <div class="card-header modal-header-bar">
-                <h3><i class="fas fa-sliders-h" style="color: var(--primary);"></i> Plan & Doctor Quota Settings</h3>
-                <button type="button" class="modal-close-btn" onclick="closePlanModal()" aria-label="Close">&times;</button>
+            <div class="card-header modal-header-bar" style="background: linear-gradient(135deg, #00838f, #00695c); color: white;">
+                <h3 style="color: white;"><i class="fas fa-check-circle"></i> Activate Plan for Clinic</h3>
+                <button type="button" class="modal-close-btn" onclick="closeActivateModal()" style="color: white;" aria-label="Close">&times;</button>
             </div>
             <form method="POST" action="" class="modal-form-wrap">
-                <input type="hidden" name="action" value="update_plan">
-                <input type="hidden" name="tenant_id" id="planTenantId" value="<?= $t['id'] ?>">
+                <input type="hidden" name="action" value="activate_plan_tier">
+                <input type="hidden" name="tier" id="actTier">
                 
                 <div class="card-body modal-scroll-body">
-                    <div style="background: var(--bg-secondary); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color);">
-                        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Target Clinic</div>
-                        <div id="planClinicName" style="font-size: 16px; font-weight: 700; color: var(--primary);"><?= sanitizeOutput($t['clinic_name']) ?></div>
-                        <div id="planSubdomain" style="font-size: 12px; color: var(--text-muted);"><?= sanitizeOutput($t['subdomain']) ?>.featuregen.com</div>
+                    <div style="background: var(--bg-secondary); padding: 14px 18px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Activating For Clinic</div>
+                        <div style="font-size: 16px; font-weight: 700; color: var(--primary); margin: 2px 0;"><?= sanitizeOutput($t['clinic_name']) ?></div>
+                        <div style="font-size: 14px; font-weight: 600; color: #00838f;" id="actPlanTitle">Yearly Plan</div>
                     </div>
 
-                    <div class="grid-2 gap-16 mb-16">
-                        <div class="form-group">
-                            <label class="form-label">Plan Tier <span class="required">*</span></label>
-                            <select name="plan_type" id="planTypeSelect" class="form-control" onchange="handlePlanTypeChange()">
-                                <option value="trial">Free Trial</option>
-                                <option value="monthly">Monthly Plan</option>
-                                <option value="yearly">Yearly Plan</option>
-                                <option value="one_time">One-Time Lifetime Cost</option>
-                                <option value="custom">Custom Plan</option>
-                            </select>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 11px; color: #64748b;">Plan Fee</div>
+                            <div style="font-size: 16px; font-weight: 800; color: #059669;" id="actPlanPriceDisplay">₹14,999.00</div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Doctor Quota (`max_doctors`) <span class="required">*</span></label>
-                            <input type="number" name="max_doctors" id="planMaxDoctors" class="form-control" min="0" required>
-                            <small class="text-muted">Enter 0 for unlimited doctors</small>
+                        <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 11px; color: #64748b;">Doctor Quota</div>
+                            <div style="font-size: 16px; font-weight: 800; color: #0284c7;" id="actPlanDoctorDisplay">10 Doctors</div>
                         </div>
                     </div>
 
-                    <div class="grid-2 gap-16 mb-16">
-                        <div class="form-group" id="bonusMonthsGroup">
-                            <label class="form-label">Negotiated Bonus Months</label>
-                            <input type="number" name="bonus_months" id="planBonusMonths" class="form-control" min="0" value="0">
-                            <small class="text-muted">e.g. +2 bonus months on yearly</small>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Agreed Price (₹)</label>
-                            <input type="number" name="plan_amount" id="planAmount" class="form-control" step="0.01" value="0.00">
-                        </div>
+                    <div class="form-group mb-16">
+                        <label class="form-label font-semibold">Start Validity Period From</label>
+                        <select name="extend_mode" class="form-control">
+                            <option value="now" selected>Today (Reset & Start from Now)</option>
+                            <?php if ($endsAt && $endsAt > $now): ?>
+                            <option value="extend">Extend from Current Expiry (<?= date('d M Y', $endsAt) ?>)</option>
+                            <?php endif; ?>
+                        </select>
                     </div>
 
-                    <div class="grid-2 gap-16 mb-16" id="expiryGroup">
-                        <div class="form-group">
-                            <label class="form-label">Expiry Date</label>
-                            <input type="date" name="subscription_ends_at" id="planExpiryDate" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Subscription Status</label>
-                            <select name="subscription_status" id="planSubStatus" class="form-control">
-                                <option value="active">Active</option>
-                                <option value="trial">Trial</option>
-                                <option value="expired">Expired</option>
-                                <option value="suspended">Suspended</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group mb-0">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: var(--bg-secondary); padding: 12px; border-radius: 8px;">
-                            <input type="checkbox" name="is_lifetime" id="planIsLifetime" value="1" onchange="handleLifetimeToggle()">
-                            <span style="font-weight: 600; color: var(--text);">Grant Lifetime Perpetual License (Never Expires)</span>
+                    <div class="form-group mb-0" id="actCashOptionGroup">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px;">
+                            <input type="checkbox" name="record_cash_payment" value="1" checked>
+                            <div>
+                                <strong style="color: #15803d; font-size: 13px;">Also log as Cash on Hand Payment</strong>
+                                <div style="font-size: 11px; color: #166534;">Generates official receipt # and records payment in ledger immediately.</div>
+                            </div>
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="card-footer modal-footer-bar">
-                    <button type="button" class="btn btn-outline" onclick="closePlanModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Plan Settings</button>
+                    <button type="button" class="btn btn-outline" onclick="closeActivateModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background: #00838f; border: none;">
+                        <i class="fas fa-check"></i> Confirm & Activate Plan
+                    </button>
                 </div>
             </form>
         </div>
@@ -716,8 +865,8 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
 </div>
 
 <!-- ============================================ -->
-<!-- MODAL 2: RECORD PAYMENT (CASH ON HAND ETC) -->
-<!-- Fully Scrollable & Always Centered/Closeable -->
+<!-- MODAL: RECORD PAYMENT (CASH ON HAND) -->
+<!-- Pre-populated with this clinic's custom rates -->
 <!-- ============================================ -->
 <div id="paymentModal" class="custom-modal-backdrop" style="display:none;">
     <div class="custom-modal-dialog" style="width: 620px;">
@@ -740,7 +889,7 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
 
                     <div class="grid-2 gap-16 mb-16">
                         <div class="form-group">
-                            <label class="form-label">Payment Mode <span class="required">*</span></label>
+                            <label class="form-label font-semibold">Payment Mode <span class="required">*</span></label>
                             <select name="payment_mode" class="form-control" required>
                                 <option value="cash_on_hand" selected>💵 Cash on Hand (Direct Handover)</option>
                                 <option value="bank_transfer">🏦 Bank Transfer / NEFT / IMPS</option>
@@ -750,51 +899,51 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Amount Collected (₹) <span class="required">*</span></label>
-                            <input type="number" name="amount" id="payAmount" class="form-control" step="0.01" value="<?= sanitizeOutput($settings['yearly_price'] ?? '14999') ?>" placeholder="e.g. 15000" required>
+                            <label class="form-label font-semibold">Amount Collected (₹) <span class="required">*</span></label>
+                            <input type="number" name="amount" id="payAmount" class="form-control" step="0.01" value="<?= $effYearlyPrice ?>" placeholder="e.g. 15000" required>
                         </div>
                     </div>
 
                     <div class="grid-2 gap-16 mb-16">
                         <div class="form-group">
-                            <label class="form-label">Receipt / Reference #</label>
+                            <label class="form-label font-semibold">Receipt / Reference #</label>
                             <input type="text" name="payment_reference" id="payReference" class="form-control" value="REC-<?= date('Y') ?>-<?= rand(1000, 9999) ?>" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Collected By <span class="required">*</span></label>
+                            <label class="form-label font-semibold">Collected By <span class="required">*</span></label>
                             <input type="text" name="collected_by" class="form-control" value="<?= sanitizeOutput(getSession('full_name', 'Super Admin')) ?>" required>
                         </div>
                     </div>
 
                     <div class="grid-2 gap-16 mb-16">
                         <div class="form-group">
-                            <label class="form-label">Validity Period to Grant <span class="required">*</span></label>
+                            <label class="form-label font-semibold">Plan to Grant <span class="required">*</span></label>
                             <select name="period_type" id="payPeriodType" class="form-control" onchange="handlePaymentPeriodChange()">
-                                <option value="12_months" selected>Yearly Extension (12 Months + Bonus)</option>
-                                <option value="1_month">Monthly Extension (1 Month)</option>
+                                <option value="12_months" selected>Yearly (12 Months + <?= $effYearlyBonus ?> Free Bonus)</option>
+                                <option value="1_month">Monthly (1 Month)</option>
                                 <option value="lifetime">One-Time Lifetime License</option>
                                 <option value="custom">Custom Days</option>
                             </select>
                         </div>
                         <div class="form-group" id="payBonusGroup">
-                            <label class="form-label">Bonus Months Granted</label>
-                            <input type="number" name="bonus_months_granted" id="payBonusMonths" class="form-control" value="<?= sanitizeOutput($settings['yearly_default_bonus_months'] ?? '2') ?>" min="0">
+                            <label class="form-label font-semibold">Free Bonus Months Granted</label>
+                            <input type="number" name="bonus_months_granted" id="payBonusMonths" class="form-control" value="<?= $effYearlyBonus ?>" min="0">
                         </div>
                     </div>
 
                     <div class="grid-2 gap-16 mb-16">
                         <div class="form-group">
-                            <label class="form-label">Doctor Limit Granted <span class="required">*</span></label>
-                            <input type="number" name="doctor_limit_granted" id="payDoctorLimit" class="form-control" value="<?= sanitizeOutput($settings['yearly_max_doctors'] ?? ($t['max_doctors'] ?? '10')) ?>" min="1" required>
+                            <label class="form-label font-semibold">Doctor Limit Granted <span class="required">*</span></label>
+                            <input type="number" name="doctor_limit_granted" id="payDoctorLimit" class="form-control" value="<?= $effYearlyDoctors ?>" min="1" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Payment Date <span class="required">*</span></label>
+                            <label class="form-label font-semibold">Payment Date <span class="required">*</span></label>
                             <input type="date" name="payment_date" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
                     </div>
 
                     <div class="form-group mb-0">
-                        <label class="form-label">Payment & Handover Notes</label>
+                        <label class="form-label font-semibold">Payment & Handover Notes</label>
                         <textarea name="notes" class="form-control" rows="2" placeholder="e.g. Cash on hand received directly at clinic office."></textarea>
                     </div>
                 </div>
@@ -829,9 +978,6 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
     background: var(--bg-card);
 }
 
-/* ============================================ */
-/* PERFECT SCROLLABLE & RESPONSIVE MODAL SYSTEM */
-/* ============================================ */
 .custom-modal-backdrop {
     position: fixed;
     top: 0;
@@ -921,40 +1067,48 @@ $thisClinicRevenue = $stmtRev->fetch()['tot'] ?? 0;
 </style>
 
 <script>
-// ============================================
-// MODAL CONTROLS & EVENT LISTENERS
-// ============================================
+// Live update preview of bonus months & yearly price
+const custYearlyPriceInput = document.getElementById('custYearlyPrice');
+const custYearlyBonusInput = document.getElementById('custYearlyBonus');
+if (custYearlyPriceInput && custYearlyBonusInput) {
+    function updateYearlyPreview() {
+        const bonus = parseInt(custYearlyBonusInput.value) || 0;
+        const price = parseFloat(custYearlyPriceInput.value) || 0;
+        const prevBonus = document.getElementById('previewBonusMonths');
+        const prevTotal = document.getElementById('previewTotalMonths');
+        const prevPrice = document.getElementById('previewYearlyPrice');
+        if (prevBonus) prevBonus.textContent = bonus;
+        if (prevTotal) prevTotal.textContent = 12 + bonus;
+        if (prevPrice) prevPrice.textContent = price.toLocaleString('en-IN');
+    }
+    custYearlyPriceInput.addEventListener('input', updateYearlyPreview);
+    custYearlyBonusInput.addEventListener('input', updateYearlyPreview);
+}
 
-function openPlanModal(tenantData) {
-    const tenant = tenantData || <?= json_encode($t) ?>;
-    document.getElementById('planTenantId').value = tenant.id;
-    document.getElementById('planClinicName').textContent = tenant.clinic_name;
-    document.getElementById('planSubdomain').textContent = tenant.subdomain + '.featuregen.com';
-    document.getElementById('planTypeSelect').value = tenant.plan_type || 'trial';
-    document.getElementById('planMaxDoctors').value = tenant.max_doctors !== undefined ? tenant.max_doctors : 2;
-    document.getElementById('planBonusMonths').value = tenant.bonus_months || 0;
-    document.getElementById('planAmount').value = tenant.plan_amount || '0.00';
-    document.getElementById('planSubStatus').value = tenant.subscription_status || 'active';
+// Open Activate Plan Modal
+function triggerActivatePlan(tier, title, price, doctors, bonus) {
+    document.getElementById('actTier').value = tier;
+    document.getElementById('actPlanTitle').textContent = title;
+    document.getElementById('actPlanPriceDisplay').textContent = '₹' + parseFloat(price).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    document.getElementById('actPlanDoctorDisplay').textContent = (doctors > 0 ? doctors + ' Doctors' : 'Unlimited Doctors') + (bonus > 0 ? ' (+' + bonus + 'm Bonus)' : '');
     
-    if (tenant.subscription_ends_at) {
-        document.getElementById('planExpiryDate').value = tenant.subscription_ends_at.split(' ')[0];
+    const cashGroup = document.getElementById('actCashOptionGroup');
+    if (price <= 0) {
+        cashGroup.style.display = 'none';
     } else {
-        document.getElementById('planExpiryDate').value = '';
+        cashGroup.style.display = 'block';
     }
     
-    document.getElementById('planIsLifetime').checked = (tenant.is_lifetime == 1 || tenant.plan_type === 'one_time');
-    handleLifetimeToggle();
-    handlePlanTypeChange();
-    
-    document.getElementById('planModal').style.display = 'flex';
+    document.getElementById('activatePlanModal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
 
-function closePlanModal() {
-    document.getElementById('planModal').style.display = 'none';
+function closeActivateModal() {
+    document.getElementById('activatePlanModal').style.display = 'none';
     document.body.style.overflow = '';
 }
 
+// Payment Modal Controls
 function openPaymentModal() {
     document.getElementById('paymentModal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -965,68 +1119,53 @@ function closePaymentModal() {
     document.body.style.overflow = '';
 }
 
-// Click backdrop outside modal card to close
-document.getElementById('planModal').addEventListener('click', function(e) {
-    if (e.target === this || e.target.classList.contains('custom-modal-dialog')) {
-        closePlanModal();
-    }
-});
-
+// Click backdrop to close
 document.getElementById('paymentModal').addEventListener('click', function(e) {
     if (e.target === this || e.target.classList.contains('custom-modal-dialog')) {
         closePaymentModal();
+    }
+});
+document.getElementById('activatePlanModal').addEventListener('click', function(e) {
+    if (e.target === this || e.target.classList.contains('custom-modal-dialog')) {
+        closeActivateModal();
     }
 });
 
 // ESC key closes any open modal
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        closePlanModal();
         closePaymentModal();
+        closeActivateModal();
     }
 });
 
-function handlePlanTypeChange() {
-    const pType = document.getElementById('planTypeSelect').value;
-    const bonusGroup = document.getElementById('bonusMonthsGroup');
-    if (pType === 'yearly') {
-        bonusGroup.style.display = 'block';
-    } else {
-        bonusGroup.style.display = 'none';
-    }
-    if (pType === 'one_time') {
-        document.getElementById('planIsLifetime').checked = true;
-    }
-    handleLifetimeToggle();
-}
-
-function handleLifetimeToggle() {
-    const isLife = document.getElementById('planIsLifetime').checked;
-    const expGroup = document.getElementById('expiryGroup');
-    if (isLife) {
-        expGroup.style.opacity = '0.4';
-        document.getElementById('planExpiryDate').disabled = true;
-    } else {
-        expGroup.style.opacity = '1';
-        document.getElementById('planExpiryDate').disabled = false;
-    }
-}
+// Switch pricing in Record Payment according to this clinic's custom rates
+const clinicCustomRates = {
+    monthlyPrice: <?= json_encode($effMonthlyPrice) ?>,
+    monthlyDoctors: <?= json_encode($effMonthlyDoctors) ?>,
+    yearlyPrice: <?= json_encode($effYearlyPrice) ?>,
+    yearlyDoctors: <?= json_encode($effYearlyDoctors) ?>,
+    yearlyBonus: <?= json_encode($effYearlyBonus) ?>,
+    lifetimePrice: <?= json_encode($effLifetimePrice) ?>,
+    lifetimeDoctors: <?= json_encode($effLifetimeDoctors) ?>
+};
 
 function handlePaymentPeriodChange() {
     const period = document.getElementById('payPeriodType').value;
     const bonusGroup = document.getElementById('payBonusGroup');
     if (period === '12_months') {
         bonusGroup.style.display = 'block';
-        document.getElementById('payAmount').value = <?= json_encode($settings['yearly_price'] ?? '14999') ?>;
-        document.getElementById('payDoctorLimit').value = <?= json_encode($settings['yearly_max_doctors'] ?? '10') ?>;
+        document.getElementById('payAmount').value = clinicCustomRates.yearlyPrice;
+        document.getElementById('payBonusMonths').value = clinicCustomRates.yearlyBonus;
+        document.getElementById('payDoctorLimit').value = clinicCustomRates.yearlyDoctors;
     } else if (period === '1_month') {
         bonusGroup.style.display = 'none';
-        document.getElementById('payAmount').value = <?= json_encode($settings['monthly_price'] ?? '1499') ?>;
-        document.getElementById('payDoctorLimit').value = <?= json_encode($settings['monthly_max_doctors'] ?? '3') ?>;
+        document.getElementById('payAmount').value = clinicCustomRates.monthlyPrice;
+        document.getElementById('payDoctorLimit').value = clinicCustomRates.monthlyDoctors;
     } else if (period === 'lifetime') {
         bonusGroup.style.display = 'none';
-        document.getElementById('payAmount').value = <?= json_encode($settings['one_time_price'] ?? '49999') ?>;
-        document.getElementById('payDoctorLimit').value = <?= json_encode($settings['one_time_max_doctors'] ?? '0') ?>;
+        document.getElementById('payAmount').value = clinicCustomRates.lifetimePrice;
+        document.getElementById('payDoctorLimit').value = clinicCustomRates.lifetimeDoctors;
     } else {
         bonusGroup.style.display = 'none';
     }
