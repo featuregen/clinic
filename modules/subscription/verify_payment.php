@@ -77,7 +77,7 @@ try {
         ");
         $stmtP->execute([
             $tenantId, $amount, $baseAmount, $gstRate, $gstAmount,
-            $paymentId, $periodEnd, $newLimit, $paymentNotes
+            $paymentId, $periodEnd, $addonDoctors, $paymentNotes
         ]);
 
         // 2. Update tenant max_doctors & addon_doctors

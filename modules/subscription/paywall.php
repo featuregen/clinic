@@ -95,28 +95,42 @@ $isExpired = !empty($currentTenant['is_expired']);
 $isLifetime = !empty($currentTenant['is_lifetime']) && $currentTenant['is_lifetime'] == 1;
 $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTenant['subscription_ends_at']) : null;
 
-// Add-on Co-Termed Calculation:
+// Add-on Co-Termed Calculation based on active plan and exact remaining days:
 // "whichever plan they are it will append based on plan ends calculate and get the money"
-$daysRemaining = ($endsAt && $endsAt > time()) ? ceil(($endsAt - time()) / 86400) : 0;
-$monthsRemaining = max(1, ceil($daysRemaining / 30.4167));
+$now = new DateTime();
+$end = $endsAt ? (new DateTime())->setTimestamp($endsAt) : null;
+
+$daysRemaining = 0;
+$monthsRemaining = 1;
+
+if ($end && $end > $now) {
+    $diff = $now->diff($end);
+    $daysRemaining = (int)$diff->format('%a');
+    $totalCalendarMonths = ($diff->y * 12) + $diff->m;
+    if ($diff->d >= 15) {
+        $monthsRemaining = $totalCalendarMonths + 1;
+    } else {
+        $monthsRemaining = max(1, $totalCalendarMonths);
+    }
+}
 
 $addonRatePerDoctor = $addonMonthlyPrice;
-$addonPeriodLabel = '1 Month';
+$addonPeriodLabel = '1 Month (' . $daysRemaining . ' Days)';
 
 if ($activePlanType === 'yearly') {
     if ($monthsRemaining >= 10) {
         $addonRatePerDoctor = $addonYearlyPrice; // ₹250 annual rate
-        $addonPeriodLabel = $monthsRemaining . ' Months (Annual Rate)';
+        $addonPeriodLabel = $monthsRemaining . ' Months (' . $daysRemaining . ' Days Remaining &bull; Annual Rate)';
     } else {
         $addonRatePerDoctor = min($monthsRemaining * $addonMonthlyPrice, $addonYearlyPrice);
-        $addonPeriodLabel = $monthsRemaining . ' Month' . ($monthsRemaining > 1 ? 's' : '') . ' Remaining';
+        $addonPeriodLabel = $monthsRemaining . ' Month' . ($monthsRemaining > 1 ? 's' : '') . ' (' . $daysRemaining . ' Days Remaining)';
     }
 } elseif ($activePlanType === 'monthly') {
     $addonRatePerDoctor = $addonMonthlyPrice; // ₹25 / month
-    $addonPeriodLabel = 'Current Month until ' . ($endsAt ? date('d M Y', $endsAt) : 'renewal');
+    $addonPeriodLabel = '1 Month (' . $daysRemaining . ' Days Remaining until ' . ($endsAt ? date('d M Y', $endsAt) : 'renewal') . ')';
 } elseif ($activePlanType === 'trial') {
-    $addonRatePerDoctor = $monthsRemaining * $addonMonthlyPrice;
-    $addonPeriodLabel = $monthsRemaining . ' Month' . ($monthsRemaining > 1 ? 's' : '') . ' (Trial Period)';
+    $addonRatePerDoctor = min($monthsRemaining * $addonMonthlyPrice, $addonYearlyPrice);
+    $addonPeriodLabel = $monthsRemaining . ' Month' . ($monthsRemaining > 1 ? 's' : '') . ' (' . $daysRemaining . ' Days Remaining in Trial)';
 }
 ?>
 
