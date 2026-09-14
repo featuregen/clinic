@@ -473,10 +473,10 @@ if ($activePlanType === 'yearly') {
                 <i class="fas fa-infinity" style="font-size: 22px; color: #0284c7;"></i>
             </div>
             
-            <h3 style="font-size: 22px; margin: 0 0 8px; color: var(--text);">One-Time Lifetime</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Pay once and own forever. Zero renewals. Unlimited forever.</p>
+            <h3 style="font-size: 22px; margin: 0 0 8px; color: var(--text);">One-Time Lifetime <span style="color: #0284c7;">*</span></h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;">Pay once and own forever. Zero renewals. Unlimited forever.</p>
             
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 18px;">
                 <span style="font-size: 34px; font-weight: 800; color: #0284c7;">₹<?= number_format($lifetimeBase, 0) ?></span>
                 <span style="font-size: 14px; color: var(--text-muted);">one-time</span>
                 <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.4;">
@@ -485,23 +485,38 @@ if ($activePlanType === 'yearly') {
                 </div>
             </div>
 
-            <ul style="list-style: none; padding: 0; margin: 0 0 32px; flex: 1; font-size: 14px; line-height: 2;">
+            <div style="background: #f0f9ff; border: 1.5px dashed #0284c7; border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; font-size: 12.5px; color: #0369a1; line-height: 1.45; display: flex; align-items: flex-start; gap: 8px;">
+                <i class="fas fa-info-circle" style="color: #0284c7; margin-top: 2px; flex-shrink: 0;"></i>
+                <span><strong>* server and domain will be maintained by client</strong></span>
+            </div>
+
+            <ul style="list-style: none; padding: 0; margin: 0 0 28px; flex: 1; font-size: 14px; line-height: 2;">
                 <li><i class="fas fa-check" style="color: #0284c7; margin-right: 10px;"></i> <strong>Unlimited Doctors</strong></li>
                 <li><i class="fas fa-check" style="color: #0284c7; margin-right: 10px;"></i> <strong>Lifetime Perpetual Access</strong></li>
                 <li><i class="fas fa-check" style="color: #0284c7; margin-right: 10px;"></i> Unlimited Branches & Locations</li>
-                <li><i class="fas fa-check" style="color: #0284c7; margin-right: 10px;"></i> Custom Clinic Branding & Domain</li>
+                <li><i class="fas fa-check" style="color: #0284c7; margin-right: 10px;"></i> Custom Clinic Branding</li>
                 <li><i class="fas fa-check" style="color: #0284c7; margin-right: 10px;"></i> All Future Feature Updates Included</li>
-                <li><i class="fas fa-check" style="color: #0284c7; margin-right: 10px;"></i> Dedicated Account Manager</li>
+                <li><i class="fas fa-server" style="color: #0284c7; margin-right: 10px;"></i> <em>* Server & domain maintained by client</em></li>
             </ul>
 
             <?php if ($isLifetime): ?>
             <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border-color: #0284c7; color: #0284c7;" disabled>
                 <i class="fas fa-check-circle"></i> Permanent Lifetime Active
             </button>
-            <?php else: ?>
+            <?php elseif ($isSuperAdmin): ?>
             <button type="button" class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border-color: #0284c7; color: #0284c7;" onclick="selectPlan('one_time', <?= $lifetimeBase ?>, <?= $lifetimeGst ?>, <?= $lifetimeTotal ?>, 'One-Time Lifetime License')">
-                <i class="fas fa-infinity"></i> Upgrade to Lifetime Access
+                <i class="fas fa-infinity"></i> Direct Activate Lifetime Access
             </button>
+            <div style="text-align: center; margin-top: 8px; font-size: 11.5px; color: var(--text-muted);">
+                * Server and domain will be maintained by client
+            </div>
+            <?php else: ?>
+            <button type="button" class="btn btn-primary" style="width: 100%; padding: 13px; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #0284c7, #0369a1); border: none; border-radius: 8px; color: white; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25); cursor: pointer;" onclick="openContactSalesModal()">
+                <i class="fas fa-headset"></i> Contact Sales
+            </button>
+            <div style="text-align: center; margin-top: 8px; font-size: 11.5px; color: var(--text-muted);">
+                * Server and domain will be maintained by client
+            </div>
             <?php endif; ?>
         </div>
     </div>
@@ -738,6 +753,70 @@ $pastPayments = $stmtHist->fetchAll();
 <?php endif; ?>
 
 <!-- ============================================ -->
+<!-- CONTACT SALES MODAL (ONE-TIME LIFETIME) -->
+<!-- ============================================ -->
+<div id="contactSalesModal" onclick="handleSalesBackdropClick(event)" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); overflow-y:auto; -webkit-overflow-scrolling:touch; padding:24px 12px; align-items:flex-start; justify-content:center;">
+    <div class="card" onclick="event.stopPropagation()" style="width: 520px; max-width: 100%; margin: auto; background: #ffffff; border-radius: 14px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid var(--border-color); overflow: hidden; animation: slideUp 0.2s ease;">
+        <div class="card-header" style="position: sticky; top: 0; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; z-index: 20; padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: white;">Contact Enterprise Sales</h3>
+                    <div style="font-size: 11.5px; opacity: 0.9;">One-Time Lifetime Perpetual License</div>
+                </div>
+            </div>
+            <button type="button" onclick="closeContactSalesModal()" aria-label="Close" style="background: rgba(255,255,255,0.2); border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; color: white; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="card-body" style="padding: 22px; max-height: calc(85vh - 70px); overflow-y: auto;">
+            <!-- Price and Disclaimer Box -->
+            <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                    <span style="font-size: 13.5px; font-weight: 700; color: #0369a1;">Perpetual Lifetime Access:</span>
+                    <span style="font-size: 22px; font-weight: 800; color: #0284c7;">₹<?= number_format($lifetimeTotal, 2) ?></span>
+                </div>
+                <div style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+                    Base ₹<?= number_format($lifetimeBase, 2) ?> + 18% GST (₹<?= number_format($lifetimeGst, 2) ?>) &bull; Unlimited Doctors Included
+                </div>
+                <div style="background: white; border: 1.5px dashed #0284c7; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: #0369a1; line-height: 1.45; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-info-circle" style="color: #0284c7; font-size: 15px; flex-shrink: 0;"></i>
+                    <span><strong>* server and domain will be maintained by client</strong></span>
+                </div>
+            </div>
+
+            <!-- Context / Reasons why contact sales -->
+            <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+                <p style="margin: 0 0 10px;">
+                    <strong>Why is online payment disabled for this plan?</strong><br>
+                    The One-Time Lifetime License includes private server deployment, database setup, and custom domain configuration on client-managed infrastructure.
+                </p>
+                <p style="margin: 0;">
+                    Please connect directly with our enterprise team to confirm technical specifications, schedule installation, and obtain your official GST tax invoice.
+                </p>
+            </div>
+
+            <!-- Direct Actions: WhatsApp & Phone Call -->
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+                <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $offlineContact) ?>?text=<?= urlencode("Hello, I am interested in purchasing the One-Time Lifetime License for clinic: " . ($currentTenant['clinic_name'] ?? 'Clinic') . " (* server and domain will be maintained by client). Please guide me on deployment.") ?>" target="_blank" class="btn btn-success" style="padding: 13px 16px; font-size: 14.5px; font-weight: 700; background: #25d366; border: none; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);">
+                    <i class="fab fa-whatsapp" style="font-size: 19px;"></i> Chat with Sales on WhatsApp
+                </a>
+                <a href="tel:<?= preg_replace('/[^0-9\+]/', '', $offlineContact) ?>" class="btn btn-outline" style="padding: 12px 16px; font-size: 14px; font-weight: 700; border-color: #0284c7; color: #0284c7; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; background: white;">
+                    <i class="fas fa-phone-alt"></i> Call Sales Desk (<?= htmlspecialchars($offlineContact) ?>)
+                </a>
+            </div>
+
+            <button type="button" onclick="closeContactSalesModal()" class="btn btn-outline" style="width: 100%; justify-content: center; padding: 10px; font-size: 13px;">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
 <!-- CHECKOUT / PAYMENT MODAL -->
 <!-- ============================================ -->
 <div id="checkoutModal" onclick="handleBackdropClick(event)" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); overflow-y:auto; -webkit-overflow-scrolling:touch; padding:24px 12px; align-items:flex-start; justify-content:center;">
@@ -892,6 +971,8 @@ $pastPayments = $stmtHist->fetchAll();
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+const isSuperAdmin = <?= $isSuperAdmin ? 'true' : 'false' ?>;
+
 let selectedPlan = {
     type: 'yearly',
     addon_doctors: 0,
@@ -902,6 +983,11 @@ let selectedPlan = {
 };
 
 function selectPlan(type, basePrice, gstAmount, totalPrice, name) {
+    if (type === 'one_time' && !isSuperAdmin) {
+        openContactSalesModal();
+        return;
+    }
+
     selectedPlan = { type, addon_doctors: 0, basePrice, gstAmount, totalPrice, name };
     document.getElementById('modalPlanName').textContent = name;
     document.getElementById('modalBasePrice').textContent = '₹' + basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -983,9 +1069,32 @@ function handleBackdropClick(e) {
     }
 }
 
+function openContactSalesModal() {
+    const modal = document.getElementById('contactSalesModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeContactSalesModal() {
+    const modal = document.getElementById('contactSalesModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+function handleSalesBackdropClick(e) {
+    if (e && e.target && e.target.id === 'contactSalesModal') {
+        closeContactSalesModal();
+    }
+}
+
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' || e.keyCode === 27) {
         closeCheckoutModal();
+        closeContactSalesModal();
     }
 });
 

@@ -98,10 +98,11 @@ try {
             : floatval($settings['yearly_base_price'] ?? 6000);
         $orderTitle = "Yearly Plan Subscription";
     } elseif ($planType === 'one_time') {
-        $basePrice = isset($currentTenant['custom_lifetime_price']) && $currentTenant['custom_lifetime_price'] !== null
-            ? floatval($currentTenant['custom_lifetime_price'])
-            : floatval($settings['one_time_base_price'] ?? 25000);
-        $orderTitle = "Lifetime Perpetual License";
+        echo json_encode([
+            'success' => false,
+            'error' => 'Online payment is not available for the One-Time Lifetime License (* server and domain will be maintained by client). Please contact sales directly.'
+        ]);
+        exit;
     } else {
         echo json_encode(['success' => false, 'error' => 'Invalid plan type selected.']);
         exit;

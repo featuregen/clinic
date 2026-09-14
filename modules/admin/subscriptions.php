@@ -671,14 +671,15 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                     <div class="card-body" style="padding: 24px; flex: 1;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                             <h4 style="margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-infinity" style="color: #0284c7;"></i> 4. One-Time Lifetime License
+                                <i class="fas fa-infinity" style="color: #0284c7;"></i> 4. One-Time Lifetime License <span style="color: #0284c7;">*</span>
                             </h4>
                             <?php if ($isLife || ($t['plan_type'] ?? '') === 'one_time'): ?>
                                 <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 11px;">Currently Active</span>
                             <?php endif; ?>
                         </div>
                         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
-                            One-time perpetual purchase for this clinic. Never expires.
+                            One-time perpetual purchase for this clinic. Never expires.<br>
+                            <span style="color: #0284c7; font-weight: 600; font-size: 12px;">* Server and domain will be maintained by client (Online checkout is disabled for clients; "Contact Sales" is shown).</span>
                         </p>
 
                         <div class="grid-2 gap-16 mb-20">
