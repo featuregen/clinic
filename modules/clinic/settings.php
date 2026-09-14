@@ -137,6 +137,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
         <div class="card">
             <div class="card-header"><h3><i class="fas fa-link" style="color: var(--accent);"></i> Quick Links</h3></div>
             <div class="card-body">
+                <a href="<?= BASE_URL ?>/modules/clinic/branches.php" class="btn btn-outline btn-block mb-8"><i class="fas fa-code-branch"></i> Manage Branches</a>
                 <a href="<?= BASE_URL ?>/modules/admin/index.php" class="btn btn-outline btn-block mb-8"><i class="fas fa-cogs"></i> System Admin</a>
                 <a href="<?= BASE_URL ?>/modules/communication/templates.php" class="btn btn-outline btn-block mb-8"><i class="fas fa-envelope"></i> Message Templates</a>
                 <a href="<?= BASE_URL ?>/modules/reports/daily.php" class="btn btn-outline btn-block"><i class="fas fa-chart-bar"></i> Reports</a>

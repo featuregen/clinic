@@ -211,9 +211,16 @@ $clinic = $db->fetch("SELECT name, logo FROM clinics WHERE id = ?", [getCurrentC
             </div>
 
             <div class="nav-item">
-                <a href="<?= BASE_URL ?>/modules/clinic/settings.php" class="nav-link <?= isActiveMenu('clinic') ?>">
+                <a href="<?= BASE_URL ?>/modules/clinic/settings.php" class="nav-link <?= $currentPage === 'settings.php' && $currentModule === 'clinic' ? 'active' : '' ?>">
                     <i class="fas fa-hospital-alt"></i>
                     <span>Clinic Settings</span>
+                </a>
+            </div>
+
+            <div class="nav-item">
+                <a href="<?= BASE_URL ?>/modules/clinic/branches.php" class="nav-link <?= strpos($currentPage, 'branches.php') !== false ? 'active' : '' ?>">
+                    <i class="fas fa-code-branch"></i>
+                    <span>Branches</span>
                 </a>
             </div>
             
