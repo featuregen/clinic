@@ -53,18 +53,30 @@ $lifetimeBase = $lifetimePrice;
 $lifetimeGst = round($lifetimeBase * ($gstRate / 100), 2);
 $lifetimeTotal = $lifetimeBase + $lifetimeGst;
 
-// Resolve current active doctor quota based on plan and custom/global settings
+// Doctor Add-on Rates: Rs. 25 per month or Rs. 250 per annum
+$addonMonthlyPrice = !empty($currentTenant['custom_addon_doctor_monthly_price']) 
+    ? floatval($currentTenant['custom_addon_doctor_monthly_price']) 
+    : floatval($settings['addon_doctor_monthly_price'] ?? 25);
+
+$addonYearlyPrice = !empty($currentTenant['custom_addon_doctor_yearly_price']) 
+    ? floatval($currentTenant['custom_addon_doctor_yearly_price']) 
+    : floatval($settings['addon_doctor_yearly_price'] ?? 250);
+
+// Resolve current active doctor quota based on plan and custom/global settings plus any purchased add-ons
 $activePlanType = $currentTenant['plan_type'] ?? 'trial';
-$activeQuota = intval($currentTenant['max_doctors'] ?? 0);
+$baseQuota = intval($currentTenant['max_doctors'] ?? 0);
 if ($activePlanType === 'trial') {
-    $activeQuota = $trialDoctors;
+    $baseQuota = $trialDoctors;
 } elseif ($activePlanType === 'monthly') {
-    $activeQuota = $monthlyDoctors;
+    $baseQuota = $monthlyDoctors;
 } elseif ($activePlanType === 'yearly') {
-    $activeQuota = $yearlyDoctors;
+    $baseQuota = $yearlyDoctors;
 } elseif ($activePlanType === 'one_time') {
-    $activeQuota = $lifetimeDoctors;
+    $baseQuota = $lifetimeDoctors;
 }
+
+$addonDoctors = intval($currentTenant['addon_doctors'] ?? 0);
+$activeQuota = ($baseQuota > 0) ? ($baseQuota + $addonDoctors) : 0;
 
 if ($activeQuota > 0 && $activeQuota !== intval($currentTenant['max_doctors'] ?? 0)) {
     try {
@@ -73,13 +85,39 @@ if ($activeQuota > 0 && $activeQuota !== intval($currentTenant['max_doctors'] ??
     } catch (Exception $e) {}
 }
 
-$razorpayKey = $settings['razorpay_key_id'] ?? '';
+$razorpayKey = !empty($currentTenant['custom_razorpay_key_id']) 
+    ? $currentTenant['custom_razorpay_key_id'] 
+    : ($settings['razorpay_key_id'] ?? '');
 $offlineContact = $settings['offline_payment_contact'] ?? 'Phone: +91 98765 43210';
 $offlineBank = $settings['offline_bank_details'] ?? '';
 
 $isExpired = !empty($currentTenant['is_expired']);
 $isLifetime = !empty($currentTenant['is_lifetime']) && $currentTenant['is_lifetime'] == 1;
 $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTenant['subscription_ends_at']) : null;
+
+// Add-on Co-Termed Calculation:
+// "whichever plan they are it will append based on plan ends calculate and get the money"
+$daysRemaining = ($endsAt && $endsAt > time()) ? ceil(($endsAt - time()) / 86400) : 0;
+$monthsRemaining = max(1, ceil($daysRemaining / 30.4167));
+
+$addonRatePerDoctor = $addonMonthlyPrice;
+$addonPeriodLabel = '1 Month';
+
+if ($activePlanType === 'yearly') {
+    if ($monthsRemaining >= 10) {
+        $addonRatePerDoctor = $addonYearlyPrice; // ₹250 annual rate
+        $addonPeriodLabel = $monthsRemaining . ' Months (Annual Rate)';
+    } else {
+        $addonRatePerDoctor = min($monthsRemaining * $addonMonthlyPrice, $addonYearlyPrice);
+        $addonPeriodLabel = $monthsRemaining . ' Month' . ($monthsRemaining > 1 ? 's' : '') . ' Remaining';
+    }
+} elseif ($activePlanType === 'monthly') {
+    $addonRatePerDoctor = $addonMonthlyPrice; // ₹25 / month
+    $addonPeriodLabel = 'Current Month until ' . ($endsAt ? date('d M Y', $endsAt) : 'renewal');
+} elseif ($activePlanType === 'trial') {
+    $addonRatePerDoctor = $monthsRemaining * $addonMonthlyPrice;
+    $addonPeriodLabel = $monthsRemaining . ' Month' . ($monthsRemaining > 1 ? 's' : '') . ' (Trial Period)';
+}
 ?>
 
 <div class="content-header">
@@ -189,12 +227,13 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
     </div>
 
     <!-- 2. Yearly Plan (Featured) -->
-    <div class="card" style="border: 2px solid #00838f; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 131, 143, 0.15); display: flex; flex-direction: column; position: relative;">
-        <div style="position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #00838f, #00695c); color: white; padding: 5px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0, 131, 143, 0.25); z-index: 5;">
-            <i class="fas fa-star" style="color: #fbbf24; margin-right: 4px;"></i> <?= $activePlanType === 'yearly' ? 'Current Plan' : 'Recommended Upgrade' ?> &bull; <?= $totalYearlyMonths ?> Months Access
+    <div class="card" style="border: 2px solid #00838f; border-radius: 16px; box-shadow: 0 12px 35px rgba(0, 131, 143, 0.2); display: flex; flex-direction: column; overflow: hidden; position: relative;">
+        <!-- Prominent Top Recommended Ribbon Header -->
+        <div style="background: linear-gradient(135deg, #00838f, #00695c); color: white; text-align: center; padding: 10px 16px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i class="fas fa-star" style="color: #fbbf24;"></i> <?= $activePlanType === 'yearly' ? 'Current Active Plan' : 'Recommended Upgrade &bull; ' . $totalYearlyMonths . ' Months Access' ?>
         </div>
         
-        <div class="card-body" style="padding: 36px 28px 32px; flex: 1; display: flex; flex-direction: column;">
+        <div class="card-body" style="padding: 28px 28px 32px; flex: 1; display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <?php if ($activePlanType === 'yearly'): ?>
                 <span class="badge badge-success" style="font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 20px;">
@@ -286,6 +325,106 @@ $endsAt = !empty($currentTenant['subscription_ends_at']) ? strtotime($currentTen
             </button>
             <?php endif; ?>
         </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- DOCTOR CAPACITY ADD-ON PACK (Option A GST) -->
+<!-- ============================================ -->
+<div id="doctor-addons" class="card mb-32" style="border-radius: 16px; border: 2px solid #0891b2; background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%); box-shadow: 0 10px 25px rgba(8, 145, 178, 0.08); overflow: hidden;">
+    <div style="background: linear-gradient(135deg, #0891b2, #0e7490); color: white; padding: 18px 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0 0 2px; font-size: 19px; color: white; font-weight: 800;">Doctor Capacity Add-On Pack</h3>
+                <div style="font-size: 13px; opacity: 0.9;">Append extra doctor slots to your existing plan without upgrading whole tiers</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span class="badge" style="background: rgba(255,255,255,0.25); color: white; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px;">
+                ₹25 / doctor / month &bull; ₹250 / doctor / annum (+18% GST)
+            </span>
+        </div>
+    </div>
+
+    <div class="card-body" style="padding: 28px;">
+        <?php if ($isLifetime): ?>
+        <div class="alert alert-info" style="margin: 0; background: #e0f2fe; color: #0369a1; border-left: 4px solid #0284c7; padding: 16px; border-radius: 8px;">
+            <i class="fas fa-infinity" style="margin-right: 8px; font-size: 18px;"></i>
+            Your clinic has a <strong>Permanent Lifetime License</strong> with <strong>Unlimited Doctors</strong> included. No add-on slots needed!
+        </div>
+        <?php elseif ($isExpired): ?>
+        <div class="alert alert-warning" style="margin: 0; background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px;">
+            <i class="fas fa-exclamation-triangle" style="margin-right: 8px; font-size: 18px;"></i>
+            Your clinic subscription has expired. Please renew your Monthly or Yearly plan above before purchasing doctor add-on packs.
+        </div>
+        <?php else: ?>
+        <div class="grid-2 gap-24" style="align-items: center;">
+            <div>
+                <h4 style="font-size: 16px; margin: 0 0 8px; color: var(--text);"><i class="fas fa-sliders-h" style="color: #0891b2;"></i> Select Extra Doctor Slots to Add:</h4>
+                <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 16px; line-height: 1.5;">
+                    Current Active Quota: <strong><?= $activeQuota ?> Doctors</strong>. 
+                    Add-on slots will co-terminate and append automatically to your current plan ending on 
+                    <strong><?= $endsAt ? date('d M Y', $endsAt) : 'N/A' ?></strong> 
+                    (<strong><?= $addonPeriodLabel ?></strong>).
+                </p>
+
+                <!-- Quantity Selector -->
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                    <button type="button" class="btn btn-outline" onclick="adjustAddonDoctors(-1)" style="width: 44px; height: 44px; padding: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; border-radius: 10px;">-</button>
+                    <input type="number" id="addonDoctorCount" value="1" min="1" max="50" style="width: 80px; height: 44px; text-align: center; font-size: 20px; font-weight: 800; border: 2px solid #0891b2; border-radius: 10px; color: #0891b2;" oninput="updateAddonCalc()">
+                    <button type="button" class="btn btn-outline" onclick="adjustAddonDoctors(1)" style="width: 44px; height: 44px; padding: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; border-radius: 10px;">+</button>
+                    <span style="font-size: 14px; font-weight: 600; color: var(--text);">Extra Doctor Slot(s)</span>
+                </div>
+
+                <!-- Quick pills -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setAddonDoctors(1)">+1 Doctor</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setAddonDoctors(2)">+2 Doctors</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setAddonDoctors(3)">+3 Doctors</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setAddonDoctors(5)">+5 Doctors</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setAddonDoctors(10)">+10 Doctors</button>
+                </div>
+            </div>
+
+            <!-- Live Price & Checkout Calculation Box -->
+            <div style="background: white; border: 2px solid #0891b2; border-radius: 14px; padding: 20px 24px; box-shadow: 0 4px 15px rgba(8, 145, 178, 0.08);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;">
+                    <span style="font-size: 13px; font-weight: 700; color: #0891b2; text-transform: uppercase; letter-spacing: 0.5px;">Add-on Price Calculation</span>
+                    <span class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 700;">SAC: 998314</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: var(--text);">
+                    <span>Rate Applied (Co-termed):</span>
+                    <span style="font-weight: 600;">₹<?= number_format($addonRatePerDoctor, 2) ?> / doc (<?= $addonPeriodLabel ?>)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: var(--text);">
+                    <span>Base Fee (<span id="calcDocCount">1</span> Doc &times; ₹<?= number_format($addonRatePerDoctor, 2) ?>):</span>
+                    <strong id="calcBaseFee">₹<?= number_format($addonRatePerDoctor, 2) ?></strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">
+                    <span>GST @ 18%:</span>
+                    <span id="calcGstFee" style="font-weight: 600;">₹<?= number_format(round($addonRatePerDoctor * 0.18, 2), 2) ?></span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 2px dashed #e2e8f0; margin-bottom: 18px;">
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Total Payable</div>
+                        <div style="font-size: 11px; color: #059669; font-weight: 600;">New Limit: <strong id="calcNewQuota"><?= $activeQuota + 1 ?></strong> Doctors</div>
+                    </div>
+                    <div style="font-size: 26px; font-weight: 800; color: #0891b2;" id="calcTotalFee">
+                        ₹<?= number_format(round($addonRatePerDoctor * 1.18, 2), 2) ?>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #0891b2, #0e7490); border: none;" onclick="buyAddonPack()">
+                    <i class="fas fa-bolt"></i> Purchase Add-on Slots Now
+                </button>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -459,7 +598,16 @@ $pastPayments = $stmtHist->fetchAll();
                     <i class="fas fa-bolt"></i> <span id="razorpayBtnText">Pay Online via Razorpay</span>
                 </button>
                 <div style="text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-muted);">
-                    Supports UPI, Credit/Debit Cards, Net Banking, and Wallets
+                    Supports UPI (GPay/PhonePe/Paytm), Credit/Debit Cards, Net Banking & Wallets
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="mb-20" style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 14px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px;">
+                    <i class="fas fa-bolt" style="color: #0891b2;"></i> Online Gateway Offline
+                </div>
+                <div style="font-size: 12px; color: #64748b;">
+                    Razorpay Key has not been entered yet. Contact administrator to configure your Razorpay Key ID or use direct transfer below.
                 </div>
             </div>
             <?php endif; ?>
@@ -486,6 +634,7 @@ $pastPayments = $stmtHist->fetchAll();
 <script>
 let selectedPlan = {
     type: 'yearly',
+    addon_doctors: 0,
     basePrice: <?= $yearlyBase ?>,
     gstAmount: <?= $yearlyGst ?>,
     totalPrice: <?= $yearlyTotal ?>,
@@ -493,7 +642,30 @@ let selectedPlan = {
 };
 
 function selectPlan(type, basePrice, gstAmount, totalPrice, name) {
-    selectedPlan = { type, basePrice, gstAmount, totalPrice, name };
+    selectedPlan = { type, addon_doctors: 0, basePrice, gstAmount, totalPrice, name };
+    document.getElementById('modalPlanName').textContent = name;
+    document.getElementById('modalBasePrice').textContent = '₹' + basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('modalGstAmount').textContent = '₹' + gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('modalTotalPrice').textContent = '₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    const cashTotal = document.getElementById('modalCashTotal');
+    if (cashTotal) cashTotal.textContent = '₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    const rzpText = document.getElementById('razorpayBtnText');
+    if (rzpText) rzpText.textContent = 'Pay ₹' + totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Online via Razorpay';
+    
+    document.getElementById('checkoutModal').style.display = 'flex';
+}
+
+function selectAddon(count, basePrice, gstAmount, totalPrice, name) {
+    selectedPlan = {
+        type: 'doctor_addon',
+        addon_doctors: count,
+        basePrice: basePrice,
+        gstAmount: gstAmount,
+        totalPrice: totalPrice,
+        name: name
+    };
     document.getElementById('modalPlanName').textContent = name;
     document.getElementById('modalBasePrice').textContent = '₹' + basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById('modalGstAmount').textContent = '₹' + gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -512,17 +684,72 @@ function closeCheckoutModal() {
     document.getElementById('checkoutModal').style.display = 'none';
 }
 
+// Addon Calculator Functions
+const addonRatePerDoctor = <?= json_encode($addonRatePerDoctor) ?>;
+const addonPeriodLabel = <?= json_encode($addonPeriodLabel) ?>;
+const activeQuota = <?= json_encode($activeQuota) ?>;
+
+function adjustAddonDoctors(delta) {
+    const input = document.getElementById('addonDoctorCount');
+    if (!input) return;
+    let val = (parseInt(input.value) || 1) + delta;
+    if (val < 1) val = 1;
+    if (val > 100) val = 100;
+    input.value = val;
+    updateAddonCalc();
+}
+
+function setAddonDoctors(val) {
+    const input = document.getElementById('addonDoctorCount');
+    if (!input) return;
+    input.value = val;
+    updateAddonCalc();
+}
+
+function updateAddonCalc() {
+    const input = document.getElementById('addonDoctorCount');
+    if (!input) return;
+    const count = parseInt(input.value) || 1;
+    const baseFee = Math.round(count * addonRatePerDoctor * 100) / 100;
+    const gstFee = Math.round(baseFee * 18) / 100;
+    const totalFee = Math.round((baseFee + gstFee) * 100) / 100;
+    
+    const docCountEl = document.getElementById('calcDocCount');
+    const baseFeeEl = document.getElementById('calcBaseFee');
+    const gstFeeEl = document.getElementById('calcGstFee');
+    const totalFeeEl = document.getElementById('calcTotalFee');
+    const newQuotaEl = document.getElementById('calcNewQuota');
+    
+    if (docCountEl) docCountEl.textContent = count;
+    if (baseFeeEl) baseFeeEl.textContent = '₹' + baseFee.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    if (gstFeeEl) gstFeeEl.textContent = '₹' + gstFee.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    if (totalFeeEl) totalFeeEl.textContent = '₹' + totalFee.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    if (newQuotaEl) newQuotaEl.textContent = (activeQuota + count);
+}
+
+function buyAddonPack() {
+    const input = document.getElementById('addonDoctorCount');
+    const count = input ? (parseInt(input.value) || 1) : 1;
+    const baseFee = Math.round(count * addonRatePerDoctor * 100) / 100;
+    const gstFee = Math.round(baseFee * 18) / 100;
+    const totalFee = Math.round((baseFee + gstFee) * 100) / 100;
+    const title = '+' + count + ' Doctor Slots Add-On Pack (' + addonPeriodLabel + ')';
+    selectAddon(count, baseFee, gstFee, totalFee, title);
+}
+
 const rzpKey = <?= json_encode($razorpayKey) ?>;
 const razorpayBtn = document.getElementById('razorpayBtn');
 
 if (razorpayBtn && rzpKey) {
     razorpayBtn.addEventListener('click', function() {
+        const isAddon = (selectedPlan.type === 'doctor_addon');
+        const descSuffix = isAddon ? ' - Doctor Add-on Pack (Incl. 18% GST)' : ' - Subscription Renewal (Incl. 18% GST)';
         const options = {
             "key": rzpKey,
             "amount": Math.round(selectedPlan.totalPrice * 100),
             "currency": "INR",
             "name": "Feature Gen Care",
-            "description": selectedPlan.name + " - Subscription Renewal (Incl. 18% GST)",
+            "description": selectedPlan.name + descSuffix,
             "image": "<?= ASSETS_URL ?>/images/favicon.svg",
             "handler": function (response) {
                 // Post to verification script
@@ -533,6 +760,7 @@ if (razorpayBtn && rzpKey) {
                 const fields = {
                     razorpay_payment_id: response.razorpay_payment_id,
                     plan_type: selectedPlan.type,
+                    addon_doctors: selectedPlan.addon_doctors || 0,
                     amount: selectedPlan.totalPrice,
                     base_amount: selectedPlan.basePrice,
                     gst_rate: 18.00,
@@ -554,7 +782,7 @@ if (razorpayBtn && rzpKey) {
                 "email": <?= json_encode(getSession('email', '')) ?>
             },
             "theme": {
-                "color": "#00838f"
+                "color": "#0891b2"
             }
         };
         const rzp = new Razorpay(options);

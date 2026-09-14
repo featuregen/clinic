@@ -187,9 +187,14 @@ $isQuotaReached = (!$isEdit && $maxDoctors > 0 && $activeDocCount >= $maxDoctors
             </p>
         </div>
     </div>
-    <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-warning btn-sm" style="white-space: nowrap; background: #d97706; border: none; color: white; font-weight: 600; padding: 8px 16px; border-radius: 6px; text-decoration: none;">
-        <i class="fas fa-arrow-circle-up"></i> Upgrade Plan
-    </a>
+    <div style="display: flex; gap: 8px; flex-shrink: 0;">
+        <a href="<?= BASE_URL ?>/modules/subscription/paywall.php#doctor-addons" class="btn btn-sm" style="white-space: nowrap; background: linear-gradient(135deg, #0891b2, #0e7490); border: none; color: white; font-weight: 700; padding: 8px 16px; border-radius: 6px; text-decoration: none;">
+            <i class="fas fa-plus-circle"></i> Add Doctor Slots (+₹25/mo)
+        </a>
+        <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-warning btn-sm" style="white-space: nowrap; background: #d97706; border: none; color: white; font-weight: 600; padding: 8px 16px; border-radius: 6px; text-decoration: none;">
+            <i class="fas fa-arrow-circle-up"></i> Upgrade Plan
+        </a>
+    </div>
 </div>
 <?php endif; ?>
 

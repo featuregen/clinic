@@ -49,6 +49,9 @@ $effLifetimeDoctors = isset($t['custom_lifetime_doctors']) && $t['custom_lifetim
 $effTrialMonths = !empty($t['custom_trial_months']) ? intval($t['custom_trial_months']) : intval($settings['trial_duration_months'] ?? 1);
 $effTrialDoctors = !empty($t['custom_trial_doctors']) ? intval($t['custom_trial_doctors']) : intval($settings['trial_max_doctors'] ?? 2);
 
+$effAddonMonthly = !empty($t['custom_addon_doctor_monthly_price']) ? floatval($t['custom_addon_doctor_monthly_price']) : floatval($settings['addon_doctor_monthly_price'] ?? 25);
+$effAddonYearly = !empty($t['custom_addon_doctor_yearly_price']) ? floatval($t['custom_addon_doctor_yearly_price']) : floatval($settings['addon_doctor_yearly_price'] ?? 250);
+
 // ============================================
 // POST ACTION HANDLERS
 // ============================================
@@ -66,6 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lifetimeDoctors = intval($_POST['custom_lifetime_doctors'] ?? $effLifetimeDoctors);
         $trialMonths = intval($_POST['custom_trial_months'] ?? $effTrialMonths);
         $trialDoctors = intval($_POST['custom_trial_doctors'] ?? $effTrialDoctors);
+
+        $customAddonMonthly = isset($_POST['custom_addon_doctor_monthly_price']) && $_POST['custom_addon_doctor_monthly_price'] !== '' ? floatval($_POST['custom_addon_doctor_monthly_price']) : null;
+        $customAddonYearly = isset($_POST['custom_addon_doctor_yearly_price']) && $_POST['custom_addon_doctor_yearly_price'] !== '' ? floatval($_POST['custom_addon_doctor_yearly_price']) : null;
+        $customRzpKey = sanitize(trim($_POST['custom_razorpay_key_id'] ?? ''));
+        $customRzpSecret = sanitize(trim($_POST['custom_razorpay_key_secret'] ?? ''));
 
         // Update active max_doctors immediately for the current plan
         $currentPlanType = $t['plan_type'] ?? 'trial';
@@ -92,6 +100,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     custom_lifetime_doctors = ?,
                     custom_trial_months = ?,
                     custom_trial_doctors = ?,
+                    custom_addon_doctor_monthly_price = ?,
+                    custom_addon_doctor_yearly_price = ?,
+                    custom_razorpay_key_id = ?,
+                    custom_razorpay_key_secret = ?,
                     max_doctors = ?,
                     updated_at = NOW()
                 WHERE id = ?
@@ -99,10 +111,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([
                 $monthlyPrice, $monthlyDoctors, $yearlyPrice, $yearlyDoctors,
                 $yearlyBonus, $lifetimePrice, $lifetimeDoctors, $trialMonths,
-                $trialDoctors, $newActiveMaxDoctors, $t['id']
+                $trialDoctors, $customAddonMonthly, $customAddonYearly,
+                $customRzpKey, $customRzpSecret, $newActiveMaxDoctors, $t['id']
             ]);
             
-            setFlashMessage('success', "Custom plans & pricing for {$t['clinic_name']} saved successfully! Active doctor quota updated to {$newActiveMaxDoctors} doctors.");
+            setFlashMessage('success', "Custom configuration for {$t['clinic_name']} saved successfully! Active doctor quota updated to {$newActiveMaxDoctors} doctors.");
             header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=plan");
             exit;
         } catch (Exception $e) {
@@ -272,6 +285,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $totalMonths = 12 + $bonusMonths;
                 $newEnd = date('Y-m-d 23:59:59', strtotime("+{$totalMonths} month", $startTs));
                 $planType = 'yearly';
+            } elseif ($periodType === 'doctor_addon') {
+                $planType = 'doctor_addon';
+                $newEnd = !empty($t['subscription_ends_at']) ? $t['subscription_ends_at'] : date('Y-m-d 23:59:59', strtotime('+1 month'));
             } elseif ($periodType === 'custom') {
                 $customDays = intval($_POST['custom_days'] ?? 30);
                 $newEnd = date('Y-m-d 23:59:59', strtotime("+{$customDays} days", $startTs));
@@ -293,25 +309,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newPaymentId = $master->lastInsertId();
             
             // Update Tenant validity
-            $stmtU = $master->prepare("
-                UPDATE tenants 
-                SET plan_type = ?,
-                    billing_cycle = ?,
-                    max_doctors = ?,
-                    bonus_months = ?,
-                    plan_amount = ?,
-                    is_lifetime = ?,
-                    subscription_starts_at = COALESCE(subscription_starts_at, NOW()),
-                    subscription_ends_at = ?,
-                    subscription_status = 'active',
-                    status = 'active'
-                WHERE id = ?
-            ");
-            $billingCycle = ($periodType === 'lifetime') ? 'one_time' : (($periodType === '1_month') ? 'monthly' : 'yearly');
-            $stmtU->execute([
-                $planType, $billingCycle, $doctorLimit, $bonusMonths, $amount,
-                $isLifetime, $newEnd, $t['id']
-            ]);
+            if ($periodType === 'doctor_addon') {
+                $extraDocs = max(1, $doctorLimit);
+                $stmtU = $master->prepare("
+                    UPDATE tenants 
+                    SET max_doctors = max_doctors + ?,
+                        addon_doctors = COALESCE(addon_doctors, 0) + ?,
+                        status = 'active',
+                        updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $stmtU->execute([$extraDocs, $extraDocs, $t['id']]);
+            } else {
+                $stmtU = $master->prepare("
+                    UPDATE tenants 
+                    SET plan_type = ?,
+                        billing_cycle = ?,
+                        max_doctors = ?,
+                        bonus_months = ?,
+                        plan_amount = ?,
+                        is_lifetime = ?,
+                        subscription_starts_at = COALESCE(subscription_starts_at, NOW()),
+                        subscription_ends_at = ?,
+                        subscription_status = 'active',
+                        status = 'active'
+                    WHERE id = ?
+                ");
+                $billingCycle = ($periodType === 'lifetime') ? 'one_time' : (($periodType === '1_month') ? 'monthly' : 'yearly');
+                $stmtU->execute([
+                    $planType, $billingCycle, $doctorLimit, $bonusMonths, $amount,
+                    $isLifetime, $newEnd, $t['id']
+                ]);
+            }
             
             $master->commit();
             setFlashMessage('success', "Payment of ₹" . number_format($amount, 2) . " recorded successfully! Receipt #$reference issued.");
@@ -335,6 +364,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'yearly_default_bonus_months' => sanitize($_POST['yearly_default_bonus_months'] ?? '2'),
             'one_time_price' => sanitize($_POST['one_time_price'] ?? '49999'),
             'one_time_max_doctors' => sanitize($_POST['one_time_max_doctors'] ?? '0'),
+            'addon_doctor_monthly_price' => sanitize($_POST['addon_doctor_monthly_price'] ?? '25'),
+            'addon_doctor_yearly_price' => sanitize($_POST['addon_doctor_yearly_price'] ?? '250'),
             'razorpay_key_id' => sanitize($_POST['razorpay_key_id'] ?? ''),
             'razorpay_key_secret' => sanitize($_POST['razorpay_key_secret'] ?? ''),
             'offline_payment_contact' => sanitize($_POST['offline_payment_contact'] ?? ''),
@@ -655,6 +686,61 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         </div>
                     </div>
                 </div>
+
+                <!-- 5. DOCTOR ADD-ON RATES FOR THIS CLINIC -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid var(--border-color); border-radius: 12px; display: flex; flex-direction: column;">
+                    <div class="card-body" style="padding: 24px; flex: 1;">
+                        <h4 style="margin: 0 0 16px; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-plus-circle" style="color: #0891b2;"></i> 5. Doctor Add-On Pack Pricing
+                        </h4>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            Custom doctor slot pricing when this clinic needs extra doctor capacity beyond their plan quota.
+                        </p>
+                        <div class="grid-2 gap-16">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Monthly Rate (₹ / extra doc)</label>
+                                <input type="number" name="custom_addon_doctor_monthly_price" class="form-control" value="<?= isset($t['custom_addon_doctor_monthly_price']) && $t['custom_addon_doctor_monthly_price'] !== null ? $t['custom_addon_doctor_monthly_price'] : '' ?>" placeholder="Default: <?= $settings['addon_doctor_monthly_price'] ?? 25 ?>" step="0.01">
+                                <small class="text-muted">Empty = use default (₹<?= $settings['addon_doctor_monthly_price'] ?? 25 ?>/mo)</small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Yearly Rate (₹ / extra doc)</label>
+                                <input type="number" name="custom_addon_doctor_yearly_price" class="form-control" value="<?= isset($t['custom_addon_doctor_yearly_price']) && $t['custom_addon_doctor_yearly_price'] !== null ? $t['custom_addon_doctor_yearly_price'] : '' ?>" placeholder="Default: <?= $settings['addon_doctor_yearly_price'] ?? 250 ?>" step="0.01">
+                                <small class="text-muted">Empty = use default (₹<?= $settings['addon_doctor_yearly_price'] ?? 250 ?>/yr)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. RAZORPAY GATEWAY CONFIGURATION FOR THIS CLINIC -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid <?= !empty($t['custom_razorpay_key_id']) ? '#00838f' : 'var(--border-color)' ?>; border-radius: 12px; display: flex; flex-direction: column;">
+                    <div class="card-body" style="padding: 24px; flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h4 style="margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-bolt" style="color: #00838f;"></i> 6. Razorpay Gateway (This Clinic)
+                            </h4>
+                            <?php if (!empty($t['custom_razorpay_key_id'])): ?>
+                                <span class="badge badge-success" style="font-size: 11px;"><i class="fas fa-check-circle"></i> Custom Key Active</span>
+                            <?php else: ?>
+                                <span class="badge" style="background: #f1f5f9; color: #475569; font-size: 11px;">Using Global Fallback</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            Configure a dedicated Razorpay Key for <strong><?= sanitizeOutput($t['clinic_name']) ?></strong>, or leave blank to use the SaaS platform's default account.
+                        </p>
+                        <div class="grid-2 gap-16">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Clinic Razorpay Key ID</label>
+                                <input type="text" name="custom_razorpay_key_id" class="form-control" value="<?= sanitizeOutput($t['custom_razorpay_key_id'] ?? '') ?>" placeholder="rzp_test_... or rzp_live_...">
+                                <small class="text-muted">Leave blank to use platform default.</small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Clinic Razorpay Key Secret</label>
+                                <input type="password" name="custom_razorpay_key_secret" class="form-control" value="<?= sanitizeOutput($t['custom_razorpay_key_secret'] ?? '') ?>" placeholder="••••••••••••••••">
+                                <small class="text-muted">Secret key for verification.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid var(--border-color);">
@@ -828,6 +914,78 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         </div>
                     </div>
                 </div>
+
+                <!-- Doctor Add-on Capacity Rates -->
+                <div class="card" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                    <div class="card-body">
+                        <h4 style="margin: 0 0 12px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-plus-circle" style="color: #0891b2;"></i> Doctor Add-On Pack Defaults
+                        </h4>
+                        <div class="grid-2 gap-12">
+                            <div class="form-group">
+                                <label class="form-label">Monthly Add-on Rate per Doctor (₹)</label>
+                                <input type="number" name="addon_doctor_monthly_price" class="form-control" value="<?= sanitizeOutput($settings['addon_doctor_monthly_price'] ?? '25') ?>" step="0.01" required>
+                                <small class="text-muted">Default: ₹25 / month per extra doctor (+ 18% GST)</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Yearly Add-on Rate per Doctor (₹)</label>
+                                <input type="number" name="addon_doctor_yearly_price" class="form-control" value="<?= sanitizeOutput($settings['addon_doctor_yearly_price'] ?? '250') ?>" step="0.01" required>
+                                <small class="text-muted">Default: ₹250 / year per extra doctor (+ 18% GST)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Razorpay Payment Gateway Credentials -->
+                <div class="card" style="background: var(--bg-secondary); border: 2px solid #00838f; border-radius: 12px; grid-column: span 2;">
+                    <div class="card-body">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="margin: 0; display: flex; align-items: center; gap: 8px; color: #00838f;">
+                                <i class="fas fa-bolt"></i> SaaS Platform Razorpay Gateway (Global Fallback)
+                            </h4>
+                            <?php if (!empty($settings['razorpay_key_id'])): ?>
+                                <span class="badge badge-success" style="font-size: 11px;"><i class="fas fa-check-circle"></i> Online Gateway Active</span>
+                            <?php else: ?>
+                                <span class="badge badge-warning" style="font-size: 11px; background: #fef3c7; color: #b45309;"><i class="fas fa-exclamation-triangle"></i> Not Configured (Offline Mode)</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                            These credentials enable online subscription and add-on card/UPI payments for all clinics on the platform. 
+                            Find your keys in the <a href="https://dashboard.razorpay.com/#/app/keys" target="_blank" style="color: #00838f; font-weight: 600; text-decoration: underline;">Razorpay Dashboard &rarr; Settings &rarr; API Keys</a>.
+                        </p>
+                        <div class="grid-2 gap-16 mb-16">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Razorpay Key ID</label>
+                                <input type="text" name="razorpay_key_id" class="form-control" value="<?= sanitizeOutput($settings['razorpay_key_id'] ?? '') ?>" placeholder="rzp_test_... or rzp_live_...">
+                                <small class="text-muted">Starts with <code>rzp_test_</code> (for testing) or <code>rzp_live_</code> (for real payments).</small>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Razorpay Key Secret</label>
+                                <input type="password" name="razorpay_key_secret" class="form-control" value="<?= sanitizeOutput($settings['razorpay_key_secret'] ?? '') ?>" placeholder="••••••••••••••••">
+                                <small class="text-muted">Secret key used for secure server-side verification.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Offline Payment & Bank Details -->
+                <div class="card" style="background: var(--bg-secondary); border: 1px solid var(--border-color); grid-column: span 2;">
+                    <div class="card-body">
+                        <h4 style="margin: 0 0 12px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-university" style="color: #059669;"></i> Offline Payment Contact & Bank Details
+                        </h4>
+                        <div class="grid-2 gap-16">
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Offline Payment Support Line / Contact</label>
+                                <input type="text" name="offline_payment_contact" class="form-control" value="<?= sanitizeOutput($settings['offline_payment_contact'] ?? '') ?>" placeholder="Phone: +91 98765 43210 | WhatsApp: +91 98765 43210">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label font-semibold">Bank Account & UPI Instructions</label>
+                                <textarea name="offline_bank_details" class="form-control" rows="3" placeholder="Account Name, Number, IFSC, UPI ID..."><?= sanitizeOutput($settings['offline_bank_details'] ?? '') ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="d-flex justify-end">
@@ -981,6 +1139,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                                 <option value="12_months" selected>Yearly (12 Months + <?= $effYearlyBonus ?> Free Bonus)</option>
                                 <option value="1_month">Monthly (1 Month)</option>
                                 <option value="lifetime">One-Time Lifetime License</option>
+                                <option value="doctor_addon">⚡ Doctor Capacity Add-On Slots</option>
                                 <option value="custom">Custom Days</option>
                             </select>
                         </div>
@@ -1212,7 +1371,10 @@ const clinicCustomRates = {
     yearlyDoctors: <?= json_encode($effYearlyDoctors) ?>,
     yearlyBonus: <?= json_encode($effYearlyBonus) ?>,
     lifetimePrice: <?= json_encode($effLifetimePrice) ?>,
-    lifetimeDoctors: <?= json_encode($effLifetimeDoctors) ?>
+    lifetimeDoctors: <?= json_encode($effLifetimeDoctors) ?>,
+    addonMonthly: <?= json_encode($effAddonMonthly) ?>,
+    addonYearly: <?= json_encode($effAddonYearly) ?>,
+    currentPlan: <?= json_encode($t['plan_type'] ?? 'trial') ?>
 };
 
 function calcPaymentGst(source) {
@@ -1254,6 +1416,10 @@ function handlePaymentPeriodChange() {
         bonusGroup.style.display = 'none';
         base = clinicCustomRates.lifetimePrice;
         document.getElementById('payDoctorLimit').value = clinicCustomRates.lifetimeDoctors;
+    } else if (period === 'doctor_addon') {
+        bonusGroup.style.display = 'none';
+        base = (clinicCustomRates.currentPlan === 'yearly') ? clinicCustomRates.addonYearly : clinicCustomRates.addonMonthly;
+        document.getElementById('payDoctorLimit').value = 1; // 1 extra doctor
     } else {
         bonusGroup.style.display = 'none';
         base = parseFloat(document.getElementById('payBaseAmount').value) || 0;

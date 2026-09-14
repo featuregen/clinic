@@ -49,6 +49,9 @@ $isQuotaFull = ($maxDoctors > 0 && $totalDocs >= $maxDoctors);
     </div>
     <div class="d-flex gap-8 align-items-center">
         <?php if ($isQuotaFull): ?>
+        <a href="<?= BASE_URL ?>/modules/subscription/paywall.php#doctor-addons" class="btn btn-sm" style="background: linear-gradient(135deg, #0891b2, #0e7490); color: white; border: none; font-weight: 700;">
+            <i class="fas fa-plus-circle"></i> Add Doctor Slots (+₹25/mo)
+        </a>
         <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-warning btn-sm" style="background: #d97706; color: white; border: none;">
             <i class="fas fa-arrow-circle-up"></i> Upgrade Plan
         </a>

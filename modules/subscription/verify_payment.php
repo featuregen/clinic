@@ -57,7 +57,44 @@ try {
     $doctorLimit = 2;
     $billingCycle = 'monthly';
     
-    if ($planType === 'one_time') {
+    if ($planType === 'doctor_addon') {
+        $addonDoctors = intval($_POST['addon_doctors'] ?? 1);
+        if ($addonDoctors < 1) $addonDoctors = 1;
+
+        $currentLimit = intval($currentTenant['max_doctors'] ?? 2);
+        $newLimit = $currentLimit + $addonDoctors;
+        $periodEnd = $currentTenant['subscription_ends_at'];
+
+        $paymentNotes = "Doctor Capacity Add-On Pack: +{$addonDoctors} doctor slot(s) appended until " . ($periodEnd ? date('d M Y', strtotime($periodEnd)) : 'Lifetime') . " (Base: ₹" . number_format($baseAmount, 2) . " + 18% GST: ₹" . number_format($gstAmount, 2) . ")";
+
+        // 1. Insert payment record
+        $stmtP = $master->prepare("
+            INSERT INTO tenant_subscription_payments (
+                tenant_id, plan_type, amount, base_amount, gst_rate, gst_amount,
+                payment_mode, payment_reference, collected_by, period_start, period_end,
+                bonus_months_granted, doctor_limit_granted, status, notes, created_at
+            ) VALUES (?, 'doctor_addon', ?, ?, ?, ?, 'razorpay', ?, 'Razorpay Online', NOW(), ?, 0, ?, 'completed', ?, NOW())
+        ");
+        $stmtP->execute([
+            $tenantId, $amount, $baseAmount, $gstRate, $gstAmount,
+            $paymentId, $periodEnd, $newLimit, $paymentNotes
+        ]);
+
+        // 2. Update tenant max_doctors & addon_doctors
+        $stmtU = $master->prepare("
+            UPDATE tenants 
+            SET max_doctors = ?,
+                addon_doctors = COALESCE(addon_doctors, 0) + ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmtU->execute([$newLimit, $addonDoctors, $tenantId]);
+
+        $master->commit();
+        setFlashMessage('success', "Doctor Add-on activated! +{$addonDoctors} doctor slot(s) added successfully. Your new capacity is {$newLimit} doctors.");
+        header('Location: ' . BASE_URL . '/modules/doctors/list.php');
+        exit;
+    } elseif ($planType === 'one_time') {
         $isLifetime = 1;
         $newEnd = null;
         $doctorLimit = isset($currentTenant['custom_lifetime_doctors']) && $currentTenant['custom_lifetime_doctors'] !== null ? intval($currentTenant['custom_lifetime_doctors']) : intval($settings['one_time_max_doctors'] ?? 0);

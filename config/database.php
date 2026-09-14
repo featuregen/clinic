@@ -256,6 +256,23 @@ class Database {
                     ADD COLUMN gst_amount DECIMAL(10,2) DEFAULT 0.00 AFTER gst_rate");
             }
             
+            // Check if addon_doctors column exists in tenants
+            $colAddonCheck = $masterConn->query("SHOW COLUMNS FROM tenants LIKE 'addon_doctors'")->fetch();
+            if (!$colAddonCheck) {
+                $masterConn->exec("ALTER TABLE tenants 
+                    ADD COLUMN addon_doctors INT DEFAULT 0 AFTER max_doctors,
+                    ADD COLUMN custom_addon_doctor_monthly_price DECIMAL(10,2) NULL,
+                    ADD COLUMN custom_addon_doctor_yearly_price DECIMAL(10,2) NULL");
+            }
+            
+            // Check if custom_razorpay_key_id column exists in tenants
+            $colRzpCheck = $masterConn->query("SHOW COLUMNS FROM tenants LIKE 'custom_razorpay_key_id'")->fetch();
+            if (!$colRzpCheck) {
+                $masterConn->exec("ALTER TABLE tenants 
+                    ADD COLUMN custom_razorpay_key_id VARCHAR(100) NULL,
+                    ADD COLUMN custom_razorpay_key_secret VARCHAR(100) NULL");
+            }
+            
             // Ensure saas_global_settings exists
             $masterConn->exec("CREATE TABLE IF NOT EXISTS saas_global_settings (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -278,6 +295,8 @@ class Database {
                     'yearly_default_bonus_months' => '2',
                     'one_time_price' => '49999',
                     'one_time_max_doctors' => '0',
+                    'addon_doctor_monthly_price' => '25',
+                    'addon_doctor_yearly_price' => '250',
                     'razorpay_key_id' => '',
                     'razorpay_key_secret' => '',
                     'offline_payment_contact' => 'Phone: +91 98765 43210 | WhatsApp: +91 98765 43210',
@@ -286,6 +305,11 @@ class Database {
                 foreach ($defaultSettings as $k => $v) {
                     $stmt->execute([$k, $v]);
                 }
+            } else {
+                // Ensure addon pricing keys exist
+                $masterConn->exec("INSERT IGNORE INTO saas_global_settings (setting_key, setting_value) VALUES 
+                    ('addon_doctor_monthly_price', '25'),
+                    ('addon_doctor_yearly_price', '250')");
             }
         } catch (PDOException $e) {
             error_log("Master DB Self-healing migration error: " . $e->getMessage());

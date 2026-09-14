@@ -257,6 +257,15 @@ $sgstAmount = round($gstAmount - $cgstAmount, 2);
             <tbody>
                 <tr>
                     <td>
+                        <?php if ($payment['plan_type'] === 'doctor_addon'): ?>
+                        <strong style="font-size: 14px; color: #0891b2;">Doctor Capacity Add-On Pack</strong>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                            +<?= intval($payment['doctor_limit_granted']) ?> Additional Doctor Slot(s) for Feature Gen Care
+                        </div>
+                        <div style="font-size: 12px; color: #0891b2; font-weight: 600; margin-top: 2px;">
+                            <i class="fas fa-bolt"></i> Co-termed with active subscription
+                        </div>
+                        <?php else: ?>
                         <strong style="text-transform: capitalize; font-size: 14px;"><?= sanitizeOutput($payment['plan_type']) ?> Plan Subscription</strong>
                         <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
                             Feature Gen Care Cloud Clinic Suite
@@ -266,16 +275,23 @@ $sgstAmount = round($gstAmount - $cgstAmount, 2);
                             <i class="fas fa-gift"></i> +<?= $payment['bonus_months_granted'] ?> Bonus Months Included
                         </div>
                         <?php endif; ?>
+                        <?php endif; ?>
                     </td>
                     <td>
                         <span style="font-weight: 700; color: #475569; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 12px;">998314</span>
                     </td>
                     <td>
+                        <?php if ($payment['plan_type'] === 'doctor_addon'): ?>
+                        <strong style="color: #0891b2;">+<?= $payment['doctor_limit_granted'] ?> Extra Slots</strong>
+                        <?php else: ?>
                         <strong><?= $payment['doctor_limit_granted'] > 0 ? $payment['doctor_limit_granted'] . ' Doctors' : 'Unlimited' ?></strong>
+                        <?php endif; ?>
                     </td>
                     <td>
                         <?php if ($payment['plan_type'] === 'one_time' || empty($payment['period_end'])): ?>
                             <span style="color: #059669; font-weight: 700;"><i class="fas fa-infinity"></i> Lifetime Perpetual</span>
+                        <?php elseif ($payment['plan_type'] === 'doctor_addon'): ?>
+                            Co-termed until<br><strong><?= date('d M Y', strtotime($payment['period_end'])) ?></strong>
                         <?php else: ?>
                             <?= date('d M Y', strtotime($payment['period_start'])) ?> &rarr;<br><strong><?= date('d M Y', strtotime($payment['period_end'])) ?></strong>
                         <?php endif; ?>
