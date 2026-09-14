@@ -10,8 +10,10 @@ $db = db();
 $clinicId = getCurrentClinicId();
 
 $staff = $db->fetchAll(
-    "SELECT u.*, r.name as role_name FROM users u
+    "SELECT u.*, r.name as role_name, b.name as branch_name 
+     FROM users u
      JOIN roles r ON u.role_id = r.id
+     LEFT JOIN branches b ON u.branch_id = b.id
      WHERE u.clinic_id = ? ORDER BY u.full_name", [$clinicId]
 );
 ?>
@@ -34,7 +36,7 @@ $staff = $db->fetchAll(
         <?php else: ?>
         <div class="table-responsive">
             <table class="table">
-                <thead><tr><th>Staff</th><th>Role</th><th>Email</th><th>Phone</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Staff</th><th>Role</th><th>Branch</th><th>Email</th><th>Phone</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
                 <tbody>
                 <?php foreach ($staff as $s): ?>
                 <tr>
@@ -48,6 +50,7 @@ $staff = $db->fetchAll(
                         </div>
                     </td>
                     <td><span class="badge badge-secondary"><?= ucfirst(str_replace('_', ' ', $s['role_name'])) ?></span></td>
+                    <td><?= !empty($s['branch_name']) ? '<span class="badge badge-info">' . sanitizeOutput($s['branch_name']) . '</span>' : '<span class="badge badge-secondary">All Branches</span>' ?></td>
                     <td><?= sanitizeOutput($s['email'] ?? '-') ?></td>
                     <td><?= sanitizeOutput($s['phone'] ?? '-') ?></td>
                     <td><span class="badge badge-<?= $s['is_active'] ? 'success' : 'danger' ?>"><?= $s['is_active'] ? 'Active' : 'Inactive' ?></span></td>

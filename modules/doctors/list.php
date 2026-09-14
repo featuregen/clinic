@@ -11,13 +11,14 @@ $clinicId = getCurrentClinicId();
 
 $doctors = $db->fetchAll(
     "SELECT d.*, u.full_name, u.email, u.phone, u.profile_image, u.last_login,
-            s.name as specialty_name, dept.name as department_name,
+            s.name as specialty_name, dept.name as department_name, b.name as branch_name,
             (SELECT COUNT(*) FROM appointments WHERE doctor_id = d.id AND appointment_date = CURDATE()) as today_appointments,
             (SELECT COUNT(*) FROM appointments WHERE doctor_id = d.id) as total_appointments
      FROM doctors d
      JOIN users u ON d.user_id = u.id
      LEFT JOIN specialties s ON d.specialty_id = s.id
      LEFT JOIN departments dept ON d.department_id = dept.id
+     LEFT JOIN branches b ON u.branch_id = b.id
      WHERE d.clinic_id = ?
      ORDER BY u.full_name", [$clinicId]
 );
@@ -54,6 +55,13 @@ $doctors = $db->fetchAll(
             <h3>Dr. <?= sanitizeOutput($doc['full_name']) ?></h3>
             <p class="text-muted" style="font-size: 13px;"><?= sanitizeOutput($doc['specialty_name'] ?? 'General') ?></p>
             <p style="font-size: 12px; color: var(--text-muted);"><?= sanitizeOutput($doc['qualification'] ?? '') ?></p>
+            <div>
+                <?php if (!empty($doc['branch_name'])): ?>
+                    <span class="badge badge-info" style="font-size: 11px;"><i class="fas fa-map-marker-alt"></i> <?= sanitizeOutput($doc['branch_name']) ?></span>
+                <?php else: ?>
+                    <span class="badge badge-secondary" style="font-size: 11px;"><i class="fas fa-network-wired"></i> All Branches</span>
+                <?php endif; ?>
+            </div>
             
             <div style="display: flex; gap: 16px; justify-content: center; margin: 16px 0;">
                 <div style="text-align: center;">

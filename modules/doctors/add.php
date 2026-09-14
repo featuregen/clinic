@@ -16,7 +16,7 @@ $isEdit = false;
 // Edit mode
 if (isset($_GET['id'])) {
     $doctor = $db->fetch(
-        "SELECT d.*, u.full_name, u.email, u.phone, u.gender, u.date_of_birth, u.username, u.role,
+        "SELECT d.*, u.full_name, u.email, u.phone, u.gender, u.date_of_birth, u.username, u.role, u.branch_id,
                 u.qualification, u.specialization, u.license_number, u.address, u.profile_image
          FROM doctors d JOIN users u ON d.user_id = u.id
          WHERE d.id = ? AND d.clinic_id = ?", [$_GET['id'], $clinicId]
@@ -53,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slotDuration = intval($_POST['default_slot_duration'] ?? 15);
     $isAvailable = isset($_POST['is_available']) ? 1 : 0;
     $bio = sanitize($_POST['bio'] ?? '');
+    $branchId = intval($_POST['branch_id'] ?? 0) ?: null;
 
     try {
         $db->beginTransaction();
@@ -61,9 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Update users table
             $db->query(
                 "UPDATE users SET full_name=?, email=?, phone=?, gender=?, date_of_birth=?,
-                 qualification=?, specialization=?, license_number=?, address=? WHERE id=?",
+                 qualification=?, specialization=?, license_number=?, address=?, branch_id=? WHERE id=?",
                 [$fullName, $email ?: null, $phone ?: null, $gender ?: null, $dob ?: null,
-                 $qualification ?: null, $specialization ?: null, $licenseNumber ?: null, $address ?: null, $doctor['user_id']]
+                 $qualification ?: null, $specialization ?: null, $licenseNumber ?: null, $address ?: null, $branchId, $doctor['user_id']]
             );
 
             // Update password only if provided
@@ -97,10 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Insert into users table
             $roleId = $db->fetch("SELECT id FROM roles WHERE name = 'doctor'")['id'] ?? 3;
             $db->query(
-                "INSERT INTO users (clinic_id, role_id, role, username, password, full_name, email, phone,
+                "INSERT INTO users (clinic_id, branch_id, role_id, role, username, password, full_name, email, phone,
                  gender, date_of_birth, qualification, specialization, license_number, address)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                [$clinicId, $roleId, 'doctor', $username, password_hash($password, PASSWORD_DEFAULT),
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                [$clinicId, $branchId, $roleId, 'doctor', $username, password_hash($password, PASSWORD_DEFAULT),
                  $fullName, $email ?: null, $phone ?: null, $gender ?: null, $dob ?: null,
                  $qualification ?: null, $specialization ?: null, $licenseNumber ?: null, $address ?: null]
             );
@@ -133,9 +134,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = $isEdit ? 'Edit Doctor' : 'Add Doctor';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 
-// Load specialties and departments for dropdowns
+// Load specialties, departments, and branches for dropdowns
 $specialties = $db->fetchAll("SELECT id, name FROM specialties WHERE is_active = 1 ORDER BY name");
 $departments = $db->fetchAll("SELECT id, name FROM departments WHERE clinic_id = ? AND is_active = 1 ORDER BY name", [$clinicId]);
+$branches = $db->fetchAll("SELECT id, name FROM branches WHERE clinic_id = ? AND is_active = 1 ORDER BY name", [$clinicId]);
 ?>
 
 <div class="content-header">
@@ -304,7 +306,13 @@ $departments = $db->fetchAll("SELECT id, name FROM departments WHERE clinic_id =
                 </label>
             </div>
             <div class="form-group">
-                <!-- spacer -->
+                <label class="form-label">Branch Location</label>
+                <select name="branch_id" id="doctorBranchSelect" class="form-control">
+                    <option value="">All Branches</option>
+                    <?php foreach ($branches as $branch): ?>
+                    <option value="<?= $branch['id'] ?>" <?= ($doctor['branch_id'] ?? '') == $branch['id'] ? 'selected' : '' ?>><?= sanitizeOutput($branch['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
         </div>
 
