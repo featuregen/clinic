@@ -56,6 +56,7 @@ function createSession($user) {
     $_SESSION['username'] = $user['username'];
     $_SESSION['full_name'] = $user['full_name'];
     $_SESSION['email'] = $user['email'];
+    $_SESSION['phone'] = $user['phone'] ?? null;
     $_SESSION['role'] = $user['role'];
     $_SESSION['role_id'] = $user['role_id'] ?? null;
     $_SESSION['clinic_id'] = $user['clinic_id'] ?? 1;

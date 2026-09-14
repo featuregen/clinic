@@ -12,6 +12,17 @@ $clinicId = getCurrentClinicId();
 $currentUserRole = getCurrentUserRole();
 $isSuperAdmin = ($currentUserRole === ROLE_SUPER_ADMIN);
 
+$userId = getCurrentUserId();
+$currentUserProfile = db()->fetch("SELECT full_name, email, phone FROM users WHERE id = ?", [$userId]);
+$clinicRow = db()->fetch("SELECT name, email, phone FROM clinics WHERE id = ?", [$clinicId]);
+if (!$clinicRow) {
+    $clinicRow = db()->fetch("SELECT name, email, phone FROM clinics ORDER BY id ASC LIMIT 1");
+}
+$prefillName = !empty($currentUserProfile['full_name']) ? $currentUserProfile['full_name'] : getSession('full_name', 'Admin');
+$prefillEmail = !empty($currentUserProfile['email']) ? $currentUserProfile['email'] : getSession('email', '');
+$rawPhone = !empty($currentUserProfile['phone']) ? $currentUserProfile['phone'] : (!empty($clinicRow['phone']) ? $clinicRow['phone'] : getSession('phone', ''));
+$prefillPhone = preg_replace('/[^0-9+]/', '', (string)$rawPhone);
+
 // Handle Direct Activation / Offline Payment Recording by Super Admin (COD, UPI, Net Banking, Cheque) - Razorpay Not Required
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'super_admin_direct_payment') {
     if (!$isSuperAdmin) {
@@ -1234,8 +1245,9 @@ if (razorpayBtn && rzpKey) {
                     }
                 },
                 "prefill": {
-                    "name": <?= json_encode(getSession('full_name', 'Admin')) ?>,
-                    "email": <?= json_encode(getSession('email', '')) ?>
+                    "name": <?= json_encode($prefillName) ?>,
+                    "email": <?= json_encode($prefillEmail) ?>,
+                    "contact": <?= json_encode($prefillPhone) ?>
                 },
                 "theme": {
                     "color": "#00838f"

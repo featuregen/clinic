@@ -38,6 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     $db->query("UPDATE users SET full_name = ?, email = ?, phone = ? WHERE id = ?", [$fullName, $email, $phone, $userId]);
     $_SESSION['full_name'] = $fullName;
+    $_SESSION['email'] = $email;
+    $_SESSION['phone'] = $phone;
     logAudit('update', 'auth', 'user', $userId, null, null, 'Profile updated');
     setFlashMessage('success', 'Profile updated successfully.');
     header('Location: ' . BASE_URL . '/modules/auth/profile.php');
