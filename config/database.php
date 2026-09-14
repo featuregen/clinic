@@ -173,12 +173,47 @@ class Database {
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES {$this->charset}"
             ]);
             
+            // Self-heal tenant DB schema for clinics table
+            $this->ensureTenantClinicsSchema($this->connection);
+
             // Close master connection
             $masterConn = null;
             
         } catch (PDOException $e) {
             error_log("Database Connection Error: " . $e->getMessage());
             die("<h1>System Error</h1><p>Database connection failed. Please check configuration.</p>");
+        }
+    }
+    
+    /**
+     * Self-healing tenant database schema for clinics table
+     */
+    private function ensureTenantClinicsSchema($tenantConn) {
+        try {
+            $tableCheck = $tenantConn->query("SHOW TABLES LIKE 'clinics'")->fetch();
+            if ($tableCheck) {
+                $cols = $tenantConn->query("SHOW COLUMNS FROM clinics")->fetchAll(PDO::FETCH_COLUMN);
+                $colDefinitions = [
+                    'logo' => "VARCHAR(255) NULL AFTER name",
+                    'email' => "VARCHAR(150) NULL",
+                    'phone' => "VARCHAR(20) NULL",
+                    'address' => "TEXT NULL",
+                    'city' => "VARCHAR(100) NULL",
+                    'state' => "VARCHAR(100) NULL",
+                    'pincode' => "VARCHAR(10) NULL",
+                    'website' => "VARCHAR(200) NULL",
+                    'pan_number' => "VARCHAR(20) NULL",
+                    'gst_number' => "VARCHAR(20) NULL"
+                ];
+
+                foreach ($colDefinitions as $colName => $colDef) {
+                    if (!in_array($colName, $cols)) {
+                        $tenantConn->exec("ALTER TABLE clinics ADD COLUMN {$colName} {$colDef}");
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Tenant clinics schema check error: " . $e->getMessage());
         }
     }
     
