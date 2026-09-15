@@ -3,7 +3,7 @@
  * Delete Template
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
-requirePermission('templates.delete'); // Or manage
+requirePermission('prescriptions.templates');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = $_POST['id'] ?? 0;

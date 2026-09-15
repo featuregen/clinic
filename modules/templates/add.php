@@ -4,7 +4,7 @@
  */
 $pageTitle = 'Manage Template';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';
-requirePermission('templates.manage');
+requirePermission('prescriptions.templates');
 
 $db = db();
 $clinicId = getCurrentClinicId();
