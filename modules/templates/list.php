@@ -9,7 +9,7 @@ requirePermission('prescriptions.templates');
 $db = db();
 $clinicId = getCurrentClinicId();
 $userId = $_SESSION['user_id'];
-$isAdmin = (getCurrentUserRole() === 'clinic_admin' || getCurrentUserRole() === 'super_admin');
+$isAdmin = in_array(getCurrentUserRole(), ['admin', 'clinic_admin', 'super_admin', ROLE_ADMIN, ROLE_SUPER_ADMIN]);
 
 // Fetch templates logic
 $where = "WHERE t.clinic_id = ?";
@@ -55,8 +55,9 @@ $templates = $db->fetchAll(
         </div>
     </div>
     <?php else: foreach ($templates as $t): 
-        $meds = json_decode($t['medicines'] ?? '[]', true);
-        $tests = json_decode($t['lab_tests'] ?? '[]', true);
+        $tData = json_decode($t['template_data'] ?? '[]', true);
+        $meds = !empty($tData['medicines']) ? $tData['medicines'] : json_decode($t['medicines'] ?? '[]', true);
+        $tests = !empty($tData['lab_tests']) ? $tData['lab_tests'] : json_decode($t['lab_tests'] ?? '[]', true);
         $medCount = is_array($meds) ? count($meds) : 0;
         $testCount = is_array($tests) ? count($tests) : 0;
     ?>

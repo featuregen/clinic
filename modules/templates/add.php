@@ -8,8 +8,7 @@ requirePermission('prescriptions.templates');
 
 $db = db();
 $clinicId = getCurrentClinicId();
-$userId = $_SESSION['user_id'];
-$isAdmin = (getCurrentUserRole() === 'clinic_admin' || getCurrentUserRole() === 'super_admin');
+$isAdmin = in_array(getCurrentUserRole(), ['admin', 'clinic_admin', 'super_admin', ROLE_ADMIN, ROLE_SUPER_ADMIN]);
 $doctorId = getCurrentDoctorId();
 
 $id = $_GET['id'] ?? 0;
@@ -118,12 +117,13 @@ $testList = $db->fetchAll("SELECT name FROM lab_tests WHERE is_active = 1 ORDER 
                 <div class="col-md-6 form-group">
                     <label>Scope</label>
                     <select name="scope" class="form-control" <?= !$isAdmin ? 'disabled' : '' ?>>
-                        <option value="personal" <?= ($template['scope'] ?? '') === 'personal' ? 'selected' : '' ?>>Personal</option>
+                        <option value="personal" <?= ($template['scope'] ?? 'personal') === 'personal' ? 'selected' : '' ?>>Personal (Only you)</option>
                         <?php if ($isAdmin): ?>
-                        <option value="clinic" <?= ($template['scope'] ?? '') === 'clinic' ? 'selected' : '' ?>>Clinic-wide</option>
+                        <option value="clinic" <?= ($template['scope'] ?? '') === 'clinic' ? 'selected' : '' ?>>Clinic-wide (All Doctors)</option>
                         <?php endif; ?>
                     </select>
                     <?php if (!$isAdmin): ?><input type="hidden" name="scope" value="personal"><?php endif; ?>
+                    <small class="text-muted text-xs">Personal: visible only to creator. Clinic-wide: available to all clinic doctors.</small>
                 </div>
                 
                 <div class="col-md-12 form-group">
