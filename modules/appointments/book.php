@@ -90,15 +90,45 @@ $doctors = $db->fetchAll(
                     </div>
                 </div>
                 <?php else: ?>
-                <div class="form-group">
-                    <label class="form-label">Select Patient <span class="required">*</span></label>
-                    <select name="patient_id" id="patientSelect" class="form-control" required>
-                        <option value="">Search and select patient...</option>
-                    </select>
-                    <div class="form-text">
-                        <a href="<?= BASE_URL ?>/modules/patients/add.php">+ Register New Patient</a>
+                <div id="patientSearchSection" class="form-group mb-16" style="position: relative;">
+                    <label class="form-label font-semibold">Select Patient <span class="required">*</span></label>
+                    <div style="position: relative;">
+                        <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 2;"></i>
+                        <input type="text" id="patientSearchInput" class="form-control" placeholder="Search by Phone, Patient ID, or Name..." autocomplete="off" style="padding-left: 38px; padding-right: 36px;">
+                        <span id="searchClearBtn" onclick="resetPatientSearchInput()" style="display:none; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 16px; z-index: 3;" title="Clear search">&times;</span>
+                    </div>
+
+                    <!-- Live Dropdown Results -->
+                    <div id="patientSearchResults" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-card, #ffffff); border: 1px solid var(--border-color, #cbd5e1); border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); max-height: 300px; overflow-y: auto; z-index: 9999;"></div>
+
+                    <div class="d-flex justify-between align-center mt-8">
+                        <small class="text-muted text-xs"><i class="fas fa-info-circle"></i> Type phone (e.g. 98765...) or Patient ID (e.g. PAT-...) to avoid name duplicates</small>
+                        <a href="<?= BASE_URL ?>/modules/patients/add.php" target="_blank" class="text-xs" style="color: var(--primary); font-weight: 600;">+ Register New Patient</a>
                     </div>
                 </div>
+
+                <!-- Selected Patient Confirmation Card -->
+                <div id="selectedPatientCard" class="alert alert-success mb-16" style="display: none; justify-content: space-between; align-items: center; border-left: 4px solid var(--success); padding: 12px 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex-shrink: 0;">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #16a34a; letter-spacing: 0.5px;">Patient Selected</div>
+                            <strong id="cardPatientName" style="font-size: 15px; color: var(--text-primary);"></strong>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <span class="badge badge-primary" id="cardPatientUid" style="font-size: 11px;"></span>
+                                <span><i class="fas fa-phone text-muted"></i> <strong id="cardPatientPhone"></strong></span>
+                                <span id="cardPatientMeta"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="changePatientSelection()" style="font-size: 12px; background: white; flex-shrink: 0;">
+                        <i class="fas fa-sync-alt"></i> Change
+                    </button>
+                </div>
+
+                <input type="hidden" name="patient_id" id="selectedPatientId" required>
                 <?php endif; ?>
                 
                 <h4 class="mb-16 mt-24"><i class="fas fa-user-md" style="color: var(--accent);"></i> Doctor & Schedule</h4>
@@ -175,19 +205,166 @@ $doctors = $db->fetchAll(
 </form>
 
 <script>
-// Load patients for search
+// Patient Search and Autocomplete Logic
 <?php if (!$prefilledPatient): ?>
-fetch(`${BASE_URL}/modules/patients/search_ajax.php?clinic_id=<?= $clinicId ?>`)
-    .then(r => r.json())
-    .then(patients => {
-        const select = document.getElementById('patientSelect');
-        patients.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = `${p.patient_uid} - ${p.first_name} ${p.last_name || ''} (${p.phone})`;
-            select.appendChild(opt);
+const searchInput = document.getElementById('patientSearchInput');
+const resultsBox = document.getElementById('patientSearchResults');
+const hiddenIdInput = document.getElementById('selectedPatientId');
+const selectedPatientCard = document.getElementById('selectedPatientCard');
+const patientSearchSection = document.getElementById('patientSearchSection');
+const clearBtn = document.getElementById('searchClearBtn');
+
+let searchDebounceTimer = null;
+let currentPatientsList = [];
+
+function fetchAndRenderPatients(query = '') {
+    resultsBox.innerHTML = '<div style="padding: 12px 16px; color: var(--text-muted); font-size: 13px;"><i class="fas fa-spinner fa-spin"></i> Searching patients...</div>';
+    resultsBox.style.display = 'block';
+
+    fetch(`${BASE_URL}/modules/patients/search_ajax.php?q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(patients => {
+            currentPatientsList = patients || [];
+            renderPatientResults(currentPatientsList, query);
+        })
+        .catch(() => {
+            resultsBox.innerHTML = '<div style="padding: 12px 16px; color: var(--danger); font-size: 13px;">Failed to search patients.</div>';
         });
-    }).catch(() => {});
+}
+
+function renderPatientResults(patients, query) {
+    if (!patients || patients.length === 0) {
+        resultsBox.innerHTML = `
+            <div style="padding: 18px 16px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                <i class="fas fa-user-slash mb-4" style="font-size: 22px; opacity: 0.4;"></i>
+                <div>No patient found matching "<strong>${escapeHtml(query)}</strong>"</div>
+                <div style="margin-top: 10px;">
+                    <a href="${BASE_URL}/modules/patients/add.php" target="_blank" class="btn btn-sm btn-primary">+ Register New Patient</a>
+                </div>
+            </div>`;
+        resultsBox.style.display = 'block';
+        return;
+    }
+
+    let html = '';
+    if (!query) {
+        html += `<div style="padding: 6px 14px; background: var(--bg-surface, #f8fafc); border-bottom: 1px solid var(--border-color, #e2e8f0); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Recent Patients</div>`;
+    } else {
+        html += `<div style="padding: 6px 14px; background: var(--bg-surface, #f8fafc); border-bottom: 1px solid var(--border-color, #e2e8f0); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Matches Found (${patients.length})</div>`;
+    }
+
+    patients.forEach((p, idx) => {
+        const metaParts = [];
+        if (p.gender) metaParts.push(p.gender);
+        if (p.age) metaParts.push(p.age + ' yrs');
+        if (p.blood_group) metaParts.push(`<span class="badge badge-danger" style="font-size: 9px; padding: 1px 4px;">${p.blood_group}</span>`);
+        const metaText = metaParts.join(' • ');
+
+        html += `
+        <div class="patient-search-item" data-index="${idx}" style="padding: 10px 14px; border-bottom: 1px solid var(--border-color, #f1f5f9); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s;" onmouseover="this.style.background='var(--bg-surface, #f1f5f9)'" onmouseout="this.style.background='transparent'">
+            <div style="flex: 1; min-width: 0; padding-right: 12px;">
+                <div style="font-weight: 700; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name || '')}</span>
+                    <span class="badge badge-primary" style="font-size: 11px; font-weight: 600; padding: 2px 6px;">${escapeHtml(p.patient_uid)}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span><i class="fas fa-phone" style="font-size: 10px;"></i> <strong style="color: var(--text-primary);">${escapeHtml(p.phone || '-')}</strong></span>
+                    ${metaText ? `<span>${metaText}</span>` : ''}
+                </div>
+            </div>
+            <button type="button" class="btn btn-xs btn-primary" style="flex-shrink: 0; pointer-events: none;">
+                Select <i class="fas fa-check" style="font-size: 10px; margin-left: 2px;"></i>
+            </button>
+        </div>`;
+    });
+
+    resultsBox.innerHTML = html;
+    resultsBox.style.display = 'block';
+
+    resultsBox.querySelectorAll('.patient-search-item').forEach(el => {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const idx = parseInt(this.getAttribute('data-index'));
+            selectPatient(currentPatientsList[idx]);
+        });
+    });
+}
+
+function selectPatient(patient) {
+    if (!patient) return;
+    hiddenIdInput.value = patient.id;
+    document.getElementById('cardPatientName').textContent = `${patient.first_name} ${patient.last_name || ''}`;
+    document.getElementById('cardPatientUid').textContent = patient.patient_uid;
+    document.getElementById('cardPatientPhone').textContent = patient.phone || '-';
+    
+    const metaParts = [];
+    if (patient.gender) metaParts.push(patient.gender);
+    if (patient.age) metaParts.push(patient.age + ' yrs');
+    if (patient.blood_group) metaParts.push(patient.blood_group);
+    document.getElementById('cardPatientMeta').textContent = metaParts.length > 0 ? ('• ' + metaParts.join(' • ')) : '';
+
+    patientSearchSection.style.display = 'none';
+    resultsBox.style.display = 'none';
+    selectedPatientCard.style.display = 'flex';
+}
+
+function changePatientSelection() {
+    hiddenIdInput.value = '';
+    selectedPatientCard.style.display = 'none';
+    patientSearchSection.style.display = 'block';
+    searchInput.value = '';
+    clearBtn.style.display = 'none';
+    searchInput.focus();
+    fetchAndRenderPatients('');
+}
+
+function resetPatientSearchInput() {
+    searchInput.value = '';
+    clearBtn.style.display = 'none';
+    searchInput.focus();
+    fetchAndRenderPatients('');
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+if (searchInput) {
+    searchInput.addEventListener('focus', function() {
+        fetchAndRenderPatients(this.value.trim());
+    });
+
+    searchInput.addEventListener('input', function() {
+        const val = this.value.trim();
+        clearBtn.style.display = val ? 'block' : 'none';
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            fetchAndRenderPatients(val);
+        }, 220);
+    });
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#patientSearchSection')) {
+        if (resultsBox) resultsBox.style.display = 'none';
+    }
+});
+
+// Form validation before submit
+document.querySelector('form')?.addEventListener('submit', function(e) {
+    const pid = document.querySelector('[name="patient_id"]')?.value;
+    if (!pid || pid === '0') {
+        e.preventDefault();
+        alert('Please search and select a patient first.');
+        if (searchInput) {
+            patientSearchSection.style.display = 'block';
+            searchInput.focus();
+        }
+        return false;
+    }
+});
 <?php endif; ?>
 
 function updateFee() {
