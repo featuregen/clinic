@@ -276,11 +276,11 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         </div>
                     </div>
                     
+                    <?php if (!empty($branch['appointment_count'])): ?>
                     <div style="display: flex; gap: 12px; margin-top: 16px; padding: 8px 12px; background: var(--bg-surface); border-radius: 6px; font-size: 12px;">
-                        <div><strong><?= $branch['staff_count'] ?? 0 ?></strong> Staff Members</div>
-                        <div style="color: var(--border-color);">|</div>
-                        <div><strong><?= $branch['appointment_count'] ?? 0 ?></strong> Appointments</div>
+                        <div><strong><?= $branch['appointment_count'] ?></strong> Appointments</div>
                     </div>
+                    <?php endif; ?>
                 </div>
                 
                 <?php if ($isSuperAdmin): ?>

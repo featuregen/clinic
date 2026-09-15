@@ -243,11 +243,11 @@ $templates = $db->fetchAll("SELECT * FROM prescription_templates WHERE clinic_id
                                 </select>
                             </div>
                         </div>
-                        <div class="form-row mb-12">
-                            <div class="form-group">
+                        <div class="mb-12" style="display: flex; gap: 12px; align-items: center;">
+                            <div class="form-group mb-0" style="flex: 1;">
                                 <input type="text" name="med_duration[]" class="form-control" placeholder="Duration (e.g. 5 days)" value="<?= sanitizeOutput($med['duration'] ?? '') ?>">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group mb-0" style="flex: 1;">
                                 <select name="med_route[]" class="form-control">
                                     <option value="oral" <?= ($med['route'] ?? 'oral') === 'oral' ? 'selected' : '' ?>>Oral</option>
                                     <option value="injection" <?= ($med['route'] ?? '') === 'injection' ? 'selected' : '' ?>>Injection</option>
@@ -255,9 +255,11 @@ $templates = $db->fetchAll("SELECT * FROM prescription_templates WHERE clinic_id
                                     <option value="inhalation" <?= ($med['route'] ?? '') === 'inhalation' ? 'selected' : '' ?>>Inhalation</option>
                                 </select>
                             </div>
-                            <div class="form-group" style="position: relative;">
+                            <div class="form-group mb-0" style="flex: 1.5;">
                                 <input type="text" name="med_instructions[]" class="form-control" placeholder="Instructions" value="<?= sanitizeOutput($med['instructions'] ?? '') ?>">
-                                <button type="button" class="btn btn-sm btn-ghost text-danger" style="position: absolute; right: -40px; top: 50%; transform: translateY(-50%);" onclick="this.closest('.medicine-row').remove()"><i class="fas fa-trash"></i></button>
+                            </div>
+                            <div class="form-group mb-0" style="flex-shrink: 0;">
+                                <button type="button" class="btn btn-sm btn-ghost text-danger" title="Remove Medicine" style="padding: 8px 10px; border-radius: 6px;" onclick="this.closest('.medicine-row').remove()"><i class="fas fa-trash"></i></button>
                             </div>
                         </div>
                         <hr style="border-color: var(--border-color); margin: 8px 0;">
@@ -281,14 +283,16 @@ $templates = $db->fetchAll("SELECT * FROM prescription_templates WHERE clinic_id
                 </div>
                 <div class="card-body" id="testsContainer">
                     <?php if (!empty($rxTests)): foreach ($rxTests as $test): ?>
-                    <div class="test-row form-row mb-12">
-                        <div class="form-group">
+                    <div class="test-row mb-12" style="display: flex; gap: 12px; align-items: center;">
+                        <div class="form-group mb-0" style="flex: 1;">
                             <input type="hidden" name="test_id[]" value="<?= $test['test_id'] ?>">
-                            <input type="text" name="test_name[]" class="form-control" value="<?= sanitizeOutput($test['test_name']) ?>">
+                            <input type="text" name="test_name[]" class="form-control" value="<?= sanitizeOutput($test['test_name']) ?>" placeholder="Test name" required list="testList">
                         </div>
-                        <div class="form-group" style="position: relative;">
+                        <div class="form-group mb-0" style="flex: 1;">
                             <input type="text" name="test_instructions[]" class="form-control" placeholder="Instructions" value="<?= sanitizeOutput($test['instructions'] ?? '') ?>">
-                            <button type="button" class="btn btn-sm btn-ghost text-danger" style="position: absolute; right: -40px; top: 50%; transform: translateY(-50%);" onclick="this.closest('.test-row').remove()"><i class="fas fa-trash"></i></button>
+                        </div>
+                        <div class="form-group mb-0" style="flex-shrink: 0;">
+                            <button type="button" class="btn btn-sm btn-ghost text-danger" title="Remove Test" style="padding: 8px 10px; border-radius: 6px;" onclick="this.closest('.test-row').remove()"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                     <?php endforeach; else: ?>
@@ -360,11 +364,11 @@ function addMedicine() {
                 </select>
             </div>
         </div>
-        <div class="form-row mb-12">
-            <div class="form-group">
+        <div class="mb-12" style="display: flex; gap: 12px; align-items: center;">
+            <div class="form-group mb-0" style="flex: 1;">
                 <input type="text" name="med_duration[]" class="form-control" placeholder="Duration">
             </div>
-            <div class="form-group">
+            <div class="form-group mb-0" style="flex: 1;">
                 <select name="med_route[]" class="form-control">
                     <option value="oral">Oral</option>
                     <option value="injection">Injection</option>
@@ -372,9 +376,11 @@ function addMedicine() {
                     <option value="inhalation">Inhalation</option>
                 </select>
             </div>
-            <div class="form-group" style="position: relative;">
+            <div class="form-group mb-0" style="flex: 1.5;">
                 <input type="text" name="med_instructions[]" class="form-control" placeholder="Instructions">
-                <button type="button" class="btn btn-sm btn-ghost text-danger" style="position: absolute; right: -40px; top: 50%; transform: translateY(-50%);" onclick="this.closest('.medicine-row').remove()"><i class="fas fa-trash"></i></button>
+            </div>
+            <div class="form-group mb-0" style="flex-shrink: 0;">
+                <button type="button" class="btn btn-sm btn-ghost text-danger" title="Remove Medicine" style="padding: 8px 10px; border-radius: 6px;" onclick="this.closest('.medicine-row').remove()"><i class="fas fa-trash"></i></button>
             </div>
         </div>
         <hr style="border-color: var(--border-color); margin: 8px 0;">
@@ -387,14 +393,16 @@ function addLabTest() {
     document.getElementById('noTests')?.remove();
     const container = document.getElementById('testsContainer');
     const html = `
-    <div class="test-row form-row mb-12">
-        <div class="form-group">
+    <div class="test-row mb-12" style="display: flex; gap: 12px; align-items: center;">
+        <div class="form-group mb-0" style="flex: 1;">
             <input type="hidden" name="test_id[]" value="0">
             <input type="text" name="test_name[]" class="form-control" placeholder="Test name" required list="testList">
         </div>
-        <div class="form-group" style="position: relative;">
+        <div class="form-group mb-0" style="flex: 1;">
             <input type="text" name="test_instructions[]" class="form-control" placeholder="Instructions">
-            <button type="button" class="btn btn-sm btn-ghost text-danger" style="position: absolute; right: -40px; top: 50%; transform: translateY(-50%);" onclick="this.closest('.test-row').remove()"><i class="fas fa-trash"></i></button>
+        </div>
+        <div class="form-group mb-0" style="flex-shrink: 0;">
+            <button type="button" class="btn btn-sm btn-ghost text-danger" title="Remove Test" style="padding: 8px 10px; border-radius: 6px;" onclick="this.closest('.test-row').remove()"><i class="fas fa-trash"></i></button>
         </div>
     </div>`;
     container.insertAdjacentHTML('beforeend', html);

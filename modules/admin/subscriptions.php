@@ -1190,7 +1190,9 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         <label class="form-label font-semibold">Payment Mode <span class="required">*</span></label>
                         <select name="payment_mode" class="form-control" required>
                             <option value="cash_on_hand" selected>💵 COD (Cash on Hand / Direct Handover)</option>
-                            <option value="razorpay">⚡ Razorpay Online</option>
+                            <option value="upi">📱 UPI (Instant Transfer / QR / GPay / PhonePe)</option>
+                            <option value="bank_transfer">🏦 Net Banking / Direct Bank Transfer (IMPS / NEFT)</option>
+                            <option value="cheque">📝 Cheque / Demand Draft</option>
                         </select>
                     </div>
 
