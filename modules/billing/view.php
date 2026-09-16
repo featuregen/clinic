@@ -68,9 +68,20 @@ $payments = $db->fetchAll(
     <div class="card-body" style="padding: 32px;">
         <!-- Invoice Header -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 3px solid var(--primary); padding-bottom: 20px;">
-            <div style="display: flex; align-items: flex-start; gap: 16px;">
-                <?php if (!empty($clinic['logo'])): ?>
-                <img src="<?= UPLOADS_URL ?>/<?= $clinic['logo'] ?>" alt="Logo" style="height: 60px; width: auto; object-fit: contain;">
+                <?php 
+                $bLogo = $clinic['logo'] ?? '';
+                $bLogoUrl = '';
+                if (!empty($bLogo)) {
+                    $bClean = ltrim($bLogo, '/');
+                    $bUrl = (strpos($bClean, 'clinics/') === 0) ? (UPLOADS_URL . '/' . $bClean) : (UPLOADS_URL . '/clinics/' . $bClean);
+                    $bPath = (strpos($bClean, 'clinics/') === 0) ? (UPLOADS_PATH . '/' . $bClean) : (UPLOADS_PATH . '/clinics/' . $bClean);
+                    if (file_exists($bPath)) {
+                        $bLogoUrl = $bUrl;
+                    }
+                }
+                ?>
+                <?php if (!empty($bLogoUrl)): ?>
+                <img src="<?= $bLogoUrl ?>" alt="Logo" style="height: 60px; width: auto; object-fit: contain;" onerror="this.style.display='none'">
                 <?php endif; ?>
                 <div>
                     <h2 style="color: var(--primary); margin-bottom: 4px;"><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></h2>

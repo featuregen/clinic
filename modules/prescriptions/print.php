@@ -66,9 +66,20 @@ $patientAge = $rx['date_of_birth'] ? calculateAge($rx['date_of_birth']) : ($rx['
         </div>
 
         <!-- Header -->
-        <div class="header-line text-center">
-            <?php if (!empty($clinic['logo'])): ?>
-                <img src="<?= UPLOADS_URL ?>/clinics/<?= sanitizeOutput($clinic['logo']) ?>" alt="<?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?>" style="max-height: 70px; margin-bottom: 8px; object-fit: contain; display: block; margin-left: auto; margin-right: auto;">
+            <?php 
+            $rxLogo = $clinic['logo'] ?? '';
+            $rxLogoUrl = '';
+            if (!empty($rxLogo)) {
+                $rxClean = ltrim($rxLogo, '/');
+                $rxUrl = (strpos($rxClean, 'clinics/') === 0) ? (UPLOADS_URL . '/' . $rxClean) : (UPLOADS_URL . '/clinics/' . $rxClean);
+                $rxPath = (strpos($rxClean, 'clinics/') === 0) ? (UPLOADS_PATH . '/' . $rxClean) : (UPLOADS_PATH . '/clinics/' . $rxClean);
+                if (file_exists($rxPath)) {
+                    $rxLogoUrl = $rxUrl;
+                }
+            }
+            ?>
+            <?php if (!empty($rxLogoUrl)): ?>
+                <img src="<?= $rxLogoUrl ?>" alt="<?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?>" style="max-height: 70px; margin-bottom: 8px; object-fit: contain; display: block; margin-left: auto; margin-right: auto;" onerror="this.style.display='none'">
             <?php endif; ?>
             <h1 style="color: var(--primary); margin: 0 0 4px 0; font-size: <?= !empty($clinic['logo']) ? '20px' : '28px' ?>;">
                 <?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?>

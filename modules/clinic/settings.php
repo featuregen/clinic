@@ -60,26 +60,19 @@ try {
 
 $clinicId = getCurrentClinicId();
 $clinic = $db->fetch("SELECT * FROM clinics WHERE id = ?", [$clinicId]);
-if (!$clinic) {
-    $clinic = $db->fetch("SELECT * FROM clinics ORDER BY id ASC LIMIT 1");
-    if ($clinic) {
-        $clinicId = intval($clinic['id']);
-        $_SESSION['clinic_id'] = $clinicId;
-    }
-}
 
-// Guarantee that row 1 exists in clinics table
+// Guarantee that row exists in clinics table for this clinicId
 if (!$clinic) {
     $initialName = !empty($db->tenantInfo['clinic_name']) ? $db->tenantInfo['clinic_name'] : 'Feature Gen Care';
     $initialGst = $db->tenantInfo['gst_number'] ?? null;
     $initialPan = $db->tenantInfo['pan_number'] ?? null;
     $initialAddr = $db->tenantInfo['billing_address'] ?? null;
     try {
-        $pdo->prepare("INSERT INTO clinics (id, name, address, pan_number, gst_number) VALUES (1, ?, ?, ?, ?)")
-            ->execute([$initialName, $initialAddr, $initialPan, $initialGst]);
-        $clinicId = 1;
-        $_SESSION['clinic_id'] = 1;
-        $clinic = $db->fetch("SELECT * FROM clinics WHERE id = 1");
+        $pdo = $db->getConnection();
+        $pdo->prepare("INSERT INTO clinics (id, name, address, pan_number, gst_number) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name)")
+            ->execute([$clinicId, $initialName, $initialAddr, $initialPan, $initialGst]);
+        $_SESSION['clinic_id'] = $clinicId;
+        $clinic = $db->fetch("SELECT * FROM clinics WHERE id = ?", [$clinicId]);
     } catch (Exception $e) {
         $clinic = [];
     }
@@ -125,35 +118,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Save to tenant database 'clinics' table
+        // Save to tenant database 'clinics' table for this exact clinicId
         $existingClinic = $db->fetch("SELECT id FROM clinics WHERE id = ?", [$clinicId]);
-        if (!$existingClinic) {
-            $existingClinic = $db->fetch("SELECT id FROM clinics ORDER BY id ASC LIMIT 1");
-        }
 
         if ($existingClinic) {
-            $targetClinicId = intval($existingClinic['id']);
             $db->query(
                 "UPDATE clinics SET name=?, email=?, phone=?, address=?, city=?, state=?, pincode=?, website=?, pan_number=?, gst_number=?, logo=COALESCE(?, logo) WHERE id=?",
                 [
                     $name, $email, $phone, $address, $city, $state,
                     $pincode, $website, $panNumber, $gstNumber,
-                    $logoFilename, $targetClinicId
+                    $logoFilename, $clinicId
                 ]
             );
-            $_SESSION['clinic_id'] = $targetClinicId;
+            $_SESSION['clinic_id'] = $clinicId;
         } else {
             $db->query(
-                "INSERT INTO clinics (name, email, phone, address, city, state, pincode, website, pan_number, gst_number, logo) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO clinics (id, name, email, phone, address, city, state, pincode, website, pan_number, gst_number, logo) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
-                    $name, $email, $phone, $address, $city, $state,
+                    $clinicId, $name, $email, $phone, $address, $city, $state,
                     $pincode, $website, $panNumber, $gstNumber,
                     $logoFilename
                 ]
             );
-            $targetClinicId = intval($db->lastInsertId());
-            $_SESSION['clinic_id'] = $targetClinicId;
+            $_SESSION['clinic_id'] = $clinicId;
         }
 
         // Sync clinic name, tax & address details to Master DB tenants table for subscription tax invoices

@@ -59,7 +59,7 @@ function createSession($user) {
     $_SESSION['phone'] = $user['phone'] ?? null;
     $_SESSION['role'] = $user['role'];
     $_SESSION['role_id'] = $user['role_id'] ?? null;
-    $_SESSION['clinic_id'] = $user['clinic_id'] ?? 1;
+    $_SESSION['clinic_id'] = !empty(db()->tenantInfo['id']) ? intval(db()->tenantInfo['id']) : ($user['clinic_id'] ?? 1);
     $_SESSION['branch_id'] = $user['branch_id'] ?? null;
     $_SESSION['profile_image'] = $user['profile_image'] ?? null;
     $_SESSION['last_activity'] = time();
@@ -117,6 +117,10 @@ function getCurrentUserRole() {
  * Get current clinic ID
  */
 function getCurrentClinicId() {
+    $tenant = db()->tenantInfo;
+    if (!empty($tenant['id'])) {
+        return intval($tenant['id']);
+    }
     return $_SESSION['clinic_id'] ?? 1;
 }
 

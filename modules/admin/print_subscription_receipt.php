@@ -19,6 +19,7 @@ $master = master_db();
 $stmt = $master->prepare("
     SELECT p.*, t.clinic_name, t.subdomain, t.plan_type as current_plan, t.max_doctors as current_max_doctors,
            t.gst_number as clinic_gstin, t.pan_number as clinic_pan, t.billing_address as clinic_address,
+           t.db_host as tenant_db_host, t.db_user as tenant_db_user, t.db_password as tenant_db_password,
            t.db_name as tenant_db_name
     FROM tenant_subscription_payments p
     JOIN tenants t ON p.tenant_id = t.id
@@ -43,7 +44,7 @@ try {
     if ($settingsStmt) {
         $platformSettings = $settingsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
     }
-} catch (Exception $e) {}
+} catch (\Throwable $e) {}
 
 $platformName = !empty($platformSettings['platform_company_name']) ? $platformSettings['platform_company_name'] : 'Feature Gen Technologies';
 $platformGstin = !empty($platformSettings['platform_gstin']) ? strtoupper(trim($platformSettings['platform_gstin'])) : '';
@@ -54,15 +55,22 @@ $platformState = !empty($platformSettings['platform_state']) ? $platformSettings
 // Fallback: If clinic GST or Address is not populated on tenants table, check the clinic tenant database directly
 if (empty($payment['clinic_gstin']) || empty($payment['clinic_address'])) {
     try {
-        $tenantDbName = $payment['tenant_db_name'] ?? ('clinic_' . $payment['subdomain']);
-        $tHost = DB_HOST;
-        $tUser = DB_USER;
-        $tPass = DB_PASS;
-        $tPdo = new PDO("mysql:host={$tHost};dbname={$tenantDbName};charset=utf8mb4", $tUser, $tPass, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-        ]);
-        $cRow = $tPdo->query("SELECT address, city, state, pincode, pan_number, gst_number FROM clinics LIMIT 1")->fetch();
+        $cRow = null;
+        if (intval($payment['tenant_id']) === $currentTenantId) {
+            $cRow = db()->getConnection()->query("SELECT address, city, state, pincode, pan_number, gst_number FROM clinics LIMIT 1")->fetch();
+        } else {
+            $tHost = $payment['tenant_db_host'] ?? 'localhost';
+            $tUser = $payment['tenant_db_user'] ?? '';
+            $tPass = $payment['tenant_db_password'] ?? '';
+            $tenantDbName = $payment['tenant_db_name'] ?? ('clinic_' . ($payment['subdomain'] ?? ''));
+            if (!empty($tenantDbName) && !empty($tUser)) {
+                $tPdo = new PDO("mysql:host={$tHost};dbname={$tenantDbName};charset=utf8mb4", $tUser, $tPass, [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                ]);
+                $cRow = $tPdo->query("SELECT address, city, state, pincode, pan_number, gst_number FROM clinics LIMIT 1")->fetch();
+            }
+        }
         if ($cRow) {
             if (empty($payment['clinic_gstin']) && !empty($cRow['gst_number'])) {
                 $payment['clinic_gstin'] = strtoupper(trim($cRow['gst_number']));
@@ -77,7 +85,7 @@ if (empty($payment['clinic_gstin']) || empty($payment['clinic_address'])) {
                 }
             }
         }
-    } catch (Exception $e) {
+    } catch (\Throwable $e) {
         // Graceful fallback
     }
 }
@@ -111,40 +119,42 @@ $cgstAmount = round($gstAmount / 2, 2);
 $sgstAmount = round($gstAmount - $cgstAmount, 2);
 
 // Indian Rupee in Words Helper
-function formatRupeesInWords(float $number): string {
-    $decimal = round($number - ($no = floor($number)), 2) * 100;
-    $digits_length = strlen((string)$no);
-    $i = 0;
-    $str = array();
-    $words = array(
-        0 => '', 1 => 'One', 2 => 'Two', 3 => 'Three', 4 => 'Four', 5 => 'Five', 
-        6 => 'Six', 7 => 'Seven', 8 => 'Eight', 9 => 'Nine', 10 => 'Ten', 
-        11 => 'Eleven', 12 => 'Twelve', 13 => 'Thirteen', 14 => 'Fourteen', 
-        15 => 'Fifteen', 16 => 'Sixteen', 17 => 'Seventeen', 18 => 'Eighteen', 
-        19 => 'Nineteen', 20 => 'Twenty', 30 => 'Thirty', 40 => 'Forty', 
-        50 => 'Fifty', 60 => 'Sixty', 70 => 'Seventy', 80 => 'Eighty', 
-        90 => 'Ninety'
-    );
-    $digits = array('', 'Hundred', 'Thousand', 'Lakh', 'Crore');
-    while ($i < $digits_length) {
-        $divider = ($i == 2) ? 10 : 100;
-        $number = floor($no % $divider);
-        $no = floor($no / $divider);
-        $i += $divider == 10 ? 1 : 2;
-        if ($number) {
-            $counter = count($str);
-            $plural = ($counter && $number > 9) ? 's' : null;
-            $hundred = ($counter == 1 && !empty($str[0])) ? ' and ' : null;
-            $str[] = ($number < 21) ? $words[$number] . ' ' . $digits[$counter] . $plural . ' ' . $hundred
-                : $words[floor($number / 10) * 10] . ' ' . $words[$number % 10] . ' ' . $digits[$counter] . $plural . ' ' . $hundred;
-        } else {
-            $str[] = null;
+if (!function_exists('formatRupeesInWords')) {
+    function formatRupeesInWords(float $number): string {
+        $decimal = round($number - ($no = floor($number)), 2) * 100;
+        $digits_length = strlen((string)$no);
+        $i = 0;
+        $str = array();
+        $words = array(
+            0 => '', 1 => 'One', 2 => 'Two', 3 => 'Three', 4 => 'Four', 5 => 'Five', 
+            6 => 'Six', 7 => 'Seven', 8 => 'Eight', 9 => 'Nine', 10 => 'Ten', 
+            11 => 'Eleven', 12 => 'Twelve', 13 => 'Thirteen', 14 => 'Fourteen', 
+            15 => 'Fifteen', 16 => 'Sixteen', 17 => 'Seventeen', 18 => 'Eighteen', 
+            19 => 'Nineteen', 20 => 'Twenty', 30 => 'Thirty', 40 => 'Forty', 
+            50 => 'Fifty', 60 => 'Sixty', 70 => 'Seventy', 80 => 'Eighty', 
+            90 => 'Ninety'
+        );
+        $digits = array('', 'Hundred', 'Thousand', 'Lakh', 'Crore');
+        while ($i < $digits_length) {
+            $divider = ($i == 2) ? 10 : 100;
+            $number = floor($no % $divider);
+            $no = floor($no / $divider);
+            $i += $divider == 10 ? 1 : 2;
+            if ($number) {
+                $counter = count($str);
+                $plural = ($counter && $number > 9) ? 's' : null;
+                $hundred = ($counter == 1 && !empty($str[0])) ? ' and ' : null;
+                $str[] = ($number < 21) ? $words[$number] . ' ' . $digits[$counter] . $plural . ' ' . $hundred
+                    : $words[floor($number / 10) * 10] . ' ' . $words[$number % 10] . ' ' . $digits[$counter] . $plural . ' ' . $hundred;
+            } else {
+                $str[] = null;
+            }
         }
+        $str = array_reverse($str);
+        $result = trim(implode('', array_filter($str)));
+        $points = ($decimal > 0) ? " and " . ($words[floor($decimal / 10) * 10] . " " . $words[$decimal % 10]) . ' Paise' : '';
+        return 'Rupees ' . ($result ?: 'Zero') . $points . ' Only';
     }
-    $str = array_reverse($str);
-    $result = trim(implode('', array_filter($str)));
-    $points = ($decimal > 0) ? " and " . ($words[floor($decimal / 10) * 10] . " " . $words[$decimal % 10]) . ' Paise' : '';
-    return 'Rupees ' . ($result ?: 'Zero') . $points . ' Only';
 }
 
 $amountInWords = formatRupeesInWords($totalPaid);

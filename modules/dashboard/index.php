@@ -99,6 +99,8 @@ try {
             <i class="fas fa-user-plus"></i> Add Patient
         </a>
     </div>
+</div>
+
 <?php if (in_array($role, [ROLE_SUPER_ADMIN, ROLE_ADMIN])): ?>
 <?php
 $dashTenant = $db->tenantInfo ?? [];

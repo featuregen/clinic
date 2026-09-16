@@ -22,17 +22,42 @@ function isActiveMenu($module) {
 ?>
 <?php
 $db = db();
-$clinic = $db->fetch("SELECT name, logo FROM clinics WHERE id = ?", [getCurrentClinicId()]);
+$clinicId = getCurrentClinicId();
+$clinic = $db->fetch("SELECT name, logo FROM clinics WHERE id = ?", [$clinicId]);
+if (!$clinic && !empty($db->tenantInfo)) {
+    $clinic = [
+        'name' => $db->tenantInfo['clinic_name'] ?? APP_NAME,
+        'logo' => null
+    ];
+}
+
+$logoFile = $clinic['logo'] ?? null;
+$logoUrl = '';
+$logoExists = false;
+if (!empty($logoFile)) {
+    $cleanPath = ltrim($logoFile, '/');
+    if (strpos($cleanPath, 'clinics/') === 0) {
+        $checkPath = UPLOADS_PATH . '/' . $cleanPath;
+        $logoUrl = UPLOADS_URL . '/' . $cleanPath;
+    } else {
+        $checkPath = UPLOADS_PATH . '/clinics/' . $cleanPath;
+        $logoUrl = UPLOADS_URL . '/clinics/' . $cleanPath;
+    }
+    if (file_exists($checkPath)) {
+        $logoExists = true;
+    }
+}
 ?>
 <aside class="sidebar">
     <div class="sidebar-brand" style="flex-direction: column; align-items: center; gap: 6px; padding: 16px 12px;">
-        <?php if (!empty($clinic['logo'])): ?>
-            <img src="<?= UPLOADS_URL ?>/clinics/<?= sanitizeOutput($clinic['logo']) ?>" alt="Clinic Logo" style="max-height: 48px; max-width: 140px; object-fit: contain;">
+        <?php if ($logoExists && !empty($logoUrl)): ?>
+            <img src="<?= $logoUrl ?>" alt="Clinic Logo" style="max-height: 48px; max-width: 140px; object-fit: contain;" onerror="this.style.display='none'; var fb=document.getElementById('sidebarFallbackLogo'); if(fb) fb.style.display='flex';">
+            <div id="sidebarFallbackLogo" class="brand-logo" style="display: none;"><i class="fas fa-hospital"></i></div>
         <?php else: ?>
             <div class="brand-logo"><i class="fas fa-hospital"></i></div>
         <?php endif; ?>
         <div class="brand-text" style="text-align: center; font-size: 13px; line-height: 1.3; white-space: normal; word-break: break-word;">
-            <?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?>
+            <?= sanitizeOutput($clinic['name'] ?? ($db->tenantInfo['clinic_name'] ?? APP_NAME)) ?>
             <small style="display: block; font-size: 10px; opacity: 0.7;">Clinic Management</small>
         </div>
     </div>
