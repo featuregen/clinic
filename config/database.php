@@ -211,6 +211,18 @@ class Database {
                         $tenantConn->exec("ALTER TABLE clinics ADD COLUMN {$colName} {$colDef}");
                     }
                 }
+
+                // Ensure a clinics row exists for this tenant's ID so FK constraints on users/doctors don't fail
+                $tenantId = intval($this->tenantInfo['id'] ?? 0);
+                if ($tenantId > 0) {
+                    $existingRow = $tenantConn->prepare("SELECT id FROM clinics WHERE id = ?");
+                    $existingRow->execute([$tenantId]);
+                    if (!$existingRow->fetch()) {
+                        $clinicName = $this->tenantInfo['clinic_name'] ?? 'My Clinic';
+                        $stmt = $tenantConn->prepare("INSERT INTO clinics (id, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE id=id");
+                        $stmt->execute([$tenantId, $clinicName]);
+                    }
+                }
             }
         } catch (Exception $e) {
             error_log("Tenant clinics schema check error: " . $e->getMessage());
