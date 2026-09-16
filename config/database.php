@@ -224,9 +224,35 @@ class Database {
                     $existingRow = $tenantConn->prepare("SELECT id FROM clinics WHERE id = ?");
                     $existingRow->execute([$tenantId]);
                     if (!$existingRow->fetch()) {
-                        $clinicName = $this->tenantInfo['clinic_name'] ?? 'My Clinic';
-                        $stmt = $tenantConn->prepare("INSERT INTO clinics (id, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE id=id");
-                        $stmt->execute([$tenantId, $clinicName]);
+                        // Copy data from row id=1 if it exists, otherwise create fresh
+                        $oldRow = $tenantConn->query("SELECT * FROM clinics WHERE id = 1")->fetch();
+                        if ($oldRow) {
+                            $clinicName = $oldRow['name'] ?: ($this->tenantInfo['clinic_name'] ?? 'My Clinic');
+                            $stmt = $tenantConn->prepare("INSERT INTO clinics (id, name, logo, email, phone, address, city, state, pincode, website, pan_number, gst_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE id=id");
+                            $stmt->execute([$tenantId, $clinicName, $oldRow['logo'] ?? null, $oldRow['email'] ?? null, $oldRow['phone'] ?? null, $oldRow['address'] ?? null, $oldRow['city'] ?? null, $oldRow['state'] ?? null, $oldRow['pincode'] ?? null, $oldRow['website'] ?? null, $oldRow['pan_number'] ?? null, $oldRow['gst_number'] ?? null]);
+                        } else {
+                            $clinicName = $this->tenantInfo['clinic_name'] ?? 'My Clinic';
+                            $stmt = $tenantConn->prepare("INSERT INTO clinics (id, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE id=id");
+                            $stmt->execute([$tenantId, $clinicName]);
+                        }
+                    }
+
+                    // Migrate legacy rows from clinic_id=1 to the correct tenant ID
+                    if ($tenantId > 1) {
+                        $tablesToMigrate = ['departments', 'branches', 'doctors', 'users', 'patients', 'appointments', 'invoices', 'invoice_items', 'payments', 'services', 'prescriptions', 'dental_charts', 'dental_treatments', 'dental_procedures', 'doctor_schedules', 'doctor_leaves', 'patient_allergies', 'patient_medical_history', 'patient_documents', 'patient_vaccinations', 'medicines', 'lab_tests', 'diagnoses', 'message_templates', 'communication_logs'];
+                        foreach ($tablesToMigrate as $tbl) {
+                            try {
+                                $tblCheck = $tenantConn->query("SHOW TABLES LIKE '{$tbl}'")->fetch();
+                                if ($tblCheck) {
+                                    $colCheck = $tenantConn->query("SHOW COLUMNS FROM `{$tbl}` LIKE 'clinic_id'")->fetch();
+                                    if ($colCheck) {
+                                        $tenantConn->exec("UPDATE `{$tbl}` SET clinic_id = {$tenantId} WHERE clinic_id = 1");
+                                    }
+                                }
+                            } catch (\Throwable $e) {
+                                // Skip tables that don't exist or have issues
+                            }
+                        }
                     }
                 }
             }
