@@ -145,6 +145,12 @@ class Database {
                 }
             }
             
+            // Add addon doctor slots to the effective quota
+            $addonDoctors = isset($tenant['addon_doctors']) ? intval($tenant['addon_doctors']) : 0;
+            if ($addonDoctors > 0) {
+                $effMaxDoc += $addonDoctors;
+            }
+            
             if ($effMaxDoc > 0 && $effMaxDoc !== intval($tenant['max_doctors'] ?? 0)) {
                 $tenant['max_doctors'] = $effMaxDoc;
                 try {
