@@ -162,6 +162,20 @@ $tenantData = $db->tenantInfo ?? [];
 $maxDoctors = isset($tenantData['max_doctors']) ? intval($tenantData['max_doctors']) : 0;
 $activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors WHERE clinic_id = ?", [$clinicId])['c'] ?? 0;
 $isQuotaReached = (!$isEdit && $maxDoctors > 0 && $activeDocCount >= $maxDoctors);
+
+// Resolve addon doctor price: tenant custom > global setting > hardcoded default
+$addonDocPrice = 25;
+if (!empty($tenantData['custom_addon_doctor_monthly_price'])) {
+    $addonDocPrice = floatval($tenantData['custom_addon_doctor_monthly_price']);
+} else {
+    try {
+        $addonSetting = master_db()->query("SELECT setting_value FROM saas_global_settings WHERE setting_key = 'addon_doctor_monthly_price' LIMIT 1")->fetchColumn();
+        if ($addonSetting !== false && is_numeric($addonSetting)) {
+            $addonDocPrice = floatval($addonSetting);
+        }
+    } catch (\Throwable $e) {}
+}
+$addonDocPriceLabel = (floor($addonDocPrice) == $addonDocPrice) ? number_format($addonDocPrice, 0) : number_format($addonDocPrice, 2);
 ?>
 
 <div class="content-header">
@@ -189,7 +203,7 @@ $isQuotaReached = (!$isEdit && $maxDoctors > 0 && $activeDocCount >= $maxDoctors
     </div>
     <div style="display: flex; gap: 8px; flex-shrink: 0;">
         <a href="<?= BASE_URL ?>/modules/subscription/paywall.php#doctor-addons" class="btn btn-sm" style="white-space: nowrap; background: linear-gradient(135deg, #0891b2, #0e7490); border: none; color: white; font-weight: 700; padding: 8px 16px; border-radius: 6px; text-decoration: none;">
-            <i class="fas fa-plus-circle"></i> Add Doctor Slots (+₹25/mo)
+            <i class="fas fa-plus-circle"></i> Add Doctor Slots (+₹<?= $addonDocPriceLabel ?>/mo)
         </a>
         <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-warning btn-sm" style="white-space: nowrap; background: #d97706; border: none; color: white; font-weight: 600; padding: 8px 16px; border-radius: 6px; text-decoration: none;">
             <i class="fas fa-arrow-circle-up"></i> Upgrade Plan

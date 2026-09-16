@@ -27,6 +27,20 @@ $tenantData = $db->tenantInfo ?? [];
 $maxDoctors = isset($tenantData['max_doctors']) ? intval($tenantData['max_doctors']) : 0;
 $totalDocs = count($doctors);
 $isQuotaFull = ($maxDoctors > 0 && $totalDocs >= $maxDoctors);
+
+// Resolve addon doctor price: tenant custom > global setting > hardcoded default
+$addonDocPrice = 25;
+if (!empty($tenantData['custom_addon_doctor_monthly_price'])) {
+    $addonDocPrice = floatval($tenantData['custom_addon_doctor_monthly_price']);
+} else {
+    try {
+        $addonSetting = master_db()->query("SELECT setting_value FROM saas_global_settings WHERE setting_key = 'addon_doctor_monthly_price' LIMIT 1")->fetchColumn();
+        if ($addonSetting !== false && is_numeric($addonSetting)) {
+            $addonDocPrice = floatval($addonSetting);
+        }
+    } catch (\Throwable $e) {}
+}
+$addonDocPriceLabel = (floor($addonDocPrice) == $addonDocPrice) ? number_format($addonDocPrice, 0) : number_format($addonDocPrice, 2);
 ?>
 
 <div class="content-header">
@@ -50,7 +64,7 @@ $isQuotaFull = ($maxDoctors > 0 && $totalDocs >= $maxDoctors);
     <div class="d-flex gap-8 align-items-center">
         <?php if ($isQuotaFull): ?>
         <a href="<?= BASE_URL ?>/modules/subscription/paywall.php#doctor-addons" class="btn btn-sm" style="background: linear-gradient(135deg, #0891b2, #0e7490); color: white; border: none; font-weight: 700;">
-            <i class="fas fa-plus-circle"></i> Add Doctor Slots (+₹25/mo)
+            <i class="fas fa-plus-circle"></i> Add Doctor Slots (+₹<?= $addonDocPriceLabel ?>/mo)
         </a>
         <a href="<?= BASE_URL ?>/modules/subscription/paywall.php" class="btn btn-warning btn-sm" style="background: #d97706; color: white; border: none;">
             <i class="fas fa-arrow-circle-up"></i> Upgrade Plan
