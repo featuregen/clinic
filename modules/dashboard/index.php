@@ -76,10 +76,24 @@ try {
         [$clinicId, $today]
     );
 
+    // Conversion rate: completed appointments / total appointments this month
+    $monthlyConversion = $db->fetch(
+        "SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+         FROM appointments 
+         WHERE clinic_id = ? AND MONTH(appointment_date) = MONTH(CURDATE()) AND YEAR(appointment_date) = YEAR(CURDATE())",
+        [$clinicId]
+    );
+    $convTotal = intval($monthlyConversion['total'] ?? 0);
+    $convCompleted = intval($monthlyConversion['completed'] ?? 0);
+    $conversionRate = $convTotal > 0 ? round(($convCompleted / $convTotal) * 100) : 0;
+
 } catch (Exception $e) {
     // Tables may not exist yet - show zeros
     $todayAppointments = $totalPatients = $todayRevenue = $totalDues = $activeDoctors = $monthRevenue = 0;
     $todayAppointmentsList = $recentPatients = $statusBreakdown = [];
+    $conversionRate = 0;
 }
 ?>
 
@@ -216,7 +230,7 @@ $dashDays = $dashEnd ? max(0, ceil(($dashEnd - time()) / 86400)) : null;
         </div>
         <div class="stat-details">
             <div class="stat-label">Conversion Rate</div>
-            <div class="stat-value"><?= $todayAppointments > 0 ? '87%' : '0%' ?></div>
+            <div class="stat-value"><?= $conversionRate ?>%</div>
         </div>
     </div>
 </div>
