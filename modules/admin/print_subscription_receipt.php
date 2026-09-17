@@ -46,7 +46,7 @@ try {
     }
 } catch (\Throwable $e) {}
 
-$platformName = !empty($platformSettings['platform_company_name']) ? $platformSettings['platform_company_name'] : 'Feature Gen Technologies';
+$platformName = !empty($platformSettings['platform_company_name']) ? $platformSettings['platform_company_name'] : 'Feature Gen';
 $platformGstin = !empty($platformSettings['platform_gstin']) ? strtoupper(trim($platformSettings['platform_gstin'])) : '';
 $platformPan = !empty($platformSettings['platform_pan']) ? strtoupper(trim($platformSettings['platform_pan'])) : '';
 $platformAddress = !empty($platformSettings['platform_address']) ? $platformSettings['platform_address'] : 'Chennai, Tamil Nadu, India';
@@ -164,7 +164,7 @@ $amountInWords = formatRupeesInWords($totalPaid);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tax Invoice - <?= sanitizeOutput($payment['payment_reference'] ?: ('REC-' . $payment['id'])) ?> - Feature Gen Care</title>
+    <title>Proforma Invoice - <?= sanitizeOutput($payment['payment_reference'] ?: ('REC-' . $payment['id'])) ?> - Feature Gen Care</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
@@ -315,7 +315,7 @@ $amountInWords = formatRupeesInWords($totalPaid);
     <div class="receipt-header">
         <div>
             <div class="brand-title">
-                <i class="fas fa-file-invoice-dollar"></i> TAX INVOICE & RECEIPT
+                <i class="fas fa-file-invoice-dollar"></i> PROFORMA INVOICE
             </div>
             <div class="brand-subtitle">
                 <?= sanitizeOutput($platformName) ?> &bull; Feature Gen Care Cloud Clinic Suite
@@ -330,7 +330,7 @@ $amountInWords = formatRupeesInWords($totalPaid);
         <!-- Invoice Metadata Row -->
         <div class="grid-2" style="background: #f8fafc; padding: 14px 18px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
             <div class="info-group">
-                <label>Tax Invoice / Receipt No.</label>
+                <label>Proforma Invoice No.</label>
                 <p style="font-size: 15px; color: #00838f; font-family: monospace; letter-spacing: 0.5px;">
                     <?= sanitizeOutput($payment['payment_reference'] ?: ('REC-' . date('Y') . '-' . str_pad($payment['id'], 4, '0', STR_PAD_LEFT))) ?>
                 </p>
@@ -349,7 +349,7 @@ $amountInWords = formatRupeesInWords($totalPaid);
 
         <!-- DUAL ENTITY CARDS: BILLED BY (SUPPLIER) vs BILLED TO (RECIPIENT) -->
         <div class="grid-2" style="gap: 16px; margin-bottom: 20px;">
-            <!-- Supplier: Feature Gen Technologies -->
+            <!-- Supplier: Feature Gen -->
             <div class="entity-card" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #0284c7; letter-spacing: 0.5px;">
@@ -566,7 +566,7 @@ $amountInWords = formatRupeesInWords($totalPaid);
     
     <!-- Footer Note -->
     <div class="receipt-footer">
-        <div>Feature Gen Care is an enterprise product of <?= sanitizeOutput($platformName) ?>. Computer-generated tax invoice.</div>
+        <div>Feature Gen Care is an enterprise product of <?= sanitizeOutput($platformName) ?>. Computer-generated proforma invoice.</div>
         <div>Support: support@featuregen.com</div>
     </div>
 </div>

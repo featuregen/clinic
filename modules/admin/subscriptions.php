@@ -361,6 +361,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    // 3B. CANCEL / VOID A RECEIPT
+    elseif ($action === 'cancel_receipt') {
+        $paymentId = intval($_POST['payment_id'] ?? 0);
+        if ($paymentId > 0) {
+            try {
+                $master->beginTransaction();
+                
+                // Fetch the payment to reverse
+                $paymentRow = $master->prepare("SELECT * FROM tenant_subscription_payments WHERE id = ? AND tenant_id = ?");
+                $paymentRow->execute([$paymentId, $t['id']]);
+                $cancelPayment = $paymentRow->fetch();
+                
+                if ($cancelPayment && $cancelPayment['status'] !== 'cancelled') {
+                    // Mark payment as cancelled
+                    $master->prepare("UPDATE tenant_subscription_payments SET status = 'cancelled', notes = CONCAT(COALESCE(notes, ''), ' [CANCELLED on " . date('d M Y h:i A') . " by " . sanitize(getSession('full_name', 'Admin')) . "]') WHERE id = ?")->execute([$paymentId]);
+                    
+                    // If it was a doctor addon, reverse the addon_doctors count
+                    if ($cancelPayment['plan_type'] === 'doctor_addon') {
+                        $docsToRemove = max(1, intval($cancelPayment['doctor_limit_granted']));
+                        $master->prepare("UPDATE tenants SET addon_doctors = GREATEST(0, COALESCE(addon_doctors, 0) - ?), max_doctors = GREATEST(1, max_doctors - ?) WHERE id = ?")->execute([$docsToRemove, $docsToRemove, $t['id']]);
+                    }
+                    
+                    $master->commit();
+                    setFlashMessage('success', "Receipt #{$cancelPayment['payment_reference']} has been cancelled/voided successfully.");
+                } else {
+                    $master->commit();
+                    setFlashMessage('error', 'Payment not found or already cancelled.');
+                }
+            } catch (Exception $e) {
+                $master->rollBack();
+                $errorMsg = 'Error cancelling receipt: ' . $e->getMessage();
+            }
+        }
+        header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=payments");
+        exit;
+    }
+    
     // 4. UPDATE SAAS GLOBAL PLATFORM DEFAULTS
     elseif ($action === 'update_global_settings') {
         $settingsToSave = [
@@ -864,9 +901,24 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                             <span style="font-size: 12px;"><?= date('d M Y, h:i A', strtotime($p['created_at'])) ?></span>
                         </td>
                         <td style="text-align: right;">
-                            <a href="<?= BASE_URL ?>/modules/admin/print_subscription_receipt.php?id=<?= $p['id'] ?>" target="_blank" class="btn btn-sm btn-outline">
-                                <i class="fas fa-print"></i> Receipt
-                            </a>
+                            <?php if (($p['status'] ?? '') === 'cancelled'): ?>
+                                <span class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 700; padding: 4px 10px;">
+                                    <i class="fas fa-ban"></i> Cancelled
+                                </span>
+                            <?php else: ?>
+                            <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                                <a href="<?= BASE_URL ?>/modules/admin/print_subscription_receipt.php?id=<?= $p['id'] ?>" target="_blank" class="btn btn-sm btn-outline">
+                                    <i class="fas fa-print"></i> Receipt
+                                </a>
+                                <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to cancel/void this receipt? This action cannot be undone.');">
+                                    <input type="hidden" name="action" value="cancel_receipt">
+                                    <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
+                                    <button type="submit" class="btn btn-sm" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 600;">
+                                        <i class="fas fa-times-circle"></i> Cancel
+                                    </button>
+                                </form>
+                            </div>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; endif; ?>
@@ -1397,6 +1449,17 @@ if (custYearlyPriceInput && custYearlyBonusInput) {
 
 // Open Activate Plan Modal
 function triggerActivatePlan(tier, title, price, doctors, bonus) {
+    // Check if already on the same plan
+    const currentPlan = clinicCustomRates.currentPlan;
+    const tierToPlanMap = { 'monthly': 'monthly', 'yearly': 'yearly', 'lifetime': 'one_time' };
+    const mappedTier = tierToPlanMap[tier] || tier;
+    
+    if (currentPlan === mappedTier && currentPlan !== 'trial') {
+        if (!confirm('⚠️ This clinic is already on the ' + title + ' plan.\n\nAre you sure you want to activate the same plan again? This may create a duplicate billing.')) {
+            return;
+        }
+    }
+
     const base = parseFloat(price) || 0;
     const gst = Math.round(base * 18) / 100;
     const total = Math.round((base + gst) * 100) / 100;

@@ -999,6 +999,15 @@ function selectPlan(type, basePrice, gstAmount, totalPrice, name) {
         return;
     }
 
+    // Warn if already on the same plan
+    const currentPlan = '<?= $currentTenant['plan_type'] ?? 'trial' ?>';
+    const tierMap = { 'monthly': 'monthly', 'yearly': 'yearly', 'one_time': 'one_time' };
+    if (currentPlan === type && currentPlan !== 'trial') {
+        if (!confirm('⚠️ You are already on the ' + name + '.\n\nAre you sure you want to continue? This may create a duplicate billing.')) {
+            return;
+        }
+    }
+
     selectedPlan = { type, addon_doctors: 0, basePrice, gstAmount, totalPrice, name };
     document.getElementById('modalPlanName').textContent = name;
     document.getElementById('modalBasePrice').textContent = '₹' + basePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
