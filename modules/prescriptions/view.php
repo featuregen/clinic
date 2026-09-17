@@ -89,10 +89,10 @@ $patientAge = $rx['date_of_birth'] ? calculateAge($rx['date_of_birth']) : ($rx['
             </tr>
         </table>
         
-        <table style="width: 100%; margin-bottom: 20px; background: var(--bg-secondary); border-radius: 8px; font-size: 13px; border-collapse: collapse;">
+        <table style="width: 100%; margin-bottom: 20px; font-size: 13px; border-spacing: 0; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1;">
             <tr>
-                <td style="padding: 8px 12px;"><strong>Date:</strong> <?= formatDate($rx['prescription_date']) ?></td>
-                <td style="padding: 8px 12px; text-align: right;"><strong>Rx ID:</strong> #<?= $rxId ?></td>
+                <td style="padding: 10px 0;"><strong>Date:</strong> <?= formatDate($rx['prescription_date']) ?></td>
+                <td style="padding: 10px 0; text-align: right;"><strong>Rx ID:</strong> #<?= $rxId ?></td>
             </tr>
         </table>
         
