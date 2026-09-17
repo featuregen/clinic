@@ -1191,7 +1191,8 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                         <div class="grid-2 gap-16">
                             <div class="form-group mb-0">
                                 <label class="form-label font-semibold">Offline Payment Support Line / Contact</label>
-                                <input type="text" name="offline_payment_contact" class="form-control" value="<?= sanitizeOutput($settings['offline_payment_contact'] ?? '') ?>" placeholder="Phone: +91 98765 43210 | WhatsApp: +91 98765 43210">
+                                <textarea name="offline_payment_contact" class="form-control" rows="3" placeholder="Add one number per line, e.g.&#10;+91-9886065198 (Sales)&#10;+91-9876543210 (Support)&#10;+91-9123456789 (WhatsApp)"><?= sanitizeOutput($settings['offline_payment_contact'] ?? '') ?></textarea>
+                                <small class="text-muted" style="font-size: 11px; margin-top: 4px; display: block;">Add one number per line. You can add labels like (Sales), (Support), (WhatsApp)</small>
                             </div>
                             <div class="form-group mb-0">
                                 <label class="form-label font-semibold">Bank Account & UPI Instructions</label>

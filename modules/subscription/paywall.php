@@ -650,11 +650,17 @@ if ($activePlanType === 'yearly') {
                     </p>
                 </div>
             </div>
+            <?php
+                // Extract first phone number for Call/WhatsApp buttons
+                $contactLines = array_filter(array_map('trim', explode("\n", $offlineContact)));
+                $firstPhone = !empty($contactLines) ? preg_replace('/[^0-9\+]/', '', $contactLines[0]) : '';
+                $firstPhoneWa = preg_replace('/[^0-9]/', '', $firstPhone);
+            ?>
             <div class="d-flex gap-12">
-                <a href="tel:<?= preg_replace('/[^0-9\+]/', '', $offlineContact) ?>" class="btn btn-outline" style="background: white;">
+                <a href="tel:<?= $firstPhone ?>" class="btn btn-outline" style="background: white;">
                     <i class="fas fa-phone-alt"></i> Call Support
                 </a>
-                <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $offlineContact) ?>?text=Hello,%20I%20want%20to%20renew%20Feature%20Gen%20Care%20subscription%20for%20clinic%20<?= urlencode($currentTenant['clinic_name']) ?>" target="_blank" class="btn btn-success" style="background: #25d366; border-color: #22c55e; color: white;">
+                <a href="https://wa.me/<?= $firstPhoneWa ?>?text=Hello,%20I%20want%20to%20renew%20Feature%20Gen%20Care%20subscription%20for%20clinic%20<?= urlencode($currentTenant['clinic_name']) ?>" target="_blank" class="btn btn-success" style="background: #25d366; border-color: #22c55e; color: white;">
                     <i class="fab fa-whatsapp"></i> Chat on WhatsApp
                 </a>
             </div>
@@ -665,9 +671,21 @@ if ($activePlanType === 'yearly') {
                 <h4 style="margin: 0 0 8px; font-size: 14px; text-transform: uppercase; color: var(--primary); font-weight: 700;">
                     <i class="fas fa-id-card"></i> Administrator Contact
                 </h4>
-                <p style="font-size: 14px; margin: 0; line-height: 1.6;">
-                    <?= nl2br(sanitizeOutput($offlineContact)) ?>
-                </p>
+                <div style="font-size: 14px; line-height: 1.8;">
+                    <?php foreach ($contactLines as $line): 
+                        $cleanNum = preg_replace('/[^0-9\+]/', '', $line);
+                        $label = trim(preg_replace('/[\d\+\-\(\)\s]+/', '', $line));
+                    ?>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <a href="tel:<?= $cleanNum ?>" style="color: var(--primary); font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-phone-alt" style="font-size: 11px;"></i> <?= sanitizeOutput($line) ?>
+                        </a>
+                        <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $cleanNum) ?>" target="_blank" style="color: #25d366; font-size: 14px;" title="WhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
             <div>
                 <h4 style="margin: 0 0 8px; font-size: 14px; text-transform: uppercase; color: #059669; font-weight: 700;">
