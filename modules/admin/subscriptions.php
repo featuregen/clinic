@@ -455,6 +455,8 @@ $stmtPay = $master->prepare("
 ");
 $stmtPay->execute([$t['id']]);
 $payments = $stmtPay->fetchAll();
+$activePayments = array_filter($payments, fn($p) => ($p['status'] ?? '') !== 'cancelled');
+$activePaymentCount = count($activePayments);
 
 // Stats for THIS clinic
 $now = time();
@@ -550,7 +552,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
         <div class="stat-details">
             <div class="stat-label">Total Paid By Clinic</div>
             <div class="stat-value" style="color: #059669;">₹<?= number_format($thisClinicRevenue, 2) ?></div>
-            <div class="stat-change"><?= count($payments) ?> receipts logged</div>
+            <div class="stat-change"><?= $activePaymentCount ?> receipts logged</div>
         </div>
     </div>
 </div>
@@ -562,7 +564,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
             <i class="fas fa-sliders-h"></i> Decide Clinic Plan & Pricing
         </a>
         <a href="?tab=payments" class="tab-link <?= $currentTab === 'payments' ? 'active' : '' ?>">
-            <i class="fas fa-receipt"></i> Payment Receipts (<?= count($payments) ?>)
+            <i class="fas fa-receipt"></i> Payment Receipts (<?= $activePaymentCount ?>)
         </a>
         <a href="?tab=settings" class="tab-link <?= $currentTab === 'settings' ? 'active' : '' ?>">
             <i class="fas fa-globe"></i> SaaS Global Platform Defaults
