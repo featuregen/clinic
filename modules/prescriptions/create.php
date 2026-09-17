@@ -24,8 +24,134 @@ if (isset($_GET['id'])) {
     }
 }
 
+// If appointment_id is provided, resolve the patient_id from it
+if ($appointmentId && !$patientId) {
+    $apptRow = $db->fetch("SELECT patient_id FROM appointments WHERE id = ? AND clinic_id = ?", [$appointmentId, $clinicId]);
+    if ($apptRow) {
+        $patientId = intval($apptRow['patient_id']);
+    }
+}
+
+// GUARD: New prescriptions require a valid appointment with a patient
+if (!$isEdit && (!$appointmentId || !$patientId)) {
+    // Show appointment selection page instead of the form
+    $pageTitle = 'Prescription';
+    require_once dirname(dirname(__DIR__)) . '/includes/header.php';
+    
+    // Fetch today's booked/scheduled appointments
+    $today = date('Y-m-d');
+    $bookedAppts = $db->fetchAll(
+        "SELECT a.id, a.appointment_date, a.appointment_time, a.status, a.reason,
+                p.id as patient_id, p.first_name, p.last_name, p.patient_uid, p.phone, p.date_of_birth, p.age, p.gender,
+                u.full_name as doctor_name, s.name as specialty
+         FROM appointments a
+         JOIN patients p ON a.patient_id = p.id
+         JOIN doctors d ON a.doctor_id = d.id
+         JOIN users u ON d.user_id = u.id
+         LEFT JOIN specialties s ON d.specialty_id = s.id
+         WHERE a.clinic_id = ? AND a.appointment_date = ? AND a.status IN ('booked', 'scheduled', 'checked_in', 'in_progress')
+         ORDER BY a.appointment_time ASC",
+        [$clinicId, $today]
+    );
+    ?>
+    <div class="content-header">
+        <div>
+            <ul class="breadcrumb">
+                <li><a href="<?= BASE_URL ?>/modules/dashboard/index.php">Dashboard</a></li>
+                <li><a href="<?= BASE_URL ?>/modules/prescriptions/list.php">Prescriptions</a></li>
+                <li>Select Appointment</li>
+            </ul>
+            <h1><i class="fas fa-clipboard-list" style="color: var(--primary); margin-right: 8px;"></i> Select Appointment to Write Prescription</h1>
+        </div>
+    </div>
+    
+    <div class="alert alert-info mb-24" style="display: flex; align-items: center; gap: 12px; background: #e0f2fe; color: #0369a1; border-left: 4px solid #0284c7; padding: 16px 20px; border-radius: 8px;">
+        <i class="fas fa-info-circle" style="font-size: 20px;"></i>
+        <div>
+            <strong>Prescription requires an appointment.</strong> Please select a booked appointment below to write a prescription. 
+            Only today's active appointments are shown.
+        </div>
+    </div>
+
+    <?php if (empty($bookedAppts)): ?>
+    <div class="card">
+        <div class="card-body" style="text-align: center; padding: 48px;">
+            <i class="fas fa-calendar-times" style="font-size: 48px; color: #d1d5db; margin-bottom: 16px;"></i>
+            <h3 style="color: #6b7280; margin-bottom: 8px;">No Active Appointments Today</h3>
+            <p style="color: #9ca3af; margin-bottom: 20px;">There are no booked appointments for today. Please book an appointment first.</p>
+            <a href="<?= BASE_URL ?>/modules/appointments/book.php" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Book New Appointment
+            </a>
+        </div>
+    </div>
+    <?php else: ?>
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-calendar-check" style="color: var(--primary); margin-right: 8px;"></i> Today's Appointments (<?= date('d M Y') ?>)</h3>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Patient</th>
+                        <th>Patient ID</th>
+                        <th>Doctor</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($bookedAppts as $appt): ?>
+                    <tr>
+                        <td style="font-weight: 600; white-space: nowrap;">
+                            <i class="fas fa-clock" style="color: var(--primary); margin-right: 4px;"></i>
+                            <?= date('h:i A', strtotime($appt['appointment_time'])) ?>
+                        </td>
+                        <td>
+                            <strong><?= sanitizeOutput($appt['first_name'] . ' ' . ($appt['last_name'] ?? '')) ?></strong>
+                            <div style="font-size: 12px; color: #6b7280;">
+                                <?= $appt['date_of_birth'] ? calculateAge($appt['date_of_birth']) : ($appt['age'] ?? '-') ?> yrs
+                                | <?= sanitizeOutput($appt['gender'] ?? '-') ?>
+                                <?php if (!empty($appt['phone'])): ?> | <?= sanitizeOutput($appt['phone']) ?><?php endif; ?>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-info"><?= sanitizeOutput($appt['patient_uid']) ?></span></td>
+                        <td>Dr. <?= sanitizeOutput($appt['doctor_name']) ?> <span style="font-size:11px;color:#6b7280;">(<?= sanitizeOutput($appt['specialty'] ?? 'General') ?>)</span></td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;"><?= sanitizeOutput($appt['reason'] ?? '-') ?></td>
+                        <td>
+                            <span class="badge badge-<?= $appt['status'] === 'booked' ? 'primary' : ($appt['status'] === 'checked_in' ? 'warning' : 'info') ?>">
+                                <?= ucfirst(str_replace('_', ' ', $appt['status'])) ?>
+                            </span>
+                        </td>
+                        <td>
+                            <a href="<?= BASE_URL ?>/modules/prescriptions/create.php?appointment_id=<?= $appt['id'] ?>&patient_id=<?= $appt['patient_id'] ?>" 
+                               class="btn btn-sm btn-primary" style="white-space: nowrap;">
+                                <i class="fas fa-prescription"></i> Write Rx
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php require_once dirname(dirname(__DIR__)) . '/includes/footer.php'; exit; ?>
+<?php
+}
+
 // Handle POST BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Server-side validation: require patient and appointment
+    if (!$patientId || !$appointmentId) {
+        setFlashMessage('error', 'A valid appointment with a patient is required to write a prescription.');
+        header('Location: ' . BASE_URL . '/modules/prescriptions/create.php');
+        exit;
+    }
+
     try {
         $db->beginTransaction();
         
