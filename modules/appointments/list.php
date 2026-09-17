@@ -10,19 +10,29 @@ $db = db();
 $clinicId = getCurrentClinicId();
 $today = date('Y-m-d');
 
-// Filters
-$filterDate = sanitize($_GET['date'] ?? $today);
+// Filters - From/To date range (default: today)
+$filterFromDate = sanitize($_GET['from_date'] ?? ($_GET['date'] ?? $today));
+$filterToDate = sanitize($_GET['to_date'] ?? $filterFromDate);
 $filterDoctor = intval($_GET['doctor'] ?? 0);
 $filterStatus = sanitize($_GET['status'] ?? '');
 $page = max(1, intval($_GET['page'] ?? 1));
 
+// Ensure from <= to
+if ($filterFromDate > $filterToDate) {
+    $temp = $filterFromDate;
+    $filterFromDate = $filterToDate;
+    $filterToDate = $temp;
+}
+
+$isDateRange = ($filterFromDate !== $filterToDate);
+
 $where = "WHERE a.clinic_id = ?";
 $params = [$clinicId];
 
-if ($filterDate) {
-    $where .= " AND a.appointment_date = ?";
-    $params[] = $filterDate;
-}
+$where .= " AND a.appointment_date >= ? AND a.appointment_date <= ?";
+$params[] = $filterFromDate;
+$params[] = $filterToDate;
+
 if ($filterDoctor) {
     $where .= " AND a.doctor_id = ?";
     $params[] = $filterDoctor;
@@ -52,7 +62,7 @@ $appointments = $db->fetchAll(
      JOIN doctors d ON a.doctor_id = d.id
      JOIN users u ON d.user_id = u.id
      LEFT JOIN specialties s ON d.specialty_id = s.id
-     $where ORDER BY a.appointment_time ASC
+     $where ORDER BY a.appointment_date ASC, a.appointment_time ASC
      LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}",
     $params
 );
@@ -63,13 +73,20 @@ $doctors = $db->fetchAll(
     [$clinicId]
 );
 
-// Stats
-$statsParams = [$clinicId, $filterDate ?: $today];
+// Stats for the selected date range
+$statsParams = [$clinicId, $filterFromDate, $filterToDate];
 $dayStats = $db->fetchAll(
-    "SELECT status, COUNT(*) as count FROM appointments WHERE clinic_id = ? AND appointment_date = ? GROUP BY status",
+    "SELECT status, COUNT(*) as count FROM appointments WHERE clinic_id = ? AND appointment_date >= ? AND appointment_date <= ? GROUP BY status",
     $statsParams
 );
 $statsMap = array_column($dayStats, 'count', 'status');
+
+// Build date display text
+if ($isDateRange) {
+    $dateDisplayText = formatDate($filterFromDate) . ' — ' . formatDate($filterToDate);
+} else {
+    $dateDisplayText = formatDate($filterFromDate);
+}
 ?>
 
 <div class="content-header">
@@ -124,22 +141,47 @@ $statsMap = array_column($dayStats, 'count', 'status');
     <div class="card-body">
         <form method="GET" class="d-flex gap-12 align-center flex-wrap">
             <div class="form-group mb-0">
-                <input type="date" name="date" class="form-control" value="<?= $filterDate ?>" style="width: 180px;">
+                <label class="form-label" style="font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--text-muted);">From Date</label>
+                <input type="date" name="from_date" class="form-control" value="<?= $filterFromDate ?>" style="width: 165px;">
             </div>
-            <select name="doctor" class="form-control" style="width: auto; min-width: 180px;">
-                <option value="">All Doctors</option>
-                <?php foreach ($doctors as $doc): ?>
-                <option value="<?= $doc['id'] ?>" <?= $filterDoctor == $doc['id'] ? 'selected' : '' ?>><?= sanitizeOutput($doc['full_name']) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <select name="status" class="form-control" style="width: auto; min-width: 160px;">
-                <option value="">All Status</option>
-                <?php foreach (APPOINTMENT_STATUS as $key => $label): ?>
-                <option value="<?= $key ?>" <?= $filterStatus === $key ? 'selected' : '' ?>><?= $label ?></option>
-                <?php endforeach; ?>
-            </select>
-            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Filter</button>
-            <a href="<?= BASE_URL ?>/modules/appointments/list.php" class="btn btn-outline btn-sm"><i class="fas fa-times"></i> Clear</a>
+            <div class="form-group mb-0">
+                <label class="form-label" style="font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--text-muted);">To Date</label>
+                <input type="date" name="to_date" class="form-control" value="<?= $filterToDate ?>" style="width: 165px;">
+            </div>
+            <div class="form-group mb-0">
+                <label class="form-label" style="font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--text-muted);">Doctor</label>
+                <select name="doctor" class="form-control" style="width: auto; min-width: 160px;">
+                    <option value="">All Doctors</option>
+                    <?php foreach ($doctors as $doc): ?>
+                    <option value="<?= $doc['id'] ?>" <?= $filterDoctor == $doc['id'] ? 'selected' : '' ?>><?= sanitizeOutput($doc['full_name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group mb-0">
+                <label class="form-label" style="font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--text-muted);">Status</label>
+                <select name="status" class="form-control" style="width: auto; min-width: 140px;">
+                    <option value="">All Status</option>
+                    <?php foreach (APPOINTMENT_STATUS as $key => $label): ?>
+                    <option value="<?= $key ?>" <?= $filterStatus === $key ? 'selected' : '' ?>><?= $label ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group mb-0" style="align-self: flex-end;">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Filter</button>
+            </div>
+            <div class="form-group mb-0" style="align-self: flex-end;">
+                <a href="<?= BASE_URL ?>/modules/appointments/list.php" class="btn btn-outline btn-sm"><i class="fas fa-times"></i> Clear</a>
+            </div>
+            <!-- Quick date shortcuts -->
+            <div class="form-group mb-0" style="align-self: flex-end; display: flex; gap: 6px;">
+                <a href="<?= BASE_URL ?>/modules/appointments/list.php?from_date=<?= $today ?>&to_date=<?= $today ?>" 
+                   class="btn btn-sm <?= ($filterFromDate === $today && $filterToDate === $today) ? 'btn-primary' : 'btn-outline' ?>" 
+                   style="font-size: 11px; padding: 4px 10px;">Today</a>
+                <a href="<?= BASE_URL ?>/modules/appointments/list.php?from_date=<?= date('Y-m-d', strtotime('monday this week')) ?>&to_date=<?= date('Y-m-d', strtotime('sunday this week')) ?>" 
+                   class="btn btn-sm btn-outline" style="font-size: 11px; padding: 4px 10px;">This Week</a>
+                <a href="<?= BASE_URL ?>/modules/appointments/list.php?from_date=<?= date('Y-m-01') ?>&to_date=<?= date('Y-m-t') ?>" 
+                   class="btn btn-sm btn-outline" style="font-size: 11px; padding: 4px 10px;">This Month</a>
+            </div>
         </form>
     </div>
 </div>
@@ -147,7 +189,7 @@ $statsMap = array_column($dayStats, 'count', 'status');
 <!-- Appointments Table -->
 <div class="card">
     <div class="card-header">
-        <h3>Appointments for <?= formatDate($filterDate ?: $today) ?> <span class="badge badge-primary"><?= $totalCount ?></span></h3>
+        <h3>Appointments for <?= $dateDisplayText ?> <span class="badge badge-primary"><?= $totalCount ?></span></h3>
     </div>
     <div class="card-body p-0">
         <?php if (empty($appointments)): ?>
@@ -163,6 +205,7 @@ $statsMap = array_column($dayStats, 'count', 'status');
                     <tr>
                         <th>Token</th>
                         <th>Patient</th>
+                        <?php if ($isDateRange): ?><th>Date</th><?php endif; ?>
                         <th>Time</th>
                         <th>Doctor</th>
                         <th>Type</th>
@@ -172,7 +215,21 @@ $statsMap = array_column($dayStats, 'count', 'status');
                     </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($appointments as $apt): ?>
+                <?php 
+                $prevDate = '';
+                foreach ($appointments as $apt): 
+                    $aptDate = $apt['appointment_date'];
+                ?>
+                <?php if ($isDateRange && $aptDate !== $prevDate): 
+                    $prevDate = $aptDate;
+                    $colSpan = 9;
+                ?>
+                <tr style="background: var(--bg-surface, #f8fafc);">
+                    <td colspan="<?= $colSpan ?>" style="font-weight: 700; font-size: 13px; color: var(--primary); padding: 8px 16px;">
+                        <i class="fas fa-calendar-day" style="margin-right: 4px;"></i> <?= formatDate($aptDate) ?>
+                    </td>
+                </tr>
+                <?php endif; ?>
                 <tr>
                     <td><span class="badge badge-primary">#<?= $apt['token_number'] ?? '-' ?></span></td>
                     <td>
@@ -188,6 +245,9 @@ $statsMap = array_column($dayStats, 'count', 'status');
                             </div>
                         </div>
                     </td>
+                    <?php if ($isDateRange): ?>
+                    <td style="font-size: 12px; white-space: nowrap;"><?= date('d M', strtotime($aptDate)) ?></td>
+                    <?php endif; ?>
                     <td><strong><?= formatTime($apt['appointment_time']) ?></strong></td>
                     <td>
                         <?= sanitizeOutput($apt['doctor_name']) ?>
@@ -255,3 +315,4 @@ async function updateStatus(appointmentId, status) {
 </script>
 
 <?php require_once INCLUDES_PATH . '/footer.php'; ?>
+
