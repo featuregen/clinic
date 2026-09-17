@@ -351,6 +351,11 @@ function getStatusBadge($status, $type = 'appointment') {
             'overdue'  => ['class' => 'badge-danger',  'icon' => 'exclamation-triangle'],
             'refunded' => ['class' => 'badge-info',    'icon' => 'undo'],
             'cancelled'=> ['class' => 'badge-dark',    'icon' => 'ban'],
+        ],
+        'prescription' => [
+            'completed' => ['class' => 'badge-success', 'icon' => 'check-circle'],
+            'draft'     => ['class' => 'badge-warning', 'icon' => 'pencil-alt'],
+            'cancelled' => ['class' => 'badge-danger',  'icon' => 'times-circle'],
         ]
     ];
     
