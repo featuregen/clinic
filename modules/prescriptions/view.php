@@ -49,7 +49,7 @@ $patientAge = $rx['date_of_birth'] ? calculateAge($rx['date_of_birth']) : ($rx['
     </div>
     <div class="d-flex gap-8">
         <a href="<?= BASE_URL ?>/modules/prescriptions/create.php?id=<?= $rxId ?>" class="btn btn-outline btn-sm"><i class="fas fa-pen"></i> Edit</a>
-        <button class="btn btn-primary btn-sm" onclick="printContent('prescriptionPrint')"><i class="fas fa-print"></i> Print</button>
+        <a href="<?= BASE_URL ?>/modules/prescriptions/print.php?id=<?= $rxId ?>" target="_blank" class="btn btn-primary btn-sm"><i class="fas fa-print"></i> Print</a>
     </div>
 </div>
 
@@ -66,31 +66,35 @@ $patientAge = $rx['date_of_birth'] ? calculateAge($rx['date_of_birth']) : ($rx['
         </div>
         
         <!-- Patient & Doctor Info -->
-        <div class="grid-2 mb-24" style="gap: 24px;">
-            <div>
-                <h4 style="color: var(--primary); margin-bottom: 8px;">Patient</h4>
-                <table style="font-size: 13px; line-height: 1.8;">
-                    <tr><td style="color: var(--text-muted); width: 100px;">Name</td><td><strong><?= sanitizeOutput($rx['first_name'] . ' ' . $rx['last_name']) ?></strong></td></tr>
-                    <tr><td style="color: var(--text-muted);">ID</td><td><?= sanitizeOutput($rx['patient_uid']) ?></td></tr>
-                    <tr><td style="color: var(--text-muted);">Age/Sex</td><td><?= $patientAge ?> / <?= sanitizeOutput($rx['gender'] ?? '-') ?></td></tr>
-                    <tr><td style="color: var(--text-muted);">Phone</td><td><?= sanitizeOutput($rx['patient_phone']) ?></td></tr>
-                </table>
-            </div>
-            <div style="text-align: right;">
-                <h4 style="color: var(--primary); margin-bottom: 8px;">Doctor</h4>
-                <table style="font-size: 13px; line-height: 1.8; margin-left: auto;">
-                    <tr><td style="text-align: right;"><strong>Dr. <?= sanitizeOutput($rx['doctor_name']) ?></strong></td></tr>
-                    <tr><td style="text-align: right; color: var(--text-muted);"><?= sanitizeOutput($rx['specialty'] ?? '') ?></td></tr>
-                    <tr><td style="text-align: right; color: var(--text-muted);"><?= sanitizeOutput($rx['qualification'] ?? '') ?></td></tr>
-                    <tr><td style="text-align: right; color: var(--text-muted);">Reg: <?= sanitizeOutput($rx['registration_number'] ?? '') ?></td></tr>
-                </table>
-            </div>
-        </div>
+        <table style="width: 100%; margin-bottom: 24px; border-collapse: collapse;">
+            <tr>
+                <td style="vertical-align: top; width: 50%;">
+                    <h4 style="color: var(--primary); margin: 0 0 8px;">Patient</h4>
+                    <table style="font-size: 13px; line-height: 1.8;">
+                        <tr><td style="color: var(--text-muted); width: 80px; padding-right: 12px;">Name</td><td><strong><?= sanitizeOutput($rx['first_name'] . ' ' . $rx['last_name']) ?></strong></td></tr>
+                        <tr><td style="color: var(--text-muted); padding-right: 12px;">ID</td><td><?= sanitizeOutput($rx['patient_uid']) ?></td></tr>
+                        <tr><td style="color: var(--text-muted); padding-right: 12px;">Age/Sex</td><td><?= $patientAge ?> / <?= sanitizeOutput($rx['gender'] ?? '-') ?></td></tr>
+                        <tr><td style="color: var(--text-muted); padding-right: 12px;">Phone</td><td><?= sanitizeOutput($rx['patient_phone']) ?></td></tr>
+                    </table>
+                </td>
+                <td style="vertical-align: top; width: 50%; text-align: right;">
+                    <h4 style="color: var(--primary); margin: 0 0 8px;">Doctor</h4>
+                    <div style="font-size: 13px; line-height: 1.8;">
+                        <div><strong>Dr. <?= sanitizeOutput($rx['doctor_name']) ?></strong></div>
+                        <div style="color: var(--text-muted);"><?= sanitizeOutput($rx['specialty'] ?? '') ?></div>
+                        <div style="color: var(--text-muted);"><?= sanitizeOutput($rx['qualification'] ?? '') ?></div>
+                        <div style="color: var(--text-muted);">Reg: <?= sanitizeOutput($rx['registration_number'] ?? '') ?></div>
+                    </div>
+                </td>
+            </tr>
+        </table>
         
-        <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 20px; font-size: 13px;">
-            <span><strong>Date:</strong> <?= formatDate($rx['prescription_date']) ?></span>
-            <span><strong>Rx ID:</strong> #<?= $rxId ?></span>
-        </div>
+        <table style="width: 100%; margin-bottom: 20px; background: var(--bg-secondary); border-radius: 8px; font-size: 13px; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px 12px;"><strong>Date:</strong> <?= formatDate($rx['prescription_date']) ?></td>
+                <td style="padding: 8px 12px; text-align: right;"><strong>Rx ID:</strong> #<?= $rxId ?></td>
+            </tr>
+        </table>
         
         <!-- Clinical -->
         <?php if ($rx['chief_complaints']): ?>
@@ -162,16 +166,18 @@ $patientAge = $rx['date_of_birth'] ? calculateAge($rx['date_of_birth']) : ($rx['
         <?php endif; ?>
         
         <!-- Footer -->
-        <div style="margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-end;">
-            <div style="font-size: 11px; color: var(--text-muted);">
-                Generated by <?= APP_NAME ?> on <?= date('d M Y H:i') ?>
-            </div>
-            <div style="text-align: center;">
-                <div style="width: 200px; border-top: 1px solid var(--gray-400); padding-top: 4px; font-size: 12px;">
-                    Doctor's Signature
-                </div>
-            </div>
-        </div>
+        <table style="width: 100%; margin-top: 40px; border-collapse: collapse;">
+            <tr>
+                <td style="vertical-align: bottom; font-size: 11px; color: var(--text-muted);">
+                    Generated by <?= APP_NAME ?> on <?= date('d M Y H:i') ?>
+                </td>
+                <td style="vertical-align: bottom; text-align: right;">
+                    <div style="display: inline-block; width: 200px; border-top: 1px solid #999; padding-top: 4px; font-size: 12px; text-align: center;">
+                        Doctor's Signature
+                    </div>
+                </td>
+            </tr>
+        </table>
     </div>
 </div>
 
