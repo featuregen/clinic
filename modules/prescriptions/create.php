@@ -175,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'follow_up_date' => $_POST['follow_up_date'] ?: null,
             'follow_up_notes' => sanitize($_POST['follow_up_notes'] ?? ''),
             'clinical_notes' => sanitize($_POST['notes'] ?? ''),
-            'status' => 'draft'
+            'status' => 'completed'
         ];
         
         if ($isEdit) {
