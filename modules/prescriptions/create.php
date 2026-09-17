@@ -266,7 +266,7 @@ $appointment = $appointmentId ? $db->fetch("SELECT * FROM appointments WHERE id 
 
 // Fetch doctors
 $doctors = $db->fetchAll(
-    "SELECT d.id, u.full_name, s.name as specialty FROM doctors d JOIN users u ON d.user_id = u.id LEFT JOIN specialties s ON d.specialty_id = s.id WHERE d.clinic_id = ?", [$clinicId]
+    "SELECT d.id, u.full_name, s.name as specialty FROM doctors d JOIN users u ON d.user_id = u.id LEFT JOIN specialties s ON d.specialty_id = s.id WHERE d.clinic_id = ? AND u.is_active = 1 ORDER BY u.full_name", [$clinicId]
 );
 
 // Medicines list

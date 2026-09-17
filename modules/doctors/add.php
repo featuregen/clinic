@@ -17,7 +17,7 @@ $isEdit = false;
 if (isset($_GET['id'])) {
     $doctor = $db->fetch(
         "SELECT d.*, u.full_name, u.email, u.phone, u.gender, u.date_of_birth, u.username, u.role, u.branch_id,
-                u.qualification, u.specialization, u.license_number, u.address, u.profile_image
+                u.qualification, u.specialization, u.license_number, u.address, u.profile_image, u.is_active
          FROM doctors d JOIN users u ON d.user_id = u.id
          WHERE d.id = ? AND d.clinic_id = ?", [$_GET['id'], $clinicId]
     );
@@ -51,7 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $followupFee = floatval($_POST['followup_fee'] ?? 0);
     $expYears = intval($_POST['experience_years'] ?? 0);
     $slotDuration = intval($_POST['default_slot_duration'] ?? 15);
-    $isAvailable = isset($_POST['is_available']) ? 1 : 0;
+    $isActive = isset($_POST['is_active']) ? 1 : 0;
+    $isAvailable = ($isActive === 1 && isset($_POST['is_available'])) ? 1 : 0;
     $bio = sanitize($_POST['bio'] ?? '');
     $branches = $db->fetchAll("SELECT id, name FROM branches WHERE clinic_id = ? AND is_active = 1 ORDER BY name", [$clinicId]);
     $branchCount = count($branches);
@@ -62,15 +63,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $branchId = $branches[0]['id'];
     }
 
-    // Subscription Doctor Quota Check
+    // Subscription Doctor Quota Check (Counts only active doctors)
     $tenantData = $db->tenantInfo ?? [];
     $maxDoctors = isset($tenantData['max_doctors']) ? intval($tenantData['max_doctors']) : 0; // 0 = unlimited
-    $activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors WHERE clinic_id = ?", [$clinicId])['c'] ?? 0;
-    $isQuotaReached = (!$isEdit && $maxDoctors > 0 && $activeDocCount >= $maxDoctors);
-
-    if ($isQuotaReached) {
-        setFlashMessage('error', "Doctor limit reached: Your subscription plan allows a maximum of {$maxDoctors} doctor(s) (currently using {$activeDocCount}/{$maxDoctors}). Please upgrade your plan to register additional doctors.");
+    $activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.clinic_id = ? AND u.is_active = 1", [$clinicId])['c'] ?? 0;
+    
+    // Check quota for new doctor or when activating an inactive doctor
+    if (!$isEdit && $maxDoctors > 0 && $activeDocCount >= $maxDoctors) {
+        setFlashMessage('error', "Doctor limit reached: Your subscription plan allows a maximum of {$maxDoctors} doctor(s) (currently using {$activeDocCount}/{$maxDoctors} active slots). Please upgrade your plan or deactivate an inactive doctor to register additional doctors.");
         header('Location: ' . BASE_URL . '/modules/doctors/list.php');
+        exit;
+    }
+
+    if ($isEdit && empty($doctor['is_active']) && $isActive === 1 && $maxDoctors > 0 && $activeDocCount >= $maxDoctors) {
+        setFlashMessage('error', "Cannot activate doctor: Your subscription plan allows a maximum of {$maxDoctors} doctor(s) (currently using {$activeDocCount}/{$maxDoctors} active slots). Please upgrade your plan or deactivate another doctor first.");
+        header('Location: ' . BASE_URL . '/modules/doctors/add.php?id=' . $doctor['id']);
         exit;
     }
 
@@ -78,12 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->beginTransaction();
 
         if ($isEdit) {
-            // Update users table
+            // Update users table including is_active
             $db->query(
                 "UPDATE users SET full_name=?, email=?, phone=?, gender=?, date_of_birth=?,
-                 qualification=?, specialization=?, license_number=?, address=?, branch_id=? WHERE id=?",
+                 qualification=?, specialization=?, license_number=?, address=?, branch_id=?, is_active=? WHERE id=?",
                 [$fullName, $email ?: null, $phone ?: null, $gender ?: null, $dob ?: null,
-                 $qualification ?: null, $specialization ?: null, $licenseNumber ?: null, $address ?: null, $branchId, $doctor['user_id']]
+                 $qualification ?: null, $specialization ?: null, $licenseNumber ?: null, $address ?: null, $branchId, $isActive, $doctor['user_id']]
             );
 
             // Update password only if provided
@@ -357,6 +364,15 @@ $addonDocPriceLabel = (floor($addonDocPrice) == $addonDocPrice) ? number_format(
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="margin-bottom: 8px;">Doctor Account Status</label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" name="is_active" value="1"
+                           <?= ($doctor['is_active'] ?? 1) ? 'checked' : '' ?>>
+                    <span style="font-weight: 600;">Active Account (Consumes 1 doctor slot)</span>
+                </label>
+                <small class="text-muted" style="display: block; margin-top: 4px;">Deactivating allows you to keep all doctor records while freeing up quota.</small>
             </div>
             <div class="form-group">
                 <label class="form-label" style="margin-bottom: 8px;">Availability</label>

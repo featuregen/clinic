@@ -335,6 +335,12 @@ class Database {
                     ADD COLUMN gst_amount DECIMAL(10,2) DEFAULT 0.00 AFTER gst_rate");
             }
             
+            // Ensure status column in tenant_subscription_payments allows 'cancelled' (change from restrictive ENUM to VARCHAR(50))
+            try {
+                $masterConn->exec("ALTER TABLE tenant_subscription_payments MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'completed'");
+                $masterConn->exec("UPDATE tenant_subscription_payments SET status = 'cancelled' WHERE status = '' OR status = 'refunded' OR status NOT IN ('completed', 'pending')");
+            } catch (\Throwable $e) {}
+
             // Check if addon_doctors column exists in tenants
             $colAddonCheck = $masterConn->query("SHOW COLUMNS FROM tenants LIKE 'addon_doctors'")->fetch();
             if (!$colAddonCheck) {

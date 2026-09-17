@@ -40,7 +40,7 @@ try {
 
     // Active doctors
     $activeDoctors = $db->fetch(
-        "SELECT COUNT(*) as total FROM doctors WHERE clinic_id = ? AND is_available = 1",
+        "SELECT COUNT(*) as total FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.clinic_id = ? AND d.is_available = 1 AND u.is_active = 1",
         [$clinicId]
     )['total'] ?? 0;
 

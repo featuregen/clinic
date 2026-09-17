@@ -57,7 +57,7 @@ if (isset($_GET['patient_id'])) {
 $doctors = $db->fetchAll(
     "SELECT d.id, d.consultation_fee, d.followup_fee, d.default_slot_duration, u.full_name, s.name as specialty
      FROM doctors d JOIN users u ON d.user_id = u.id LEFT JOIN specialties s ON d.specialty_id = s.id
-     WHERE d.clinic_id = ? AND d.is_available = 1 ORDER BY u.full_name",
+     WHERE d.clinic_id = ? AND d.is_available = 1 AND u.is_active = 1 ORDER BY u.full_name",
     [$clinicId]
 );
 ?>

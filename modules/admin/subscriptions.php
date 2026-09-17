@@ -9,6 +9,10 @@ requireAuth();
 requireRole([ROLE_SUPER_ADMIN]);
 
 $master = master_db();
+try {
+    $master->exec("ALTER TABLE tenant_subscription_payments MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'completed'");
+    $master->exec("UPDATE tenant_subscription_payments SET status = 'cancelled' WHERE status = '' OR status = 'refunded' OR status NOT IN ('completed', 'pending')");
+} catch (\Throwable $e) {}
 $tenantInfo = db()->tenantInfo;
 $currentTenantId = intval($tenantInfo['id'] ?? 0);
 $currentTab = sanitize($_GET['tab'] ?? 'plan');
@@ -391,7 +395,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (Exception $e) {
                 $master->rollBack();
-                $errorMsg = 'Error cancelling receipt: ' . $e->getMessage();
+                setFlashMessage('error', 'Error cancelling receipt: ' . $e->getMessage());
+            }
+        }
+        header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=payments");
+        exit;
+    }
+
+    // 3C. DELETE A RECEIPT RECORD PERMANENTLY
+    elseif ($action === 'delete_receipt') {
+        $paymentId = intval($_POST['payment_id'] ?? 0);
+        if ($paymentId > 0) {
+            try {
+                $master->beginTransaction();
+                
+                // Fetch the payment
+                $paymentRow = $master->prepare("SELECT * FROM tenant_subscription_payments WHERE id = ? AND tenant_id = ?");
+                $paymentRow->execute([$paymentId, $t['id']]);
+                $delPayment = $paymentRow->fetch();
+                
+                if ($delPayment) {
+                    // If it was an active doctor addon, reverse the addon_doctors count
+                    if ($delPayment['status'] === 'completed' && $delPayment['plan_type'] === 'doctor_addon') {
+                        $docsToRemove = max(1, intval($delPayment['doctor_limit_granted']));
+                        $master->prepare("UPDATE tenants SET addon_doctors = GREATEST(0, COALESCE(addon_doctors, 0) - ?), max_doctors = GREATEST(1, max_doctors - ?) WHERE id = ?")->execute([$docsToRemove, $docsToRemove, $t['id']]);
+                    }
+                    
+                    $master->prepare("DELETE FROM tenant_subscription_payments WHERE id = ? AND tenant_id = ?")->execute([$paymentId, $t['id']]);
+                    
+                    $master->commit();
+                    setFlashMessage('success', "Receipt #{$delPayment['payment_reference']} deleted permanently.");
+                } else {
+                    $master->commit();
+                    setFlashMessage('error', 'Receipt record not found.');
+                }
+            } catch (Exception $e) {
+                $master->rollBack();
+                setFlashMessage('error', 'Error deleting receipt: ' . $e->getMessage());
             }
         }
         header("Location: " . BASE_URL . "/modules/admin/subscriptions.php?tab=payments");
@@ -457,7 +497,7 @@ $stmtPay->execute([$t['id']]);
 $payments = $stmtPay->fetchAll();
 $activePaymentCount = 0;
 foreach ($payments as $p) {
-    if (($p['status'] ?? '') !== 'cancelled') {
+    if (($p['status'] ?? '') === 'completed') {
         $activePaymentCount++;
     }
 }
@@ -469,10 +509,10 @@ $endsAt = !empty($t['subscription_ends_at']) ? strtotime($t['subscription_ends_a
 $isExp = (!$isLife && $endsAt && $endsAt < $now);
 $daysLeft = $endsAt ? ceil(($endsAt - $now) / 86400) : null;
 
-// Doctor counts in current clinic database
+// Doctor counts in current clinic database (active doctors only)
 $db = db();
 $currentClinicId = getCurrentClinicId();
-$activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors WHERE clinic_id = ?", [$currentClinicId])['c'] ?? 0;
+$activeDocCount = $db->fetch("SELECT COUNT(*) as c FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.clinic_id = ? AND u.is_active = 1", [$currentClinicId])['c'] ?? 0;
 
 $stmtRev = $master->prepare("SELECT COALESCE(SUM(amount), 0) as tot FROM tenant_subscription_payments WHERE tenant_id = ? AND status = 'completed'");
 $stmtRev->execute([$t['id']]);
@@ -874,13 +914,22 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                             'upi' => '<span class="badge" style="background:#f3e8ff; color:#7e22ce; border:1px solid #e9d5ff; font-weight:700;"><i class="fas fa-mobile-alt"></i> UPI</span>',
                             'cheque' => '<span class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-weight:700;"><i class="fas fa-money-check-alt"></i> Cheque</span>'
                         ];
+                        $pStatus = strtolower(trim($p['status'] ?? ''));
+                        $isCancelled = in_array($pStatus, ['cancelled', 'refunded', '']);
                     ?>
-                    <tr>
+                    <tr style="<?= $isCancelled ? 'opacity: 0.75; background: #fafbfc;' : '' ?>">
                         <td>
                             <strong><?= sanitizeOutput($p['payment_reference'] ?: ('REC-' . $p['id'])) ?></strong>
+                            <?php if ($isCancelled): ?>
+                                <span class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 10px; margin-left: 6px;">Voided</span>
+                            <?php endif; ?>
                         </td>
                         <td>
-                            <span style="font-size: 15px; font-weight: 800; color: #059669;">₹<?= number_format($p['amount'], 2) ?></span>
+                            <?php if ($isCancelled): ?>
+                                <del style="font-size: 14px; font-weight: 700; color: #94a3b8;">₹<?= number_format($p['amount'], 2) ?></del>
+                            <?php else: ?>
+                                <span style="font-size: 15px; font-weight: 800; color: #059669;">₹<?= number_format($p['amount'], 2) ?></span>
+                            <?php endif; ?>
                             <?php if (!empty($p['gst_amount']) && $p['gst_amount'] > 0): ?>
                             <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">
                                 Base: ₹<?= number_format($p['base_amount'], 2) ?> + 18% GST: ₹<?= number_format($p['gst_amount'], 2) ?>
@@ -907,24 +956,38 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                             <span style="font-size: 12px;"><?= date('d M Y, h:i A', strtotime($p['created_at'])) ?></span>
                         </td>
                         <td style="text-align: right;">
-                            <?php if (($p['status'] ?? '') === 'cancelled'): ?>
-                                <span class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 700; padding: 4px 10px;">
-                                    <i class="fas fa-ban"></i> Cancelled
-                                </span>
-                            <?php else: ?>
-                            <div style="display: flex; gap: 4px; justify-content: flex-end;">
-                                <a href="<?= BASE_URL ?>/modules/admin/print_subscription_receipt.php?id=<?= $p['id'] ?>" target="_blank" class="btn btn-sm btn-outline">
-                                    <i class="fas fa-print"></i> Receipt
-                                </a>
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to cancel/void this receipt? This action cannot be undone.');">
-                                    <input type="hidden" name="action" value="cancel_receipt">
-                                    <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
-                                    <button type="submit" class="btn btn-sm" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 600;">
-                                        <i class="fas fa-times-circle"></i> Cancel
-                                    </button>
-                                </form>
+                            <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+                                <?php if ($isCancelled): ?>
+                                    <span class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 700; padding: 4px 10px;">
+                                        <i class="fas fa-ban"></i> Cancelled
+                                    </span>
+                                    <form method="POST" style="display: inline; margin: 0;" onsubmit="return confirm('Permanently delete this receipt record from the database?');">
+                                        <input type="hidden" name="action" value="delete_receipt">
+                                        <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
+                                        <button type="submit" class="btn btn-sm" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 600;" title="Permanently Delete">
+                                            <i class="fas fa-trash-alt"></i> Delete
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <a href="<?= BASE_URL ?>/modules/admin/print_subscription_receipt.php?id=<?= $p['id'] ?>" target="_blank" class="btn btn-sm btn-outline">
+                                        <i class="fas fa-print"></i> Receipt
+                                    </a>
+                                    <form method="POST" style="display: inline; margin: 0;" onsubmit="return confirm('Are you sure you want to cancel/void this receipt? This action cannot be undone.');">
+                                        <input type="hidden" name="action" value="cancel_receipt">
+                                        <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
+                                        <button type="submit" class="btn btn-sm" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 600;">
+                                            <i class="fas fa-times-circle"></i> Cancel
+                                        </button>
+                                    </form>
+                                    <form method="POST" style="display: inline; margin: 0;" onsubmit="return confirm('Permanently delete this receipt record?');">
+                                        <input type="hidden" name="action" value="delete_receipt">
+                                        <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
+                                        <button type="submit" class="btn btn-sm btn-ghost" style="color: #94a3b8;" title="Delete Record">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                             </div>
-                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; endif; ?>
