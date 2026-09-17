@@ -24,7 +24,7 @@ if (!$patientId) {
         </div>
     </div>
 
-    <div class="card" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 40px;">
+    <div class="card" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 40px; overflow: visible;">
         <i class="fas fa-user-injured" style="font-size: 48px; color: var(--text-secondary); margin-bottom: 24px;"></i>
         <h2 style="margin-bottom: 16px;">Search Patient for Dental Chart</h2>
         <p class="text-muted mb-24">Please search and select a patient to view or edit their dental chart.</p>
@@ -32,7 +32,7 @@ if (!$patientId) {
         <div style="position: relative; max-width: 400px; margin: 0 auto;">
             <input type="text" id="patientSearch" class="form-control" placeholder="Search by name, phone, or ID..." style="padding-left: 40px; height: 48px; font-size: 16px;">
             <i class="fas fa-search" style="position: absolute; left: 16px; top: 16px; color: #999;"></i>
-            <div id="searchResults" style="display:none; position:absolute; top: 100%; left:0; right:0; background:white; border:1px solid #eee; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; max-height: 300px; overflow-y: auto; text-align: left;"></div>
+            <div id="searchResults" style="display:none; position:absolute; top: 100%; left:0; right:0; background:white; border:1px solid #eee; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 9999; max-height: 300px; overflow-y: auto; text-align: left;"></div>
         </div>
     </div>
 
