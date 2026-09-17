@@ -92,7 +92,7 @@ $prescriptions = $db->fetchAll(
                     <td>Dr. <?= sanitizeOutput($rx['doctor_name']) ?></td>
                     <td><?= sanitizeOutput(truncateText($rx['diagnosis'] ?? '-', 40)) ?></td>
                     <td><span class="badge badge-info"><?= $rx['med_count'] ?> meds</span></td>
-                    <td><?= getStatusBadge($rx['status'], 'prescription') ?></td>
+                    <td><?= getStatusBadge($rx['status'] ?: 'completed', 'prescription') ?></td>
                     <td>
                         <a href="<?= BASE_URL ?>/modules/prescriptions/view.php?id=<?= $rx['id'] ?>" class="btn btn-sm btn-ghost"><i class="fas fa-eye"></i></a>
                         <a href="<?= BASE_URL ?>/modules/prescriptions/create.php?id=<?= $rx['id'] ?>" class="btn btn-sm btn-ghost"><i class="fas fa-pen"></i></a>

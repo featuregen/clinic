@@ -255,6 +255,11 @@ class Database {
                         }
                     }
                 }
+
+                // Fix null/empty prescription statuses
+                try {
+                    $tenantConn->exec("UPDATE prescriptions SET status = 'completed' WHERE status IS NULL OR status = '' OR status = 'draft'");
+                } catch (\Throwable $e) {}
             }
         } catch (Exception $e) {
             error_log("Tenant clinics schema check error: " . $e->getMessage());
