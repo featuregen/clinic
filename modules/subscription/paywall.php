@@ -549,7 +549,7 @@ if ($activePlanType === 'yearly') {
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
             <span class="badge" style="background: rgba(255,255,255,0.25); color: white; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px;">
-                ₹25 / doctor / month &bull; ₹250 / doctor / annum (+18% GST)
+                ₹<?= number_format($addonMonthlyPrice, 0) ?> / doctor / month &bull; ₹<?= number_format($addonYearlyPrice, 0) ?> / doctor / annum (+18% GST)
             </span>
         </div>
     </div>
