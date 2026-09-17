@@ -40,19 +40,25 @@ if (!$isEdit && (!$appointmentId || !$patientId)) {
     
     // Fetch today's booked/scheduled appointments
     $today = date('Y-m-d');
-    $bookedAppts = $db->fetchAll(
-        "SELECT a.id, a.appointment_date, a.appointment_time, a.status, a.reason,
-                p.id as patient_id, p.first_name, p.last_name, p.patient_uid, p.phone, p.date_of_birth, p.age, p.gender,
-                u.full_name as doctor_name, s.name as specialty
-         FROM appointments a
-         JOIN patients p ON a.patient_id = p.id
-         JOIN doctors d ON a.doctor_id = d.id
-         JOIN users u ON d.user_id = u.id
-         LEFT JOIN specialties s ON d.specialty_id = s.id
-         WHERE a.clinic_id = ? AND a.appointment_date = ? AND a.status IN ('booked', 'scheduled', 'checked_in', 'in_progress')
-         ORDER BY a.appointment_time ASC",
-        [$clinicId, $today]
-    );
+    $bookedAppts = [];
+    try {
+        $bookedAppts = $db->fetchAll(
+            "SELECT a.id, a.appointment_date, a.appointment_time, a.status, a.reason,
+                    p.id as patient_id, p.first_name, p.last_name, p.patient_uid, p.phone, p.date_of_birth, p.gender,
+                    u.full_name as doctor_name, s.name as specialty
+             FROM appointments a
+             JOIN patients p ON a.patient_id = p.id
+             JOIN doctors d ON a.doctor_id = d.id
+             JOIN users u ON d.user_id = u.id
+             LEFT JOIN specialties s ON d.specialty_id = s.id
+             WHERE a.clinic_id = ? AND a.appointment_date = ? AND a.status IN ('booked', 'scheduled', 'checked_in', 'in_progress')
+             ORDER BY a.appointment_time ASC",
+            [$clinicId, $today]
+        );
+    } catch (\Throwable $e) {
+        error_log("Prescription guard - appointment query error: " . $e->getMessage());
+        $bookedAppts = [];
+    }
     ?>
     <div class="content-header">
         <div>
@@ -112,7 +118,7 @@ if (!$isEdit && (!$appointmentId || !$patientId)) {
                         <td>
                             <strong><?= sanitizeOutput($appt['first_name'] . ' ' . ($appt['last_name'] ?? '')) ?></strong>
                             <div style="font-size: 12px; color: #6b7280;">
-                                <?= $appt['date_of_birth'] ? calculateAge($appt['date_of_birth']) : ($appt['age'] ?? '-') ?> yrs
+                                <?= !empty($appt['date_of_birth']) ? calculateAge($appt['date_of_birth']) : '-' ?> yrs
                                 | <?= sanitizeOutput($appt['gender'] ?? '-') ?>
                                 <?php if (!empty($appt['phone'])): ?> | <?= sanitizeOutput($appt['phone']) ?><?php endif; ?>
                             </div>
