@@ -445,42 +445,52 @@ if (!empty($rxLogo)) {
         </div>
 
         <!-- ===== PATIENT INFO BAR ===== -->
-        <div class="patient-bar">
-            <div class="info-group">
-                <div class="info-item">
-                    <span class="info-label">Patient</span>
-                    <span class="info-value"><?= sanitizeOutput($rx['first_name'] . ' ' . $rx['last_name']) ?></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">ID</span>
-                    <span class="info-value"><?= sanitizeOutput($rx['patient_uid']) ?></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Age/Sex</span>
-                    <span class="info-value"><?= $patientAge ?> / <?= sanitizeOutput($rx['gender'] ?? '-') ?></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Mobile</span>
-                    <span class="info-value"><?= sanitizeOutput($rx['patient_phone']) ?></span>
-                </div>
-                <?php if (!empty($rx['blood_group'])): ?>
-                <div class="info-item">
-                    <span class="info-label">Blood</span>
-                    <span class="info-value" style="color: #dc2626;"><?= sanitizeOutput($rx['blood_group']) ?></span>
-                </div>
-                <?php endif; ?>
-            </div>
-            <div class="rx-date-badge">
-                <div class="date-item">
-                    <div class="date-label">Date</div>
-                    <div class="date-value"><?= formatDate($rx['prescription_date']) ?></div>
-                </div>
-                <div class="date-item">
-                    <div class="date-label">Rx ID</div>
-                    <div class="date-value">#<?= $rxId ?></div>
-                </div>
-            </div>
-        </div>
+        <table style="width: 100%; border-collapse: collapse; background: var(--bg-soft); border-bottom: 1px solid var(--border);" cellpadding="0" cellspacing="0">
+            <tr>
+                <td style="padding: 14px 36px;">
+                    <table style="border-collapse: collapse; font-size: 13px;" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="padding-right: 24px;">
+                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); font-weight: 600;">Patient</span>
+                                <span style="font-weight: 600; color: var(--text); margin-left: 5px;"><?= sanitizeOutput($rx['first_name'] . ' ' . $rx['last_name']) ?></span>
+                            </td>
+                            <td style="padding-right: 24px;">
+                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); font-weight: 600;">ID</span>
+                                <span style="font-weight: 600; color: var(--text); margin-left: 5px;"><?= sanitizeOutput($rx['patient_uid']) ?></span>
+                            </td>
+                            <td style="padding-right: 24px;">
+                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); font-weight: 600;">Age/Sex</span>
+                                <span style="font-weight: 600; color: var(--text); margin-left: 5px;"><?= $patientAge ?> / <?= sanitizeOutput($rx['gender'] ?? '-') ?></span>
+                            </td>
+                            <td style="padding-right: 24px;">
+                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); font-weight: 600;">Mobile</span>
+                                <span style="font-weight: 600; color: var(--text); margin-left: 5px;"><?= sanitizeOutput($rx['patient_phone']) ?></span>
+                            </td>
+                            <?php if (!empty($rx['blood_group'])): ?>
+                            <td>
+                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); font-weight: 600;">Blood</span>
+                                <span style="font-weight: 600; color: #dc2626; margin-left: 5px;"><?= sanitizeOutput($rx['blood_group']) ?></span>
+                            </td>
+                            <?php endif; ?>
+                        </tr>
+                    </table>
+                </td>
+                <td style="padding: 14px 36px; text-align: right; white-space: nowrap;">
+                    <table style="border-collapse: collapse; font-size: 13px; margin-left: auto;" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="padding-right: 20px; text-align: right;">
+                                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); font-weight: 600;">Date</div>
+                                <div style="font-weight: 700; color: var(--text);"><?= formatDate($rx['prescription_date']) ?></div>
+                            </td>
+                            <td style="text-align: right;">
+                                <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); font-weight: 600;">Rx ID</div>
+                                <div style="font-weight: 700; color: var(--text);">#<?= $rxId ?></div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
 
         <!-- ===== BODY ===== -->
         <div class="print-body">
