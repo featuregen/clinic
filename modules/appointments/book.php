@@ -162,7 +162,7 @@ $doctors = $db->fetchAll(
                 <h4 class="mb-16 mt-24"><i class="fas fa-user-md" style="color: var(--accent);"></i> Doctor & Schedule</h4>
                 <div class="form-group">
                     <label class="form-label">Select Doctor <span class="required">*</span></label>
-                    <select name="doctor_id" id="doctorSelect" class="form-control" required onchange="updateFee()">
+                    <select name="doctor_id" id="doctorSelect" class="form-control" required onchange="updateFee(); loadBookedSlots()">
                         <option value="">Choose a doctor...</option>
                         <?php foreach ($doctors as $doc): ?>
                         <option value="<?= $doc['id'] ?>" 
@@ -178,13 +178,36 @@ $doctors = $db->fetchAll(
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Date <span class="required">*</span></label>
-                        <input type="date" name="appointment_date" class="form-control" 
-                               value="<?= date('Y-m-d') ?>" min="<?= date('Y-m-d') ?>" required>
+                        <input type="date" name="appointment_date" id="appointmentDate" class="form-control" 
+                               value="<?= date('Y-m-d') ?>" min="<?= date('Y-m-d') ?>" required onchange="loadBookedSlots()">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Time <span class="required">*</span></label>
-                        <input type="time" name="appointment_time" class="form-control" value="<?= date('H:i') ?>" required>
+                        <input type="time" name="appointment_time" id="appointmentTime" class="form-control" value="<?= date('H:i') ?>" required>
                     </div>
+                </div>
+
+                <!-- Booked Slots Panel -->
+                <div id="bookedSlotsPanel" style="display: none; margin-top: 16px;">
+                    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 12px; padding: 16px; position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h5 style="margin: 0; font-size: 13px; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-calendar-alt"></i> Today's Booked Slots
+                            </h5>
+                            <span id="bookedSlotsCount" class="badge" style="background: #0284c7; color: white; font-size: 11px; font-weight: 700;"></span>
+                        </div>
+                        <div id="bookedSlotsList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                        <div id="bookedSlotsEmpty" style="display: none; text-align: center; padding: 10px 0; color: #0369a1; font-size: 13px;">
+                            <i class="fas fa-check-circle" style="margin-right: 4px;"></i> No appointments booked yet — all slots available!
+                        </div>
+                        <div id="slotConflictWarning" style="display: none; margin-top: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; color: #dc2626; font-size: 12px; font-weight: 600;">
+                            <i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>
+                            <span id="slotConflictText">This time slot is already booked!</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="bookedSlotsLoading" style="display: none; margin-top: 12px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading booked slots...
                 </div>
             </div>
             
@@ -406,6 +429,180 @@ function updateFee() {
         feeInput.value = parseFloat(fee || 0).toFixed(2);
     }
 }
+
+// ============================================
+// BOOKED SLOTS LOGIC
+// ============================================
+// Ensure escapeHtml is available (may be inside conditional block for patient search)
+if (typeof escapeHtml === 'undefined') {
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+}
+let currentBookedSlots = [];
+let currentSlotDuration = 15;
+
+function loadBookedSlots() {
+    const doctorSelect = document.getElementById('doctorSelect');
+    const dateInput = document.getElementById('appointmentDate');
+    const panel = document.getElementById('bookedSlotsPanel');
+    const loading = document.getElementById('bookedSlotsLoading');
+    const conflictWarning = document.getElementById('slotConflictWarning');
+    
+    if (!doctorSelect || !dateInput) return;
+    
+    const doctorId = doctorSelect.value;
+    const date = dateInput.value;
+    
+    if (!doctorId || !date) {
+        if (panel) panel.style.display = 'none';
+        if (loading) loading.style.display = 'none';
+        return;
+    }
+    
+    if (loading) loading.style.display = 'block';
+    if (panel) panel.style.display = 'none';
+    if (conflictWarning) conflictWarning.style.display = 'none';
+    
+    fetch(`${BASE_URL}/modules/appointments/slots_ajax.php?doctor_id=${doctorId}&date=${date}`)
+        .then(r => r.json())
+        .then(data => {
+            if (loading) loading.style.display = 'none';
+            currentBookedSlots = data.slots || [];
+            currentSlotDuration = data.slot_duration || 15;
+            renderBookedSlots(currentBookedSlots);
+            checkTimeConflict();
+        })
+        .catch(() => {
+            if (loading) loading.style.display = 'none';
+        });
+}
+
+function renderBookedSlots(slots) {
+    const panel = document.getElementById('bookedSlotsPanel');
+    const list = document.getElementById('bookedSlotsList');
+    const empty = document.getElementById('bookedSlotsEmpty');
+    const countBadge = document.getElementById('bookedSlotsCount');
+    
+    if (!panel || !list) return;
+    panel.style.display = 'block';
+    
+    if (slots.length === 0) {
+        list.style.display = 'none';
+        empty.style.display = 'block';
+        countBadge.textContent = '0 booked';
+        return;
+    }
+    
+    list.style.display = 'flex';
+    empty.style.display = 'none';
+    countBadge.textContent = slots.length + ' booked';
+    
+    let html = '';
+    slots.forEach(slot => {
+        const statusColors = {
+            'scheduled': { bg: '#dbeafe', border: '#93c5fd', text: '#1d4ed8', icon: 'fa-clock' },
+            'confirmed': { bg: '#d1fae5', border: '#6ee7b7', text: '#047857', icon: 'fa-check-circle' },
+            'checked_in': { bg: '#fef3c7', border: '#fcd34d', text: '#b45309', icon: 'fa-sign-in-alt' },
+            'in_progress': { bg: '#ede9fe', border: '#c4b5fd', text: '#6d28d9', icon: 'fa-stethoscope' },
+            'completed': { bg: '#f3f4f6', border: '#d1d5db', text: '#6b7280', icon: 'fa-check' }
+        };
+        const c = statusColors[slot.status] || statusColors['scheduled'];
+        const time12 = convertTo12Hr(slot.time);
+        
+        html += `
+            <div style="background: ${c.bg}; border: 1.5px solid ${c.border}; border-radius: 8px; padding: 8px 12px; min-width: 130px; cursor: default;" title="${slot.patient_name} (${slot.patient_uid}) — ${slot.status}">
+                <div style="font-size: 13px; font-weight: 700; color: ${c.text}; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas ${c.icon}" style="font-size: 10px;"></i>
+                    ${time12}
+                </div>
+                <div style="font-size: 11px; color: ${c.text}; opacity: 0.8; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">
+                    ${escapeHtml(slot.patient_name)}
+                </div>
+                <div style="font-size: 10px; color: ${c.text}; opacity: 0.6;">Token #${slot.token}</div>
+            </div>`;
+    });
+    
+    list.innerHTML = html;
+}
+
+function convertTo12Hr(time24) {
+    const [h, m] = time24.split(':');
+    const hr = parseInt(h);
+    const ampm = hr >= 12 ? 'PM' : 'AM';
+    const hr12 = hr % 12 || 12;
+    return hr12 + ':' + m + ' ' + ampm;
+}
+
+function checkTimeConflict() {
+    const timeInput = document.getElementById('appointmentTime');
+    const conflictWarning = document.getElementById('slotConflictWarning');
+    const conflictText = document.getElementById('slotConflictText');
+    const submitBtn = document.querySelector('button[type="submit"]');
+    
+    if (!timeInput || !conflictWarning) return;
+    
+    const selectedTime = timeInput.value; // HH:MM
+    if (!selectedTime || currentBookedSlots.length === 0) {
+        conflictWarning.style.display = 'none';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+        return;
+    }
+    
+    const selectedMinutes = timeToMinutes(selectedTime);
+    let conflict = null;
+    
+    for (const slot of currentBookedSlots) {
+        const slotStart = timeToMinutes(slot.time);
+        const slotEnd = slotStart + currentSlotDuration;
+        
+        if (selectedMinutes >= slotStart && selectedMinutes < slotEnd) {
+            conflict = slot;
+            break;
+        }
+    }
+    
+    if (conflict) {
+        const time12 = convertTo12Hr(conflict.time);
+        conflictText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Time conflict! <strong>${time12}</strong> is booked for <strong>${escapeHtml(conflict.patient_name)}</strong>. Please choose a different time.`;
+        conflictWarning.style.display = 'block';
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.5'; }
+    } else {
+        conflictWarning.style.display = 'none';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+    }
+}
+
+function timeToMinutes(t) {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+}
+
+// Attach time change listener
+const timeInput = document.getElementById('appointmentTime');
+if (timeInput) {
+    timeInput.addEventListener('change', checkTimeConflict);
+    timeInput.addEventListener('input', checkTimeConflict);
+}
+
+// Form submit validation
+document.querySelector('form')?.addEventListener('submit', function(e) {
+    const conflictWarning = document.getElementById('slotConflictWarning');
+    if (conflictWarning && conflictWarning.style.display !== 'none') {
+        e.preventDefault();
+        alert('Cannot book — the selected time slot conflicts with an existing appointment. Please choose a different time.');
+        return false;
+    }
+});
+
+// Auto-load on page ready if doctor is pre-selected
+document.addEventListener('DOMContentLoaded', function() {
+    const doctorSelect = document.getElementById('doctorSelect');
+    if (doctorSelect && doctorSelect.value) {
+        loadBookedSlots();
+    }
+});
 </script>
 
 <?php require_once INCLUDES_PATH . '/footer.php'; ?>
