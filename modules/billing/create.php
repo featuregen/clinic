@@ -138,7 +138,7 @@ try {
     </div>
 </div>
 
-<form method="POST" id="invoiceForm">
+<form method="POST" id="invoiceForm" onsubmit="return cleanEmptyItems()">
     <div class="grid-3 gap-24">
         <!-- Items (2-col span) -->
         <div style="grid-column: span 2;">
@@ -189,7 +189,7 @@ try {
                 <div class="card-body" id="itemsContainer">
                     <div class="item-row d-flex gap-12 align-center mb-12" data-index="0">
                         <div class="form-group mb-0" style="flex: 2; position: relative;">
-                            <input type="text" name="item_name[]" class="form-control svc-autocomplete" placeholder="Type service name..." required autocomplete="off" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
+                            <input type="text" name="item_name[]" class="form-control svc-autocomplete" placeholder="Type service name..." autocomplete="off" oninput="showSuggestions(this)" onfocus="showSuggestions(this)">
                             <div class="svc-suggestions"></div>
                         </div>
                         <div class="form-group mb-0" style="flex: 0.8;">
@@ -361,7 +361,7 @@ function addItem() {
     row.className = 'item-row d-flex gap-12 align-center mb-12';
     row.setAttribute('data-index', itemIndex);
     row.innerHTML =
-        '<div class="form-group mb-0" style="flex:2; position:relative;"><input type="text" name="item_name[]" class="form-control svc-autocomplete" placeholder="Type service name..." required autocomplete="off" oninput="showSuggestions(this)" onfocus="showSuggestions(this)"><div class="svc-suggestions"></div></div>' +
+        '<div class="form-group mb-0" style="flex:2; position:relative;"><input type="text" name="item_name[]" class="form-control svc-autocomplete" placeholder="Type service name..." autocomplete="off" oninput="showSuggestions(this)" onfocus="showSuggestions(this)"><div class="svc-suggestions"></div></div>' +
         '<div class="form-group mb-0" style="flex:0.8;"><select name="item_type[]" class="form-control">' + getCategoryOptionsHtml('') + '</select></div>' +
         '<div class="form-group mb-0" style="flex:0.5;"><input type="number" name="item_qty[]" class="form-control" value="1" min="1" oninput="calculateTotal()"></div>' +
         '<div class="form-group mb-0" style="flex:0.7;"><input type="number" name="item_rate[]" class="form-control" placeholder="Rate" step="0.01" oninput="calculateTotal()"></div>' +
@@ -560,6 +560,25 @@ function loadPatientHistory(patientId) {
 <?php if ($prefilledPatient): ?>
 loadPatientHistory(<?= $prefilledPatient['id'] ?>);
 <?php endif; ?>
+
+// Remove empty item rows before form submission
+function cleanEmptyItems() {
+    var rows = document.querySelectorAll('#itemsContainer .item-row');
+    rows.forEach(function(row) {
+        var nameInput = row.querySelector('input[name="item_name[]"]');
+        if (nameInput && nameInput.value.trim() === '') {
+            row.remove();
+        }
+    });
+    // Ensure at least one item remains
+    var remaining = document.querySelectorAll('#itemsContainer .item-row');
+    if (remaining.length === 0) {
+        alert('Please add at least one invoice item.');
+        addItem();
+        return false;
+    }
+    return true;
+}
 </script>
 
 <?php require_once INCLUDES_PATH . '/footer.php'; ?>
