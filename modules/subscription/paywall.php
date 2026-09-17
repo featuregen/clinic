@@ -693,6 +693,7 @@ if ($activePlanType === 'yearly') {
 $stmtHist = $master->prepare("
     SELECT * FROM tenant_subscription_payments 
     WHERE tenant_id = ? 
+      AND (status IS NULL OR status != 'cancelled')
     ORDER BY id DESC
 ");
 $stmtHist->execute([$currentTenant['id']]);

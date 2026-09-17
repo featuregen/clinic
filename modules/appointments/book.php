@@ -22,23 +22,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$patientId || !$doctorId || !$date || !$time) {
         setFlashMessage('error', 'Please fill all required fields.');
     } else {
-        try {
-            $tokenNumber = generateTokenNumber($doctorId, $date);
-            
-            $db->query(
-                "INSERT INTO appointments (clinic_id, patient_id, doctor_id, appointment_date, appointment_time, 
-                 token_number, appointment_type, visit_reason, consultation_fee, booked_by, source)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [$clinicId, $patientId, $doctorId, $date, $time, $tokenNumber, $type, $reason, $fee, getCurrentUserId(), 'web']
-            );
-            
-            $appointmentId = $db->lastInsertId();
-            logAudit('create', 'appointments', 'appointment', $appointmentId);
-            setFlashMessage('success', "Appointment booked successfully! Token #$tokenNumber");
-            header('Location: ' . BASE_URL . '/modules/appointments/list.php?date=' . $date);
-            exit;
-        } catch (Exception $e) {
-            setFlashMessage('error', 'Error: ' . $e->getMessage());
+        // Server-side duplicate time slot check
+        $doctor = $db->fetch("SELECT default_slot_duration FROM doctors WHERE id = ? AND clinic_id = ?", [$doctorId, $clinicId]);
+        $slotDuration = intval($doctor['default_slot_duration'] ?? 15);
+        $requestedStart = strtotime("$date $time");
+        $requestedEnd = $requestedStart + ($slotDuration * 60);
+        $endTimeStr = date('H:i:s', $requestedEnd);
+        
+        $conflicting = $db->fetch(
+            "SELECT a.id, a.appointment_time, TIME_FORMAT(a.appointment_time, '%h:%i %p') as display_time,
+                    CONCAT(p.first_name, ' ', IFNULL(p.last_name, '')) as patient_name
+             FROM appointments a
+             JOIN patients p ON a.patient_id = p.id
+             WHERE a.doctor_id = ? AND a.appointment_date = ? AND a.clinic_id = ?
+               AND a.status NOT IN ('cancelled', 'no_show')
+               AND (
+                   (a.appointment_time <= ? AND ADDTIME(a.appointment_time, SEC_TO_TIME(? * 60)) > ?)
+                   OR (? < ADDTIME(a.appointment_time, SEC_TO_TIME(? * 60)) AND ? >= a.appointment_time)
+               )
+             LIMIT 1",
+            [$doctorId, $date, $clinicId,
+             $time, $slotDuration, $time,
+             $time, $slotDuration, $time]
+        );
+        
+        if ($conflicting) {
+            setFlashMessage('error', "Time slot conflict! {$conflicting['display_time']} is already booked for {$conflicting['patient_name']}. Please choose a different time.");
+        } else {
+            try {
+                $tokenNumber = generateTokenNumber($doctorId, $date);
+                
+                $db->query(
+                    "INSERT INTO appointments (clinic_id, patient_id, doctor_id, appointment_date, appointment_time, end_time,
+                     token_number, appointment_type, visit_reason, consultation_fee, booked_by, source)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [$clinicId, $patientId, $doctorId, $date, $time, $endTimeStr, $tokenNumber, $type, $reason, $fee, getCurrentUserId(), 'web']
+                );
+                
+                $appointmentId = $db->lastInsertId();
+                logAudit('create', 'appointments', 'appointment', $appointmentId);
+                setFlashMessage('success', "Appointment booked successfully! Token #$tokenNumber");
+                header('Location: ' . BASE_URL . '/modules/appointments/list.php?date=' . $date);
+                exit;
+            } catch (Exception $e) {
+                setFlashMessage('error', 'Error: ' . $e->getMessage());
+            }
         }
     }
 }
