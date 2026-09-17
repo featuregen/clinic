@@ -455,8 +455,12 @@ $stmtPay = $master->prepare("
 ");
 $stmtPay->execute([$t['id']]);
 $payments = $stmtPay->fetchAll();
-$activePayments = array_filter($payments, fn($p) => ($p['status'] ?? '') !== 'cancelled');
-$activePaymentCount = count($activePayments);
+$activePaymentCount = 0;
+foreach ($payments as $p) {
+    if (($p['status'] ?? '') !== 'cancelled') {
+        $activePaymentCount++;
+    }
+}
 
 // Stats for THIS clinic
 $now = time();
