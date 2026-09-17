@@ -66,70 +66,91 @@ $payments = $db->fetchAll(
 <!-- Printable Invoice -->
 <div class="card mb-24" id="invoice-print">
     <div class="card-body" style="padding: 32px;">
-        <!-- Invoice Header -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 3px solid var(--primary); padding-bottom: 20px;">
-                <?php 
-                $bLogo = $clinic['logo'] ?? '';
-                $bLogoUrl = '';
-                if (!empty($bLogo)) {
-                    $bClean = ltrim($bLogo, '/');
-                    $bUrl = (strpos($bClean, 'clinics/') === 0) ? (UPLOADS_URL . '/' . $bClean) : (UPLOADS_URL . '/clinics/' . $bClean);
-                    $bPath = (strpos($bClean, 'clinics/') === 0) ? (UPLOADS_PATH . '/' . $bClean) : (UPLOADS_PATH . '/clinics/' . $bClean);
-                    if (file_exists($bPath)) {
-                        $bLogoUrl = $bUrl;
+<!-- Invoice Header - Letterhead -->
+        <div style="height: 5px; background: linear-gradient(90deg, #155e75, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; margin: -32px -32px 0 -32px;"></div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid var(--primary);" cellpadding="0" cellspacing="0">
+            <tr>
+                <td style="vertical-align: top;">
+                    <?php 
+                    $bLogo = $clinic['logo'] ?? '';
+                    $bLogoUrl = '';
+                    if (!empty($bLogo)) {
+                        $bClean = ltrim($bLogo, '/');
+                        $bUrl = (strpos($bClean, 'clinics/') === 0) ? (UPLOADS_URL . '/' . $bClean) : (UPLOADS_URL . '/clinics/' . $bClean);
+                        $bPath = (strpos($bClean, 'clinics/') === 0) ? (UPLOADS_PATH . '/' . $bClean) : (UPLOADS_PATH . '/clinics/' . $bClean);
+                        if (file_exists($bPath)) {
+                            $bLogoUrl = $bUrl;
+                        }
                     }
-                }
-                ?>
-                <?php if (!empty($bLogoUrl)): ?>
-                <img src="<?= $bLogoUrl ?>" alt="Logo" style="height: 60px; width: auto; object-fit: contain;" onerror="this.style.display='none'">
-                <?php endif; ?>
-                <div>
-                    <h2 style="color: var(--primary); margin-bottom: 4px;"><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></h2>
-                    <?php if ($clinic['tagline']): ?><p style="color: var(--text-muted); font-size: 13px;"><?= sanitizeOutput($clinic['tagline']) ?></p><?php endif; ?>
-                    <?php if ($clinic['address']): ?><p style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
-                        <?= sanitizeOutput($clinic['address']) ?><?= $clinic['city'] ? ', ' . sanitizeOutput($clinic['city']) : '' ?>
-                        <?= $clinic['state'] ? ', ' . sanitizeOutput($clinic['state']) : '' ?><?= $clinic['pincode'] ? ' - ' . $clinic['pincode'] : '' ?>
-                    </p><?php endif; ?>
-                    <?php if ($clinic['phone']): ?><p style="font-size: 12px; color: var(--text-secondary);">
-                        <i class="fas fa-phone" style="font-size: 10px;"></i> <?= sanitizeOutput($clinic['phone']) ?>
-                        <?= $clinic['email'] ? ' | <i class="fas fa-envelope" style="font-size: 10px;"></i> ' . sanitizeOutput($clinic['email']) : '' ?>
-                    </p><?php endif; ?>
-                    <?php if ($clinic['gst_number']): ?><p style="font-size: 12px; color: var(--text-muted);">GSTIN: <?= sanitizeOutput($clinic['gst_number']) ?></p><?php endif; ?>
-                </div>
-            </div>
-            <div style="text-align: right;">
-                <h3 style="color: var(--primary); margin-bottom: 8px;">INVOICE</h3>
-                <table style="font-size: 13px; text-align: left; margin-left: auto;">
-                    <tr><td class="text-muted" style="padding-right: 12px;">Invoice #</td><td class="font-semibold"><?= sanitizeOutput($invoice['invoice_number']) ?></td></tr>
-                    <tr><td class="text-muted" style="padding-right: 12px;">Date</td><td><?= formatDate($invoice['invoice_date']) ?></td></tr>
-                    <?php if ($invoice['due_date']): ?>
-                    <tr><td class="text-muted" style="padding-right: 12px;">Due Date</td><td><?= formatDate($invoice['due_date']) ?></td></tr>
-                    <?php endif; ?>
-                    <tr><td class="text-muted" style="padding-right: 12px;">Status</td><td><?= getStatusBadge($invoice['status'], 'payment') ?></td></tr>
-                </table>
-            </div>
-        </div>
+                    ?>
+                    <table style="border-collapse: collapse;" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <?php if (!empty($bLogoUrl)): ?>
+                            <td style="vertical-align: top; padding-right: 14px;">
+                                <img src="<?= $bLogoUrl ?>" alt="Logo" style="height: 52px; width: auto; object-fit: contain; border-radius: 6px;" onerror="this.parentElement.style.display='none'">
+                            </td>
+                            <?php endif; ?>
+                            <td style="vertical-align: top;">
+                                <div style="font-size: 18px; font-weight: 800; color: #155e75; margin-bottom: 2px;"><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></div>
+                                <?php if (!empty($clinic['address'])): ?>
+                                <div style="font-size: 11px; color: #64748b; margin-bottom: 2px;">
+                                    <?= sanitizeOutput($clinic['address']) ?><?= !empty($clinic['city']) ? ', ' . sanitizeOutput($clinic['city']) : '' ?><?= !empty($clinic['state']) ? ', ' . sanitizeOutput($clinic['state']) : '' ?><?= !empty($clinic['pincode']) ? ' - ' . $clinic['pincode'] : '' ?>
+                                </div>
+                                <?php endif; ?>
+                                <div style="font-size: 11px; color: #64748b;">
+                                    <?php if (!empty($clinic['phone'])): ?><span style="margin-right: 10px;">📞 <?= sanitizeOutput($clinic['phone']) ?></span><?php endif; ?>
+                                    <?php if (!empty($clinic['email'])): ?><span>✉ <?= sanitizeOutput($clinic['email']) ?></span><?php endif; ?>
+                                </div>
+                                <?php if (!empty($clinic['gst_number'])): ?>
+                                <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">GSTIN: <?= sanitizeOutput($clinic['gst_number']) ?></div>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="vertical-align: top; text-align: right;">
+                    <div style="display: inline-block; background: linear-gradient(135deg, #0891b2, #155e75); color: white; padding: 6px 18px; border-radius: 6px; font-size: 14px; font-weight: 800; letter-spacing: 1px; margin-bottom: 10px;">
+                        <?= ($invoice['status'] === 'paid') ? 'RECEIPT' : 'PROFORMA INVOICE' ?>
+                    </div>
+                    <table style="font-size: 12px; margin-left: auto; border-collapse: collapse;" cellpadding="0" cellspacing="0">
+                        <tr><td style="color: #94a3b8; padding: 3px 10px 3px 0; font-weight: 600;">Invoice #</td><td style="font-weight: 700; color: #1e293b;"><?= sanitizeOutput($invoice['invoice_number']) ?></td></tr>
+                        <tr><td style="color: #94a3b8; padding: 3px 10px 3px 0; font-weight: 600;">Date</td><td style="color: #334155;"><?= formatDate($invoice['invoice_date']) ?></td></tr>
+                        <?php if ($invoice['due_date']): ?>
+                        <tr><td style="color: #94a3b8; padding: 3px 10px 3px 0; font-weight: 600;">Due Date</td><td style="color: #334155;"><?= formatDate($invoice['due_date']) ?></td></tr>
+                        <?php endif; ?>
+                        <tr><td style="color: #94a3b8; padding: 3px 10px 3px 0; font-weight: 600;">Status</td><td><?= getStatusBadge($invoice['status'], 'payment') ?></td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
 
         <!-- Patient & Doctor Info -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px;">
-            <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px;">
-                <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Bill To</h4>
-                <div class="font-semibold"><?= sanitizeOutput($invoice['first_name'] . ' ' . $invoice['last_name']) ?></div>
-                <div style="font-size: 12px; color: var(--text-muted);">ID: <?= sanitizeOutput($invoice['patient_uid']) ?></div>
-                <?php if ($invoice['patient_phone']): ?><div style="font-size: 12px;"><i class="fas fa-phone" style="font-size: 10px;"></i> <?= sanitizeOutput($invoice['patient_phone']) ?></div><?php endif; ?>
-                <?php if ($invoice['patient_email']): ?><div style="font-size: 12px;"><i class="fas fa-envelope" style="font-size: 10px;"></i> <?= sanitizeOutput($invoice['patient_email']) ?></div><?php endif; ?>
-                <?php if ($invoice['patient_address']): ?><div style="font-size: 12px; margin-top: 4px;"><?= sanitizeOutput($invoice['patient_address']) ?></div><?php endif; ?>
-            </div>
-            <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px;">
-                <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Doctor / Created By</h4>
-                <?php if ($invoice['doctor_name']): ?>
-                <div class="font-semibold">Dr. <?= sanitizeOutput($invoice['doctor_name']) ?></div>
-                <?php endif; ?>
-                <?php if ($invoice['created_by_name']): ?>
-                <div style="font-size: 12px; color: var(--text-muted);">Created by: <?= sanitizeOutput($invoice['created_by_name']) ?></div>
-                <?php endif; ?>
-            </div>
-        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;" cellpadding="0" cellspacing="0">
+            <tr>
+                <td style="vertical-align: top; width: 50%; padding-right: 12px;">
+                    <div style="background: #f8fafc; padding: 14px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px;">Bill To</div>
+                        <div style="font-weight: 700; font-size: 14px; color: #1e293b;"><?= sanitizeOutput($invoice['first_name'] . ' ' . $invoice['last_name']) ?></div>
+                        <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">ID: <?= sanitizeOutput($invoice['patient_uid']) ?></div>
+                        <?php if ($invoice['patient_phone']): ?><div style="font-size: 11.5px; color: #334155; margin-top: 2px;">📞 <?= sanitizeOutput($invoice['patient_phone']) ?></div><?php endif; ?>
+                        <?php if ($invoice['patient_email']): ?><div style="font-size: 11.5px; color: #334155;">✉ <?= sanitizeOutput($invoice['patient_email']) ?></div><?php endif; ?>
+                        <?php if ($invoice['patient_address']): ?><div style="font-size: 11px; color: #64748b; margin-top: 3px;"><?= sanitizeOutput($invoice['patient_address']) ?></div><?php endif; ?>
+                    </div>
+                </td>
+                <td style="vertical-align: top; width: 50%; padding-left: 12px;">
+                    <div style="background: #f8fafc; padding: 14px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px;">Doctor / Created By</div>
+                        <?php if ($invoice['doctor_name']): ?>
+                        <div style="font-weight: 700; font-size: 14px; color: #1e293b;">Dr. <?= sanitizeOutput($invoice['doctor_name']) ?></div>
+                        <?php endif; ?>
+                        <?php if ($invoice['created_by_name']): ?>
+                        <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">Created by: <?= sanitizeOutput($invoice['created_by_name']) ?></div>
+                        <?php endif; ?>
+                    </div>
+                </td>
+            </tr>
+        </table>
 
         <!-- Line Items Table -->
         <div class="table-responsive" style="margin-bottom: 24px;">
@@ -171,36 +192,44 @@ $payments = $db->fetchAll(
         </div>
 
         <!-- Summary -->
-        <div style="display: flex; justify-content: flex-end;">
-            <table style="min-width: 300px; font-size: 14px;">
-                <tr><td class="text-muted" style="padding: 6px 16px 6px 0;">Subtotal</td><td style="text-align: right; padding: 6px 0;"><?= formatCurrency($invoice['subtotal']) ?></td></tr>
-                <?php if ($invoice['discount_amount'] > 0): ?>
-                <tr><td class="text-muted" style="padding: 6px 16px 6px 0;">Discount <?= $invoice['discount_type'] === 'percentage' ? '(' . $invoice['discount_percentage'] . '%)' : '' ?></td>
-                    <td style="text-align: right; padding: 6px 0; color: var(--danger);">-<?= formatCurrency($invoice['discount_amount']) ?></td></tr>
-                <?php endif; ?>
-                <?php if ($invoice['tax_amount'] > 0): ?>
-                <tr><td class="text-muted" style="padding: 6px 16px 6px 0;">Tax / GST</td><td style="text-align: right; padding: 6px 0;"><?= formatCurrency($invoice['tax_amount']) ?></td></tr>
-                <?php endif; ?>
-                <tr style="border-top: 2px solid var(--primary);">
-                    <td class="font-semibold" style="padding: 10px 16px 6px 0; font-size: 16px;">Grand Total</td>
-                    <td style="text-align: right; padding: 10px 0 6px; font-weight: 700; font-size: 16px; color: var(--primary);"><?= formatCurrency($invoice['total_amount']) ?></td>
-                </tr>
-                <tr><td class="text-muted" style="padding: 4px 16px 4px 0;">Paid</td>
-                    <td style="text-align: right; padding: 4px 0; color: var(--success); font-weight: 600;"><?= formatCurrency($invoice['paid_amount']) ?></td></tr>
-                <tr style="border-top: 1px solid var(--border-color);">
-                    <td class="font-semibold" style="padding: 8px 16px 0 0;">Balance Due</td>
-                    <td style="text-align: right; padding: 8px 0 0; font-weight: 700; color: var(--danger); font-size: 16px;"><?= formatCurrency($invoice['due_amount']) ?></td>
-                </tr>
-            </table>
-        </div>
+        <table style="width: 100%; border-collapse: collapse;" cellpadding="0" cellspacing="0">
+            <tr>
+                <td style="width: 55%;"></td>
+                <td style="width: 45%;">
+                    <table style="width: 100%; font-size: 13px; border-collapse: collapse;" cellpadding="0" cellspacing="0">
+                        <tr><td style="color: #64748b; padding: 6px 0;">Subtotal</td><td style="text-align: right; padding: 6px 0;"><?= formatCurrency($invoice['subtotal']) ?></td></tr>
+                        <?php if ($invoice['discount_amount'] > 0): ?>
+                        <tr><td style="color: #64748b; padding: 6px 0;">Discount <?= $invoice['discount_type'] === 'percentage' ? '(' . $invoice['discount_percentage'] . '%)' : '' ?></td>
+                            <td style="text-align: right; padding: 6px 0; color: #dc2626;">-<?= formatCurrency($invoice['discount_amount']) ?></td></tr>
+                        <?php endif; ?>
+                        <?php if ($invoice['tax_amount'] > 0): ?>
+                        <tr><td style="color: #64748b; padding: 6px 0;">Tax / GST</td><td style="text-align: right; padding: 6px 0;"><?= formatCurrency($invoice['tax_amount']) ?></td></tr>
+                        <?php endif; ?>
+                        <tr style="border-top: 2px solid #0891b2;">
+                            <td style="padding: 10px 0 6px; font-weight: 700; font-size: 15px; color: #1e293b;">Grand Total</td>
+                            <td style="text-align: right; padding: 10px 0 6px; font-weight: 800; font-size: 15px; color: #0891b2;"><?= formatCurrency($invoice['total_amount']) ?></td>
+                        </tr>
+                        <tr><td style="color: #64748b; padding: 4px 0;">Paid</td>
+                            <td style="text-align: right; padding: 4px 0; color: #16a34a; font-weight: 600;"><?= formatCurrency($invoice['paid_amount']) ?></td></tr>
+                        <tr style="border-top: 1px solid #e2e8f0;">
+                            <td style="padding: 8px 0 0; font-weight: 700;">Balance Due</td>
+                            <td style="text-align: right; padding: 8px 0 0; font-weight: 800; color: #dc2626; font-size: 15px;"><?= formatCurrency($invoice['due_amount']) ?></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
 
         <!-- Invoice Notes -->
         <?php if ($invoice['notes']): ?>
-        <div style="margin-top: 24px; padding: 12px 16px; background: var(--bg-secondary); border-radius: 8px; border-left: 3px solid var(--info);">
-            <strong style="font-size: 12px; text-transform: uppercase; color: var(--text-muted);">Notes</strong>
-            <p style="margin-top: 4px; font-size: 13px;"><?= nl2br(sanitizeOutput($invoice['notes'])) ?></p>
+        <div style="margin-top: 24px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; border-left: 3px solid #0891b2;">
+            <strong style="font-size: 10px; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px;">Notes</strong>
+            <p style="margin-top: 4px; font-size: 13px; color: #334155;"><?= nl2br(sanitizeOutput($invoice['notes'])) ?></p>
         </div>
         <?php endif; ?>
+
+        <!-- Footer band -->
+        <div style="height: 4px; background: linear-gradient(90deg, #155e75, #0891b2, #06b6d4); margin: 24px -32px -32px -32px; border-radius: 0 0 4px 4px;"></div>
     </div>
 </div>
 

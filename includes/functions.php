@@ -121,18 +121,23 @@ function generatePatientId() {
 
 function generateInvoiceNumber() {
     $db = db();
+    $clinicId = getCurrentClinicId();
     $clinic = $db->fetch("SELECT invoice_prefix, invoice_start_no FROM clinics LIMIT 1");
     $prefix = $clinic['invoice_prefix'] ?? 'INV';
+    $yearMonth = date('Ym');
     
-    $lastInvoice = $db->fetch("SELECT invoice_number FROM invoices ORDER BY id DESC LIMIT 1");
+    $lastInvoice = $db->fetch("SELECT invoice_number FROM invoices WHERE clinic_id = ? ORDER BY id DESC LIMIT 1", [$clinicId]);
     if ($lastInvoice) {
-        $lastNum = (int)preg_replace('/[^0-9]/', '', $lastInvoice['invoice_number']);
+        // Extract only the trailing sequence number after the last hyphen
+        $parts = explode('-', $lastInvoice['invoice_number']);
+        $lastPart = end($parts);
+        $lastNum = intval($lastPart);
         $nextNum = $lastNum + 1;
     } else {
         $nextNum = $clinic['invoice_start_no'] ?? 1;
     }
     
-    return $prefix . '-' . date('Ym') . '-' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+    return $prefix . '-' . $yearMonth . '-' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
 }
 
 // ============================================
