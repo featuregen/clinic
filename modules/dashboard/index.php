@@ -365,13 +365,6 @@ $dashDays = $dashEnd ? max(0, ceil(($dashEnd - time()) / 86400)) : null;
                     <div style="font-size: 12px; color: var(--text-muted);">Generate a new bill</div>
                 </div>
             </a>
-            <a href="<?= BASE_URL ?>/modules/prescriptions/create.php" class="stat-card" style="text-decoration: none; cursor: pointer;">
-                <div class="stat-icon accent"><i class="fas fa-prescription"></i></div>
-                <div class="stat-details">
-                    <div class="stat-label">Write Prescription</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">Digital prescription</div>
-                </div>
-            </a>
         </div>
     </div>
 </div>
