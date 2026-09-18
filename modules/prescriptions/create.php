@@ -314,6 +314,22 @@ $templates = $db->fetchAll("SELECT * FROM prescription_templates WHERE clinic_id
     <input type="hidden" name="patient_id" value="<?= $patientId ?>">
     <input type="hidden" name="appointment_id" value="<?= $appointmentId ?>">
     
+    <?php if (!empty($templates)): ?>
+    <div class="card mb-16" style="background: linear-gradient(135deg, #f0fdfa, #ecfeff); border: 1px dashed #0891b2;">
+        <div class="card-body" style="padding: 14px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-file-medical" style="color: #0891b2; font-size: 18px;"></i>
+                <strong style="color: #155e75; font-size: 13px;">Load Template:</strong>
+            </div>
+            <?php foreach ($templates as $tpl): ?>
+            <button type="button" class="btn btn-sm btn-outline" style="border-color: #0891b2; color: #0891b2; font-size: 12px;" onclick="loadTemplate(<?= $tpl['id'] ?>)">
+                <i class="fas fa-file-import"></i> <?= sanitizeOutput($tpl['name']) ?>
+            </button>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="grid-2 gap-24">
         <!-- Left -->
         <div>
@@ -538,6 +554,98 @@ function addLabTest() {
         </div>
     </div>`;
     container.insertAdjacentHTML('beforeend', html);
+}
+// Load Template
+function loadTemplate(templateId) {
+    fetch('<?= BASE_URL ?>/modules/templates/get.php?id=' + templateId)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) { alert(data.error || 'Failed to load template'); return; }
+            const tpl = data.template;
+            
+            // Load medicines
+            if (tpl.medicines && tpl.medicines.length > 0) {
+                document.getElementById('noMedicines')?.remove();
+                tpl.medicines.forEach(med => {
+                    const container = document.getElementById('medicinesContainer');
+                    const html = `
+                    <div class="medicine-row" data-index="${medIndex}">
+                        <div class="form-row mb-12">
+                            <div class="form-group">
+                                <input type="hidden" name="med_id[]" value="0">
+                                <input type="text" name="med_name[]" class="form-control" value="${med.name || ''}" placeholder="Medicine name" list="medicineList">
+                            </div>
+                            <div class="form-group">
+                                <input type="text" name="med_dosage[]" class="form-control" value="${med.dosage || ''}" placeholder="Dosage">
+                            </div>
+                            <div class="form-group">
+                                <select name="med_frequency[]" class="form-control">
+                                    <option value="OD" ${med.frequency==='OD'?'selected':''}>OD (Once Daily)</option>
+                                    <option value="BD" ${med.frequency==='BD'?'selected':''}>BD (Twice Daily)</option>
+                                    <option value="TDS" ${med.frequency==='TDS'?'selected':''}>TDS (Thrice Daily)</option>
+                                    <option value="QID" ${med.frequency==='QID'?'selected':''}>QID (Four Times)</option>
+                                    <option value="SOS" ${med.frequency==='SOS'?'selected':''}>SOS (As Needed)</option>
+                                    <option value="HS" ${med.frequency==='HS'?'selected':''}>HS (At Bedtime)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-12" style="display: flex; gap: 12px; align-items: center;">
+                            <div class="form-group mb-0" style="flex: 1;">
+                                <input type="text" name="med_duration[]" class="form-control" value="${med.duration || ''}" placeholder="Duration">
+                            </div>
+                            <div class="form-group mb-0" style="flex: 1;">
+                                <select name="med_route[]" class="form-control">
+                                    <option value="oral" ${(med.route||'oral')==='oral'?'selected':''}>Oral</option>
+                                    <option value="injection" ${med.route==='injection'?'selected':''}>Injection</option>
+                                    <option value="topical" ${med.route==='topical'?'selected':''}>Topical</option>
+                                    <option value="inhalation" ${med.route==='inhalation'?'selected':''}>Inhalation</option>
+                                </select>
+                            </div>
+                            <div class="form-group mb-0" style="flex: 1.5;">
+                                <input type="text" name="med_instructions[]" class="form-control" value="${med.instruction || ''}" placeholder="Instructions">
+                            </div>
+                            <div class="form-group mb-0" style="flex-shrink: 0;">
+                                <button type="button" class="btn btn-sm btn-ghost text-danger" onclick="this.closest('.medicine-row').remove()"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <hr style="border-color: var(--border-color); margin: 8px 0;">
+                    </div>`;
+                    container.insertAdjacentHTML('beforeend', html);
+                    medIndex++;
+                });
+            }
+            
+            // Load lab tests
+            if (tpl.lab_tests && tpl.lab_tests.length > 0) {
+                document.getElementById('noTests')?.remove();
+                tpl.lab_tests.forEach(test => {
+                    const container = document.getElementById('testsContainer');
+                    const html = `
+                    <div class="test-row mb-12" style="display: flex; gap: 12px; align-items: center;">
+                        <div class="form-group mb-0" style="flex: 1;">
+                            <input type="hidden" name="test_id[]" value="0">
+                            <input type="text" name="test_name[]" class="form-control" value="${test.name || ''}" placeholder="Test name" list="testList">
+                        </div>
+                        <div class="form-group mb-0" style="flex: 1;">
+                            <input type="text" name="test_instructions[]" class="form-control" value="${test.instruction || ''}" placeholder="Instructions">
+                        </div>
+                        <div class="form-group mb-0" style="flex-shrink: 0;">
+                            <button type="button" class="btn btn-sm btn-ghost text-danger" onclick="this.closest('.test-row').remove()"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            }
+            
+            // Show success notification
+            const notif = document.createElement('div');
+            notif.className = 'alert alert-success';
+            notif.innerHTML = '<i class="fas fa-check-circle"></i> Template "' + (tpl.name || 'Template') + '" loaded successfully';
+            notif.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;animation:fadeIn 0.3s;max-width:350px;';
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
+        })
+        .catch(err => { alert('Error loading template'); console.error(err); });
 }
 </script>
 
