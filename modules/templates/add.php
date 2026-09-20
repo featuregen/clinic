@@ -53,6 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Combine into template_data
     $templateData = json_encode([
+        'chief_complaints' => sanitize($_POST['chief_complaints'] ?? ''),
+        'diagnosis' => sanitize($_POST['diagnosis'] ?? ''),
+        'examination' => sanitize($_POST['examination'] ?? ''),
+        'advice' => sanitize($_POST['advice'] ?? ''),
         'medicines' => $medicines,
         'lab_tests' => $tests
     ]);
@@ -84,6 +88,10 @@ if ($id) {
     if ($template) {
         $isEdit = true;
         $data = json_decode($template['template_data'] ?? '[]', true);
+        $template['chief_complaints'] = $data['chief_complaints'] ?? '';
+        $template['diagnosis'] = $data['diagnosis'] ?? '';
+        $template['examination'] = $data['examination'] ?? '';
+        $template['advice'] = $data['advice'] ?? '';
         $template['medicines'] = $data['medicines'] ?? [];
         $template['lab_tests'] = $data['lab_tests'] ?? [];
     }
@@ -134,6 +142,31 @@ $testList = $db->fetchAll("SELECT name FROM lab_tests WHERE is_active = 1 ORDER 
             
             <hr class="my-24">
             
+            <!-- Clinical Details - matches prescription create form -->
+            <div class="mb-24">
+                <h3 class="mb-16"><i class="fas fa-stethoscope" style="color: var(--primary);"></i> Clinical Details</h3>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Chief Complaints</label>
+                        <textarea name="chief_complaints" class="form-control" rows="2" placeholder="e.g. Fever, Headache, Body pain"><?= sanitizeOutput($template['chief_complaints'] ?? '') ?></textarea>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Diagnosis</label>
+                        <textarea name="diagnosis" class="form-control" rows="2" placeholder="e.g. Viral Fever"><?= sanitizeOutput($template['diagnosis'] ?? '') ?></textarea>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Examination Findings</label>
+                        <textarea name="examination" class="form-control" rows="2" placeholder="e.g. Temp: 101°F"><?= sanitizeOutput($template['examination'] ?? '') ?></textarea>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Advice</label>
+                        <textarea name="advice" class="form-control" rows="2" placeholder="e.g. Rest, drink fluids"><?= sanitizeOutput($template['advice'] ?? '') ?></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="my-24">
+
             <!-- Medicines Section - matches prescription create form -->
             <div class="d-flex justify-between align-center mb-16">
                 <h3><i class="fas fa-pills" style="color: var(--success);"></i> Medicines</h3>

@@ -32,6 +32,10 @@ echo json_encode([
     'template' => [
         'id' => $template['id'],
         'name' => $template['name'],
+        'chief_complaints' => $data['chief_complaints'] ?? '',
+        'diagnosis' => $data['diagnosis'] ?? '',
+        'examination' => $data['examination'] ?? '',
+        'advice' => $data['advice'] ?? '',
         'medicines' => $data['medicines'] ?? [],
         'lab_tests' => $data['lab_tests'] ?? []
     ]

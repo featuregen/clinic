@@ -563,6 +563,22 @@ function loadTemplate(templateId) {
             if (!data.success) { alert(data.error || 'Failed to load template'); return; }
             const tpl = data.template;
             
+            // Fill clinical details (only if fields are empty)
+            const clinicalFields = {
+                'chief_complaints': tpl.chief_complaints || '',
+                'diagnosis': tpl.diagnosis || '',
+                'examination': tpl.examination || '',
+                'advice': tpl.advice || ''
+            };
+            for (const [fieldName, value] of Object.entries(clinicalFields)) {
+                if (value) {
+                    const field = document.querySelector(`[name="${fieldName}"]`);
+                    if (field && !field.value.trim()) {
+                        field.value = value;
+                    }
+                }
+            }
+            
             // Load medicines
             if (tpl.medicines && tpl.medicines.length > 0) {
                 document.getElementById('noMedicines')?.remove();
