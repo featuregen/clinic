@@ -369,11 +369,13 @@ function getStatusBadge($status, $type = 'appointment') {
 // RESPONSE HELPERS (for AJAX)
 // ============================================
 
-function jsonResponse($data, $statusCode = 200) {
-    http_response_code($statusCode);
-    header('Content-Type: application/json');
-    echo json_encode($data);
-    exit;
+if (!function_exists('jsonResponse')) {
+    function jsonResponse($data, $statusCode = 200) {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
 }
 
 function successResponse($message, $data = null) {

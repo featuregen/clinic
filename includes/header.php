@@ -181,10 +181,11 @@ $currentUser = [
             // Flash messages
             $flash = getFlashMessage();
             if ($flash): ?>
-            <div class="alert alert-<?= $flash['type'] ?>" data-auto-dismiss="5000">
-                <i class="fas fa-<?= $flash['type'] === 'success' ? 'check-circle' : ($flash['type'] === 'error' ? 'times-circle' : 'info-circle') ?>"></i>
-                <?= sanitizeOutput($flash['message']) ?>
-            </div>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                showToast(<?= json_encode($flash['message']) ?>, <?= json_encode($flash['type']) ?>);
+            });
+            </script>
             <?php endif; ?>
 
             <?php if ($showExpiryBanner && $userRole !== ROLE_SUPER_ADMIN): ?>

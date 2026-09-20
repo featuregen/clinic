@@ -124,6 +124,7 @@ function initToasts() {
 
 function showToast(message, type = "info", title = null, duration = 5000) {
   const container = document.querySelector(".toast-container");
+  if (!container) return;
   const icons = {
     success: "fas fa-check-circle",
     error: "fas fa-times-circle",
@@ -141,25 +142,29 @@ function showToast(message, type = "info", title = null, duration = 5000) {
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
   toast.innerHTML = `
-        <i class="toast-icon ${icons[type] || icons.info}"></i>
+        <div class="toast-icon"><i class="${icons[type] || icons.info}"></i></div>
         <div class="toast-content">
             <div class="toast-title">${title || titles[type] || "Notification"}</div>
             <div class="toast-message">${message}</div>
         </div>
-        <button class="toast-close" onclick="this.closest('.toast').remove()">
+        <button class="toast-close" onclick="dismissToast(this.closest('.toast'))">
             <i class="fas fa-times"></i>
         </button>
+        <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
     `;
 
   container.appendChild(toast);
 
   // Auto remove
   setTimeout(() => {
-    if (toast.parentElement) {
-      toast.style.animation = "fadeOut 0.3s ease forwards";
-      setTimeout(() => toast.remove(), 300);
-    }
+    dismissToast(toast);
   }, duration);
+}
+
+function dismissToast(toast) {
+  if (!toast || !toast.parentElement) return;
+  toast.style.animation = "toastSlideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards";
+  setTimeout(() => toast.remove(), 300);
 }
 
 // ============================================

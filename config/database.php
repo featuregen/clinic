@@ -77,6 +77,12 @@ class Database {
                 }
             }
             
+            // Allow mobile/API clients to override tenant via X-Tenant-Subdomain header
+            $headerSubdomain = $_SERVER['HTTP_X_TENANT_SUBDOMAIN'] ?? null;
+            if (!empty($headerSubdomain)) {
+                $subdomain = $headerSubdomain;
+            }
+            
             // Self-heal Master DB Subscription Schema & Settings
             $this->ensureMasterSubscriptionsSchema($masterConn);
             

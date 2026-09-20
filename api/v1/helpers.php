@@ -15,12 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-require_once dirname(dirname(__DIR__)) . '/config/database.php';
-require_once dirname(dirname(__DIR__)) . '/config/constants.php';
-require_once dirname(dirname(__DIR__)) . '/includes/functions.php';
-
 /**
- * Standardized JSON response emitter
+ * Standardized JSON response emitter (API version)
+ * Define BEFORE requiring functions.php to take precedence over the web version
  */
 function jsonResponse($success, $data = null, $error = null, $statusCode = 200, $meta = null) {
     http_response_code($statusCode);
@@ -41,6 +38,10 @@ function jsonResponse($success, $data = null, $error = null, $statusCode = 200, 
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
+
+require_once dirname(dirname(__DIR__)) . '/config/database.php';
+require_once dirname(dirname(__DIR__)) . '/config/constants.php';
+require_once dirname(dirname(__DIR__)) . '/includes/functions.php';
 
 /**
  * Parse JSON or Form input

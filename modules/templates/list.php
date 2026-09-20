@@ -29,6 +29,14 @@ $templates = $db->fetchAll(
      ORDER BY t.scope, t.name", 
     $params
 );
+
+// Handle delete success/error messages from query params
+if (isset($_GET['msg']) && $_GET['msg'] === 'deleted') {
+    echo '<script>document.addEventListener("DOMContentLoaded", function(){ showToast("Template deleted successfully", "success"); });</script>';
+}
+if (isset($_GET['error'])) {
+    echo '<script>document.addEventListener("DOMContentLoaded", function(){ showToast("Failed to delete template", "error"); });</script>';
+}
 ?>
 
 <div class="content-header">
@@ -61,7 +69,7 @@ $templates = $db->fetchAll(
         $medCount = is_array($meds) ? count($meds) : 0;
         $testCount = is_array($tests) ? count($tests) : 0;
     ?>
-    <div class="card">
+    <div class="card" style="overflow: visible;">
         <div class="card-body">
             <div class="d-flex justify-between align-start mb-12">
                 <div>
@@ -71,11 +79,18 @@ $templates = $db->fetchAll(
                     <h3 class="mb-4"><?= sanitizeOutput($t['name']) ?></h3>
                     <p class="text-sm text-muted"><?= sanitizeOutput($t['description'] ?? '') ?></p>
                 </div>
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-ghost btn-icon"><i class="fas fa-ellipsis-v"></i></button>
-                    <div class="dropdown-menu dropdown-menu-right">
-                        <a href="add.php?id=<?= $t['id'] ?>" class="dropdown-item"><i class="fas fa-pen"></i> Edit</a>
-                        <a href="#" onclick="confirmDelete(<?= $t['id'] ?>)" class="dropdown-item text-danger"><i class="fas fa-trash"></i> Delete</a>
+                <div class="dropdown" style="position: relative;">
+                    <button class="btn btn-sm btn-ghost btn-icon" onclick="toggleTemplateMenu(this); event.stopPropagation();">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right" style="min-width: 160px;">
+                        <a href="add.php?id=<?= $t['id'] ?>" class="dropdown-item">
+                            <i class="fas fa-pen" style="color: var(--primary);"></i> Edit Template
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" onclick="confirmDelete(<?= $t['id'] ?>, '<?= addslashes(sanitizeOutput($t['name'])) ?>'); return false;" class="dropdown-item text-danger">
+                            <i class="fas fa-trash"></i> Delete Template
+                        </a>
                     </div>
                 </div>
             </div>
@@ -96,8 +111,25 @@ $templates = $db->fetchAll(
 </div>
 
 <script>
-function confirmDelete(id) {
-    if (confirm('Are you sure you want to delete this template?')) {
+function toggleTemplateMenu(btn) {
+    const menu = btn.nextElementSibling;
+    // Close all other open menus
+    document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+        if (m !== menu) m.classList.remove('show');
+    });
+    menu.classList.toggle('show');
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', function() {
+    document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+});
+
+function confirmDelete(id, name) {
+    // Close dropdown first
+    document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+    
+    if (confirm('Delete template "' + name + '"? This cannot be undone.')) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = 'delete.php';
