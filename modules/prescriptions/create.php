@@ -563,7 +563,12 @@ function loadTemplate(templateId) {
             if (!data.success) { alert(data.error || 'Failed to load template'); return; }
             const tpl = data.template;
             
-            // Fill clinical details (only if fields are empty)
+            // Clear existing medicines and tests first
+            document.getElementById('medicinesContainer').innerHTML = '';
+            document.getElementById('testsContainer').innerHTML = '';
+            medIndex = 0;
+
+            // Fill clinical details (overwrite with template values)
             const clinicalFields = {
                 'chief_complaints': tpl.chief_complaints || '',
                 'diagnosis': tpl.diagnosis || '',
@@ -573,7 +578,7 @@ function loadTemplate(templateId) {
             for (const [fieldName, value] of Object.entries(clinicalFields)) {
                 if (value) {
                     const field = document.querySelector(`[name="${fieldName}"]`);
-                    if (field && !field.value.trim()) {
+                    if (field) {
                         field.value = value;
                     }
                 }
@@ -581,7 +586,6 @@ function loadTemplate(templateId) {
             
             // Load medicines
             if (tpl.medicines && tpl.medicines.length > 0) {
-                document.getElementById('noMedicines')?.remove();
                 tpl.medicines.forEach(med => {
                     const container = document.getElementById('medicinesContainer');
                     const html = `
