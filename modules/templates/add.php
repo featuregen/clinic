@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'dosage' => sanitize($_POST['med_dosage'][$k] ?? ''),
                     'frequency' => sanitize($_POST['med_frequency'][$k] ?? ''),
                     'duration' => sanitize($_POST['med_duration'][$k] ?? ''),
-                    'route' => sanitize($_POST['med_route'][$k] ?? ''),
+                    'route' => sanitize($_POST['med_route'][$k] ?? 'oral'),
                     'instruction' => sanitize($_POST['med_instruction'][$k] ?? '')
                 ];
             }
@@ -134,9 +134,9 @@ $testList = $db->fetchAll("SELECT name FROM lab_tests WHERE is_active = 1 ORDER 
             
             <hr class="my-24">
             
-            <!-- Medicines Section -->
+            <!-- Medicines Section - matches prescription create form -->
             <div class="d-flex justify-between align-center mb-16">
-                <h3>Medicines</h3>
+                <h3><i class="fas fa-pills" style="color: var(--success);"></i> Medicines</h3>
                 <button type="button" class="btn btn-outline btn-sm" onclick="addMedicine()"><i class="fas fa-plus"></i> Add Medicine</button>
             </div>
             
@@ -145,34 +145,54 @@ $testList = $db->fetchAll("SELECT name FROM lab_tests WHERE is_active = 1 ORDER 
                 $meds = $template['medicines'] ?? [];
                 if (!empty($meds)) {
                     foreach ($meds as $med) {
-                        // Render existing rows - logic replicated in JS
-                        echo "<div class='medicine-row row mb-12 g-2'>
-                            <div class='col-md-3'><input type='text' name='med_name[]' class='form-control' placeholder='Medicine Name' list='medList' value='{$med['name']}'></div>
-                            <div class='col-md-2'><input type='text' name='med_dosage[]' class='form-control' placeholder='Dosage' value='{$med['dosage']}'></div>
-                            <div class='col-md-2'>
-                                <select name='med_frequency[]' class='form-control'>
-                                    <option value='OD' " . (($med['frequency'] ?? '')=='OD'?'selected':'') . ">OD</option>
-                                    <option value='BD' " . (($med['frequency'] ?? '')=='BD'?'selected':'') . ">BD</option>
-                                    <option value='TDS' " . (($med['frequency'] ?? '')=='TDS'?'selected':'') . ">TDS</option>
-                                    <option value='QID' " . (($med['frequency'] ?? '')=='QID'?'selected':'') . ">QID</option>
-                                    <option value='SOS' " . (($med['frequency'] ?? '')=='SOS'?'selected':'') . ">SOS</option>
-                                    <option value='HS' " . (($med['frequency'] ?? '')=='HS'?'selected':'') . ">HS</option>
-                                </select>
-                            </div>
-                            <div class='col-md-2'><input type='text' name='med_duration[]' class='form-control' placeholder='Duration' value='{$med['duration']}'></div>
-                            <div class='col-md-2'><input type='text' name='med_instruction[]' class='form-control' placeholder='Instruction' value='{$med['instruction']}'></div>
-                            <div class='col-md-1'><button type='button' class='btn btn-ghost text-danger' onclick='this.closest(\".medicine-row\").remove()'><i class=\"fas fa-trash\"></i></button></div>
-                        </div>";
-                    }
-                }
                 ?>
+                <div class="medicine-row" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; background: var(--bg-secondary);">
+                    <div class="form-row mb-12">
+                        <div class="form-group">
+                            <input type="text" name="med_name[]" class="form-control" placeholder="Medicine name" list="medList" value="<?= sanitizeOutput($med['name'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="med_dosage[]" class="form-control" placeholder="Dosage (e.g. 500mg)" value="<?= sanitizeOutput($med['dosage'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <select name="med_frequency[]" class="form-control">
+                                <option value="OD" <?= ($med['frequency'] ?? '') === 'OD' ? 'selected' : '' ?>>OD (Once Daily)</option>
+                                <option value="BD" <?= ($med['frequency'] ?? '') === 'BD' ? 'selected' : '' ?>>BD (Twice Daily)</option>
+                                <option value="TDS" <?= ($med['frequency'] ?? '') === 'TDS' ? 'selected' : '' ?>>TDS (Thrice Daily)</option>
+                                <option value="QID" <?= ($med['frequency'] ?? '') === 'QID' ? 'selected' : '' ?>>QID (Four Times)</option>
+                                <option value="SOS" <?= ($med['frequency'] ?? '') === 'SOS' ? 'selected' : '' ?>>SOS (As Needed)</option>
+                                <option value="HS" <?= ($med['frequency'] ?? '') === 'HS' ? 'selected' : '' ?>>HS (At Bedtime)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <div class="form-group mb-0" style="flex: 1;">
+                            <input type="text" name="med_duration[]" class="form-control" placeholder="Duration (e.g. 5 days)" value="<?= sanitizeOutput($med['duration'] ?? '') ?>">
+                        </div>
+                        <div class="form-group mb-0" style="flex: 1;">
+                            <select name="med_route[]" class="form-control">
+                                <option value="oral" <?= ($med['route'] ?? 'oral') === 'oral' ? 'selected' : '' ?>>Oral</option>
+                                <option value="injection" <?= ($med['route'] ?? '') === 'injection' ? 'selected' : '' ?>>Injection</option>
+                                <option value="topical" <?= ($med['route'] ?? '') === 'topical' ? 'selected' : '' ?>>Topical</option>
+                                <option value="inhalation" <?= ($med['route'] ?? '') === 'inhalation' ? 'selected' : '' ?>>Inhalation</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0" style="flex: 1.5;">
+                            <input type="text" name="med_instruction[]" class="form-control" placeholder="Instructions" value="<?= sanitizeOutput($med['instruction'] ?? '') ?>">
+                        </div>
+                        <div class="form-group mb-0" style="flex-shrink: 0;">
+                            <button type="button" class="btn btn-sm btn-ghost text-danger" onclick="this.closest('.medicine-row').remove()" title="Remove"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <?php }} ?>
             </div>
 
             <hr class="my-24">
             
             <!-- Lab Tests Section -->
             <div class="d-flex justify-between align-center mb-16">
-                <h3>Lab Tests</h3>
+                <h3><i class="fas fa-flask" style="color: var(--warning);"></i> Lab Tests</h3>
                 <button type="button" class="btn btn-outline btn-sm" onclick="addTest()"><i class="fas fa-plus"></i> Add Test</button>
             </div>
             
@@ -181,14 +201,19 @@ $testList = $db->fetchAll("SELECT name FROM lab_tests WHERE is_active = 1 ORDER 
                 $tests = $template['lab_tests'] ?? [];
                 if (!empty($tests)) {
                     foreach ($tests as $test) {
-                        echo "<div class='test-row row mb-12 g-2'>
-                            <div class='col-md-5'><input type='text' name='test_name[]' class='form-control' placeholder='Test Name' list='testList' value='{$test['name']}'></div>
-                            <div class='col-md-6'><input type='text' name='test_instruction[]' class='form-control' placeholder='Instruction' value='{$test['instruction']}'></div>
-                            <div class='col-md-1'><button type='button' class='btn btn-ghost text-danger' onclick='this.closest(\".test-row\").remove()'><i class=\"fas fa-trash\"></i></button></div>
-                        </div>";
-                    }
-                }
                 ?>
+                <div class="test-row mb-12" style="display: flex; gap: 12px; align-items: center;">
+                    <div class="form-group mb-0" style="flex: 1;">
+                        <input type="text" name="test_name[]" class="form-control" placeholder="Test Name" list="testList" value="<?= sanitizeOutput($test['name'] ?? '') ?>">
+                    </div>
+                    <div class="form-group mb-0" style="flex: 1;">
+                        <input type="text" name="test_instruction[]" class="form-control" placeholder="Instruction" value="<?= sanitizeOutput($test['instruction'] ?? '') ?>">
+                    </div>
+                    <div class="form-group mb-0" style="flex-shrink: 0;">
+                        <button type="button" class="btn btn-ghost text-danger" onclick="this.closest('.test-row').remove()"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <?php }} ?>
             </div>
             
             <div class="mt-24 d-flex justify-end gap-16">
@@ -210,32 +235,60 @@ $testList = $db->fetchAll("SELECT name FROM lab_tests WHERE is_active = 1 ORDER 
 <script>
 function addMedicine() {
     const html = `
-    <div class='medicine-row row mb-12 g-2'>
-        <div class='col-md-3'><input type='text' name='med_name[]' class='form-control' placeholder='Medicine Name' list='medList'></div>
-        <div class='col-md-2'><input type='text' name='med_dosage[]' class='form-control' placeholder='Dosage'></div>
-        <div class='col-md-2'>
-            <select name='med_frequency[]' class='form-control'>
-                <option value='OD'>OD</option>
-                <option value='BD'>BD</option>
-                <option value='TDS'>TDS</option>
-                <option value='QID'>QID</option>
-                <option value='SOS'>SOS</option>
-                <option value='HS'>HS</option>
-            </select>
+    <div class="medicine-row" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; background: var(--bg-secondary);">
+        <div class="form-row mb-12">
+            <div class="form-group">
+                <input type="text" name="med_name[]" class="form-control" placeholder="Medicine name" list="medList">
+            </div>
+            <div class="form-group">
+                <input type="text" name="med_dosage[]" class="form-control" placeholder="Dosage (e.g. 500mg)">
+            </div>
+            <div class="form-group">
+                <select name="med_frequency[]" class="form-control">
+                    <option value="OD">OD (Once Daily)</option>
+                    <option value="BD">BD (Twice Daily)</option>
+                    <option value="TDS">TDS (Thrice Daily)</option>
+                    <option value="QID">QID (Four Times)</option>
+                    <option value="SOS">SOS (As Needed)</option>
+                    <option value="HS">HS (At Bedtime)</option>
+                </select>
+            </div>
         </div>
-        <div class='col-md-2'><input type='text' name='med_duration[]' class='form-control' placeholder='Duration'></div>
-        <div class='col-md-2'><input type='text' name='med_instruction[]' class='form-control' placeholder='Instruction'></div>
-        <div class='col-md-1'><button type='button' class='btn btn-ghost text-danger' onclick='this.closest(".medicine-row").remove()'><i class="fas fa-trash"></i></button></div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <div class="form-group mb-0" style="flex: 1;">
+                <input type="text" name="med_duration[]" class="form-control" placeholder="Duration (e.g. 5 days)">
+            </div>
+            <div class="form-group mb-0" style="flex: 1;">
+                <select name="med_route[]" class="form-control">
+                    <option value="oral">Oral</option>
+                    <option value="injection">Injection</option>
+                    <option value="topical">Topical</option>
+                    <option value="inhalation">Inhalation</option>
+                </select>
+            </div>
+            <div class="form-group mb-0" style="flex: 1.5;">
+                <input type="text" name="med_instruction[]" class="form-control" placeholder="Instructions">
+            </div>
+            <div class="form-group mb-0" style="flex-shrink: 0;">
+                <button type="button" class="btn btn-sm btn-ghost text-danger" onclick="this.closest('.medicine-row').remove()" title="Remove"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
     </div>`;
     document.getElementById('medicineContainer').insertAdjacentHTML('beforeend', html);
 }
 
 function addTest() {
     const html = `
-    <div class='test-row row mb-12 g-2'>
-        <div class='col-md-5'><input type='text' name='test_name[]' class='form-control' placeholder='Test Name' list='testList'></div>
-        <div class='col-md-6'><input type='text' name='test_instruction[]' class='form-control' placeholder='Instruction'></div>
-        <div class='col-md-1'><button type='button' class='btn btn-ghost text-danger' onclick='this.closest(".test-row").remove()'><i class="fas fa-trash"></i></button></div>
+    <div class="test-row mb-12" style="display: flex; gap: 12px; align-items: center;">
+        <div class="form-group mb-0" style="flex: 1;">
+            <input type="text" name="test_name[]" class="form-control" placeholder="Test Name" list="testList">
+        </div>
+        <div class="form-group mb-0" style="flex: 1;">
+            <input type="text" name="test_instruction[]" class="form-control" placeholder="Instruction">
+        </div>
+        <div class="form-group mb-0" style="flex-shrink: 0;">
+            <button type="button" class="btn btn-ghost text-danger" onclick="this.closest('.test-row').remove()"><i class="fas fa-trash"></i></button>
+        </div>
     </div>`;
     document.getElementById('testContainer').insertAdjacentHTML('beforeend', html);
 }
