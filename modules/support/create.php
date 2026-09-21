@@ -6,13 +6,20 @@ $pageTitle = 'New Support Ticket';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 
 $db = db();
-$masterConn = $db->getMasterConnection();
-$tenantId = intval($db->tenantInfo['id'] ?? 0);
-$clinicName = $db->tenantInfo['clinic_name'] ?? '';
 $userName = $_SESSION['full_name'] ?? 'Unknown';
 $userId = $_SESSION['user_id'] ?? 0;
+$error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+try {
+    $masterConn = $db->getMasterConnection();
+    $tenantId = intval($db->tenantInfo['id'] ?? 0);
+    $clinicName = $db->tenantInfo['clinic_name'] ?? '';
+} catch (Exception $e) {
+    $error = 'Unable to connect to support system. Please try again later.';
+    $masterConn = null;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $masterConn) {
     $subject = sanitize($_POST['subject'] ?? '');
     $category = sanitize($_POST['category'] ?? 'general');
     $priority = sanitize($_POST['priority'] ?? 'medium');
@@ -21,21 +28,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($subject)) {
         $error = 'Subject is required';
     } else {
-        // Generate ticket UID
-        $lastTicket = $masterConn->query("SELECT ticket_uid FROM support_tickets ORDER BY id DESC LIMIT 1")->fetch();
-        $nextNum = 1;
-        if ($lastTicket) {
-            $parts = explode('-', $lastTicket['ticket_uid']);
-            $nextNum = intval(end($parts)) + 1;
+        try {
+            // Generate ticket UID
+            $lastTicket = $masterConn->query("SELECT ticket_uid FROM support_tickets ORDER BY id DESC LIMIT 1")->fetch();
+            $nextNum = 1;
+            if ($lastTicket) {
+                $parts = explode('-', $lastTicket['ticket_uid']);
+                $nextNum = intval(end($parts)) + 1;
+            }
+            $ticketUid = 'TKT-' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+
+            $stmt = $masterConn->prepare("INSERT INTO support_tickets (ticket_uid, tenant_id, user_id, user_name, clinic_name, subject, description, category, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$ticketUid, $tenantId, $userId, $userName, $clinicName, $subject, $description, $category, $priority]);
+
+            setFlashMessage('Ticket ' . $ticketUid . ' created successfully!', 'success');
+            header('Location: list.php');
+            exit;
+        } catch (Exception $e) {
+            $error = 'Failed to create ticket: ' . $e->getMessage();
         }
-        $ticketUid = 'TKT-' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
-
-        $stmt = $masterConn->prepare("INSERT INTO support_tickets (ticket_uid, tenant_id, user_id, user_name, clinic_name, subject, description, category, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$ticketUid, $tenantId, $userId, $userName, $clinicName, $subject, $description, $category, $priority]);
-
-        setFlashMessage('Ticket ' . $ticketUid . ' created successfully!', 'success');
-        header('Location: list.php');
-        exit;
     }
 }
 ?>

@@ -6,8 +6,13 @@ $pageTitle = 'Support';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 
 $db = db();
-$masterConn = $db->getMasterConnection();
-$tenantId = intval($db->tenantInfo['id'] ?? 0);
+try {
+    $masterConn = $db->getMasterConnection();
+    $tenantId = intval($db->tenantInfo['id'] ?? 0);
+} catch (Exception $e) {
+    $masterConn = null;
+    $tenantId = 0;
+}
 
 $statusFilter = sanitize($_GET['status'] ?? '');
 $where = "WHERE tenant_id = ?";

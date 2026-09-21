@@ -6,10 +6,17 @@ $pageTitle = 'View Ticket';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 
 $db = db();
-$masterConn = $db->getMasterConnection();
-$tenantId = intval($db->tenantInfo['id'] ?? 0);
 $userName = $_SESSION['full_name'] ?? 'Unknown';
 $ticketId = intval($_GET['id'] ?? 0);
+
+try {
+    $masterConn = $db->getMasterConnection();
+    $tenantId = intval($db->tenantInfo['id'] ?? 0);
+} catch (Exception $e) {
+    setFlashMessage('Unable to connect to support system', 'error');
+    header('Location: list.php');
+    exit;
+}
 
 // Fetch ticket
 $stmt = $masterConn->prepare("SELECT * FROM support_tickets WHERE id = ? AND tenant_id = ?");
