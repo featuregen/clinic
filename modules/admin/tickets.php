@@ -12,7 +12,13 @@ if (getCurrentUserRole() !== ROLE_SUPER_ADMIN) {
 }
 
 $db = db();
-$masterConn = $db->getMasterConnection();
+try {
+    $masterConn = $db->getMasterConnection();
+} catch (Exception $e) {
+    setFlashMessage('Unable to connect to support system: ' . $e->getMessage(), 'error');
+    header('Location: ' . BASE_URL . '/modules/dashboard/index.php');
+    exit;
+}
 
 // Filters
 $statusFilter = sanitize($_GET['status'] ?? '');

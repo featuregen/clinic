@@ -12,9 +12,16 @@ if (getCurrentUserRole() !== ROLE_SUPER_ADMIN) {
 }
 
 $db = db();
-$masterConn = $db->getMasterConnection();
 $adminName = $_SESSION['full_name'] ?? 'Super Admin';
 $ticketId = intval($_GET['id'] ?? 0);
+
+try {
+    $masterConn = $db->getMasterConnection();
+} catch (Exception $e) {
+    setFlashMessage('Unable to connect to support system: ' . $e->getMessage(), 'error');
+    header('Location: tickets.php');
+    exit;
+}
 
 // Fetch ticket
 $stmt = $masterConn->prepare("SELECT * FROM support_tickets WHERE id = ?");
