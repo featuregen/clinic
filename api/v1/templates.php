@@ -15,24 +15,31 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // Ensure prescription_templates table exists
 try {
-    $db->query("CREATE TABLE IF NOT EXISTS prescription_templates (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        clinic_id INT NOT NULL,
-        name VARCHAR(200) NOT NULL,
-        category VARCHAR(100) NULL,
-        diagnosis TEXT NULL,
-        medicines JSON NULL,
-        instructions TEXT NULL,
-        lab_tests TEXT NULL,
-        follow_up_days INT NULL,
-        created_by INT NULL,
-        is_active TINYINT(1) DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_clinic (clinic_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-} catch (\Throwable $e) {}
+    $tableCheck = $db->getConnection()->query("SHOW TABLES LIKE 'prescription_templates'")->fetch();
+    if (!$tableCheck) {
+        $db->query("CREATE TABLE IF NOT EXISTS prescription_templates (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            clinic_id INT NOT NULL,
+            name VARCHAR(200) NOT NULL,
+            category VARCHAR(100) NULL,
+            diagnosis TEXT NULL,
+            medicines JSON NULL,
+            instructions TEXT NULL,
+            lab_tests TEXT NULL,
+            follow_up_days INT NULL,
+            created_by INT NULL,
+            is_active TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_clinic (clinic_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+} catch (\Throwable $e) {
+    // Table creation might fail on shared hosting - continue anyway
+    error_log("Templates table check: " . $e->getMessage());
+}
 
+try {
 switch ($method) {
     case 'GET':
         if (isset($_GET['id'])) {
@@ -92,4 +99,7 @@ switch ($method) {
 
     default:
         jsonResponse(false, null, 'Method not allowed', 405);
+}
+} catch (\Throwable $e) {
+    jsonResponse(false, null, 'Templates API Error: ' . $e->getMessage(), 500);
 }
