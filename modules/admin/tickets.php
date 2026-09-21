@@ -57,18 +57,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
     $tId = intval($_POST['ticket_id'] ?? 0);
     $action = $_POST['action'];
     
-    if ($action === 'assign') {
-        $masterConn->prepare("UPDATE support_tickets SET assigned_to = ?, status = 'in_progress', updated_at = NOW() WHERE id = ?")
-            ->execute([$_SESSION['full_name'] ?? 'Super Admin', $tId]);
-    } elseif ($action === 'resolve') {
-        $masterConn->prepare("UPDATE support_tickets SET status = 'resolved', resolved_at = NOW(), updated_at = NOW() WHERE id = ?")
-            ->execute([$tId]);
-    } elseif ($action === 'close') {
-        $masterConn->prepare("UPDATE support_tickets SET status = 'closed', closed_at = NOW(), updated_at = NOW() WHERE id = ?")
-            ->execute([$tId]);
-    } elseif ($action === 'reopen') {
-        $masterConn->prepare("UPDATE support_tickets SET status = 'open', resolved_at = NULL, closed_at = NULL, updated_at = NOW() WHERE id = ?")
-            ->execute([$tId]);
+    try {
+        if ($action === 'assign') {
+            $masterConn->prepare("UPDATE support_tickets SET assigned_to = ?, status = 'in_progress', updated_at = NOW() WHERE id = ?")
+                ->execute([$_SESSION['full_name'] ?? 'Super Admin', $tId]);
+        } elseif ($action === 'resolve') {
+            $masterConn->prepare("UPDATE support_tickets SET status = 'resolved', resolved_at = NOW(), updated_at = NOW() WHERE id = ?")
+                ->execute([$tId]);
+        } elseif ($action === 'close') {
+            $masterConn->prepare("UPDATE support_tickets SET status = 'closed', closed_at = NOW(), updated_at = NOW() WHERE id = ?")
+                ->execute([$tId]);
+        } elseif ($action === 'reopen') {
+            $masterConn->prepare("UPDATE support_tickets SET status = 'open', resolved_at = NULL, closed_at = NULL, updated_at = NOW() WHERE id = ?")
+                ->execute([$tId]);
+        }
+    } catch (Exception $e) {
+        setFlashMessage('Action failed: ' . $e->getMessage(), 'error');
     }
     header('Location: tickets.php' . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : ''));
     exit;

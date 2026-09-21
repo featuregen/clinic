@@ -41,6 +41,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $masterConn) {
             $stmt = $masterConn->prepare("INSERT INTO support_tickets (ticket_uid, tenant_id, user_id, user_name, clinic_name, subject, description, category, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$ticketUid, $tenantId, $userId, $userName, $clinicName, $subject, $description, $category, $priority]);
 
+            // Send email notification to super admin
+            $to = 'ga.featuregen@gmail.com';
+            $emailSubject = "[{$ticketUid}] New Support Ticket: {$subject}";
+            $emailBody = "New Support Ticket Created\n";
+            $emailBody .= "================================\n\n";
+            $emailBody .= "Ticket ID: {$ticketUid}\n";
+            $emailBody .= "Clinic: {$clinicName}\n";
+            $emailBody .= "Created By: {$userName}\n";
+            $emailBody .= "Category: " . ucfirst(str_replace('_', ' ', $category)) . "\n";
+            $emailBody .= "Priority: " . ucfirst($priority) . "\n\n";
+            $emailBody .= "Subject: {$subject}\n\n";
+            $emailBody .= "Description:\n{$description}\n\n";
+            $emailBody .= "================================\n";
+            $emailBody .= "Login to manage: https://democlinic.featuregen.com/modules/admin/tickets.php";
+            $headers = "From: noreply@featuregen.com\r\n";
+            $headers .= "Reply-To: noreply@featuregen.com\r\n";
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            @mail($to, $emailSubject, $emailBody, $headers);
+
             setFlashMessage('Ticket ' . $ticketUid . ' created successfully!', 'success');
             header('Location: list.php');
             exit;

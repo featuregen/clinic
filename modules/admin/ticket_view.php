@@ -38,34 +38,38 @@ if (!$ticket) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
-    if ($action === 'reply') {
-        $message = sanitize($_POST['message'] ?? '');
-        $isInternal = !empty($_POST['is_internal']) ? 1 : 0;
-        if (!empty($message)) {
-            $stmt = $masterConn->prepare("INSERT INTO ticket_replies (ticket_id, user_name, user_role, message, is_internal) VALUES (?, ?, 'super_admin', ?, ?)");
-            $stmt->execute([$ticketId, $adminName, $message, $isInternal]);
-            $masterConn->prepare("UPDATE support_tickets SET updated_at = NOW() WHERE id = ?")->execute([$ticketId]);
+    try {
+        if ($action === 'reply') {
+            $message = sanitize($_POST['message'] ?? '');
+            $isInternal = !empty($_POST['is_internal']) ? 1 : 0;
+            if (!empty($message)) {
+                $stmt = $masterConn->prepare("INSERT INTO ticket_replies (ticket_id, user_name, user_role, message, is_internal) VALUES (?, ?, 'super_admin', ?, ?)");
+                $stmt->execute([$ticketId, $adminName, $message, $isInternal]);
+                $masterConn->prepare("UPDATE support_tickets SET updated_at = NOW() WHERE id = ?")->execute([$ticketId]);
+            }
+        } elseif ($action === 'status') {
+            $newStatus = sanitize($_POST['new_status'] ?? '');
+            $validStatuses = ['open', 'in_progress', 'resolved', 'closed'];
+            if (in_array($newStatus, $validStatuses)) {
+                $extra = '';
+                if ($newStatus === 'resolved') $extra = ', resolved_at = NOW()';
+                if ($newStatus === 'closed') $extra = ', closed_at = NOW()';
+                if ($newStatus === 'open') $extra = ', resolved_at = NULL, closed_at = NULL';
+                $masterConn->prepare("UPDATE support_tickets SET status = ?, updated_at = NOW() $extra WHERE id = ?")->execute([$newStatus, $ticketId]);
+                
+                // Auto-add status change as reply
+                $statusLabels = ['open' => 'Open', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'closed' => 'Closed'];
+                $masterConn->prepare("INSERT INTO ticket_replies (ticket_id, user_name, user_role, message, is_internal) VALUES (?, ?, 'super_admin', ?, 0)")
+                    ->execute([$ticketId, $adminName, 'Status changed to: ' . ($statusLabels[$newStatus] ?? $newStatus)]);
+            }
+        } elseif ($action === 'assign') {
+            $masterConn->prepare("UPDATE support_tickets SET assigned_to = ?, status = 'in_progress', updated_at = NOW() WHERE id = ?")->execute([$adminName, $ticketId]);
+        } elseif ($action === 'priority') {
+            $newPriority = sanitize($_POST['new_priority'] ?? 'medium');
+            $masterConn->prepare("UPDATE support_tickets SET priority = ?, updated_at = NOW() WHERE id = ?")->execute([$newPriority, $ticketId]);
         }
-    } elseif ($action === 'status') {
-        $newStatus = sanitize($_POST['new_status'] ?? '');
-        $validStatuses = ['open', 'in_progress', 'resolved', 'closed'];
-        if (in_array($newStatus, $validStatuses)) {
-            $extra = '';
-            if ($newStatus === 'resolved') $extra = ', resolved_at = NOW()';
-            if ($newStatus === 'closed') $extra = ', closed_at = NOW()';
-            if ($newStatus === 'open') $extra = ', resolved_at = NULL, closed_at = NULL';
-            $masterConn->prepare("UPDATE support_tickets SET status = ?, updated_at = NOW() $extra WHERE id = ?")->execute([$newStatus, $ticketId]);
-            
-            // Auto-add status change as internal note
-            $statusLabels = ['open' => 'Open', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'closed' => 'Closed'];
-            $masterConn->prepare("INSERT INTO ticket_replies (ticket_id, user_name, user_role, message, is_internal) VALUES (?, ?, 'super_admin', ?, 0)")
-                ->execute([$ticketId, $adminName, 'Status changed to: ' . ($statusLabels[$newStatus] ?? $newStatus)]);
-        }
-    } elseif ($action === 'assign') {
-        $masterConn->prepare("UPDATE support_tickets SET assigned_to = ?, status = 'in_progress', updated_at = NOW() WHERE id = ?")->execute([$adminName, $ticketId]);
-    } elseif ($action === 'priority') {
-        $newPriority = sanitize($_POST['new_priority'] ?? 'medium');
-        $masterConn->prepare("UPDATE support_tickets SET priority = ?, updated_at = NOW() WHERE id = ?")->execute([$newPriority, $ticketId]);
+    } catch (Exception $e) {
+        setFlashMessage('Action failed: ' . $e->getMessage(), 'error');
     }
     
     header('Location: ticket_view.php?id=' . $ticketId . '#replies');
@@ -73,14 +77,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Re-fetch after possible changes
-$stmt = $masterConn->prepare("SELECT * FROM support_tickets WHERE id = ?");
-$stmt->execute([$ticketId]);
-$ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+try {
+    $stmt = $masterConn->prepare("SELECT * FROM support_tickets WHERE id = ?");
+    $stmt->execute([$ticketId]);
+    $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Fetch ALL replies (including internal for super admin)
-$stmt = $masterConn->prepare("SELECT * FROM ticket_replies WHERE ticket_id = ? ORDER BY created_at ASC");
-$stmt->execute([$ticketId]);
-$replies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Fetch ALL replies (including internal for super admin)
+    $stmt = $masterConn->prepare("SELECT * FROM ticket_replies WHERE ticket_id = ? ORDER BY created_at ASC");
+    $stmt->execute([$ticketId]);
+    $replies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $replies = [];
+}
 
 function tStatusBadge($status) {
     $map = [
