@@ -12,9 +12,17 @@ function authenticateApiRequest() {
     $db = db();
     
     // Extract Authorization Header
-    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    // Apache/MAMP may place the header in different $_SERVER keys
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] 
+        ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] 
+        ?? '';
     if (!$authHeader && function_exists('apache_request_headers')) {
         $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+    }
+    // Final fallback: check getallheaders()
+    if (!$authHeader && function_exists('getallheaders')) {
+        $headers = getallheaders();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
     }
     

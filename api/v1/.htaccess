@@ -1,0 +1,7 @@
+# Pass Authorization header to PHP (Apache/MAMP strips it by default)
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+# Also set it via rewrite rule as a fallback
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

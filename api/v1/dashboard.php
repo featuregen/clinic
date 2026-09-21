@@ -44,7 +44,7 @@ try {
 
     // 2. Today's Appointment Queue
     $queue = $db->fetchAll(
-        "SELECT a.id, a.token_number, a.appointment_time, a.status, a.reason,
+        "SELECT a.id, a.token_number, a.appointment_time, a.status, a.visit_reason,
                 p.id as patient_id, p.patient_uid, p.first_name, p.last_name, p.phone as patient_phone, p.gender,
                 d.id as doctor_id, u.full_name as doctor_name
          FROM appointments a
