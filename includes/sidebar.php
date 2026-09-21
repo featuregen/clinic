@@ -9,7 +9,7 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
 $currentModule = '';
 $pathParts = explode('/', $_SERVER['REQUEST_URI'] ?? '');
 foreach ($pathParts as $part) {
-    if (in_array($part, ['dashboard','clinic','doctors','staff','patients','appointments','prescriptions','templates','billing','reports','dental','vaccination','calculators','communication','admin','subscription'])) {
+    if (in_array($part, ['dashboard','clinic','doctors','staff','patients','appointments','prescriptions','templates','billing','reports','dental','vaccination','calculators','communication','admin','subscription','support'])) {
         $currentModule = $part;
         break;
     }
@@ -223,6 +223,17 @@ if (!empty($logoFile)) {
         </div>
         <?php endif; ?>
         
+        <!-- Support -->
+        <div class="nav-section">
+            <div class="nav-section-title">Support</div>
+            <div class="nav-item">
+                <a href="<?= BASE_URL ?>/modules/support/list.php" class="nav-link <?= isActiveMenu('support') ?>">
+                    <i class="fas fa-headset"></i>
+                    <span>Support Tickets</span>
+                </a>
+            </div>
+        </div>
+        
         <!-- Administration -->
         <?php if (in_array($role, [ROLE_SUPER_ADMIN, ROLE_ADMIN])): ?>
         <div class="nav-section">
@@ -281,6 +292,12 @@ if (!empty($logoFile)) {
                 <a href="<?= BASE_URL ?>/modules/admin/index.php" class="nav-link <?= isActiveMenu('admin') ?>">
                     <i class="fas fa-cogs"></i>
                     <span>System Admin</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="<?= BASE_URL ?>/modules/admin/tickets.php" class="nav-link <?= strpos($currentPage, 'ticket') !== false && $currentModule === 'admin' ? 'active' : '' ?>">
+                    <i class="fas fa-headset" style="color: #f59e0b;"></i>
+                    <span>Support Tickets</span>
                 </a>
             </div>
             <?php endif; ?>

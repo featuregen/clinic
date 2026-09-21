@@ -430,6 +430,43 @@ class Database {
                 $masterConn->exec("UPDATE saas_global_settings SET setting_value = 'rzp_test_S2WE1vnYYcKVAm' WHERE setting_key = 'razorpay_key_id' AND (setting_value = '' OR setting_value IS NULL)");
                 $masterConn->exec("UPDATE saas_global_settings SET setting_value = 'IkgTWkbFrmzpT0Gg0j3gvKK7' WHERE setting_key = 'razorpay_key_secret' AND (setting_value = '' OR setting_value IS NULL)");
             }
+
+            // Ensure support_tickets table exists
+            $masterConn->exec("CREATE TABLE IF NOT EXISTS support_tickets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_uid VARCHAR(20) NOT NULL,
+                tenant_id INT NOT NULL,
+                user_id INT NOT NULL DEFAULT 0,
+                user_name VARCHAR(100) NOT NULL DEFAULT '',
+                clinic_name VARCHAR(200) NOT NULL DEFAULT '',
+                subject VARCHAR(255) NOT NULL,
+                description TEXT NULL,
+                category ENUM('bug','feature_request','billing','account','general') DEFAULT 'general',
+                priority ENUM('low','medium','high','critical') DEFAULT 'medium',
+                status ENUM('open','in_progress','resolved','closed') DEFAULT 'open',
+                assigned_to VARCHAR(100) NULL,
+                resolved_at DATETIME NULL,
+                closed_at DATETIME NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_tenant (tenant_id),
+                INDEX idx_status (status),
+                INDEX idx_priority (priority),
+                UNIQUE KEY uk_ticket_uid (ticket_uid)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            // Ensure ticket_replies table exists
+            $masterConn->exec("CREATE TABLE IF NOT EXISTS ticket_replies (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ticket_id INT NOT NULL,
+                user_name VARCHAR(100) NOT NULL DEFAULT '',
+                user_role VARCHAR(50) NOT NULL DEFAULT 'clinic_admin',
+                message TEXT NOT NULL,
+                is_internal TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_ticket (ticket_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         } catch (PDOException $e) {
             error_log("Master DB Self-healing migration error: " . $e->getMessage());
         }
