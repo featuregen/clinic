@@ -2,8 +2,9 @@
 /**
  * View/Manage Support Ticket (Super Admin)
  */
-$pageTitle = 'View Ticket';
-require_once dirname(dirname(__DIR__)) . '/includes/header.php';
+require_once dirname(dirname(__DIR__)) . '/config/app.php';
+require_once INCLUDES_PATH . '/functions.php';
+require_once CONFIG_PATH . '/database.php';
 
 if (getCurrentUserRole() !== ROLE_SUPER_ADMIN) {
     setFlashMessage('Access denied', 'error');
@@ -89,6 +90,10 @@ try {
 } catch (Exception $e) {
     $replies = [];
 }
+
+// NOW include header (after all redirects are done)
+$pageTitle = 'View Ticket';
+require_once INCLUDES_PATH . '/header.php';
 
 function tStatusBadge($status) {
     $map = [

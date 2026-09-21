@@ -2,8 +2,9 @@
 /**
  * Support Tickets List (Clinic Side)
  */
-$pageTitle = 'Support';
-require_once dirname(dirname(__DIR__)) . '/includes/header.php';
+require_once dirname(dirname(__DIR__)) . '/config/app.php';
+require_once INCLUDES_PATH . '/functions.php';
+require_once CONFIG_PATH . '/database.php';
 
 $db = db();
 try {
@@ -42,6 +43,10 @@ try {
     }
 } catch (Exception $e) {}
 $totalTickets = array_sum($counts);
+
+// NOW include header
+$pageTitle = 'Support';
+require_once INCLUDES_PATH . '/header.php';
 
 function ticketStatusBadge($status) {
     $map = [

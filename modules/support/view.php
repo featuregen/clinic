@@ -2,8 +2,9 @@
 /**
  * View Support Ticket (Clinic Side)
  */
-$pageTitle = 'View Ticket';
-require_once dirname(dirname(__DIR__)) . '/includes/header.php';
+require_once dirname(dirname(__DIR__)) . '/config/app.php';
+require_once INCLUDES_PATH . '/functions.php';
+require_once CONFIG_PATH . '/database.php';
 
 $db = db();
 $userName = $_SESSION['full_name'] ?? 'Unknown';
@@ -46,6 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['message'])) {
 $stmt = $masterConn->prepare("SELECT * FROM ticket_replies WHERE ticket_id = ? AND is_internal = 0 ORDER BY created_at ASC");
 $stmt->execute([$ticketId]);
 $replies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// NOW include header (after all redirects are done)
+$pageTitle = 'View Ticket';
+require_once INCLUDES_PATH . '/header.php';
 
 function ticketStatusBadge($status) {
     $map = [

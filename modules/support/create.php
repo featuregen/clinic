@@ -2,9 +2,11 @@
 /**
  * Create Support Ticket
  */
-$pageTitle = 'New Support Ticket';
-require_once dirname(dirname(__DIR__)) . '/includes/header.php';
+require_once dirname(dirname(__DIR__)) . '/config/app.php';
+require_once INCLUDES_PATH . '/functions.php';
+require_once CONFIG_PATH . '/database.php';
 
+// Must process POST BEFORE header (which outputs HTML)
 $db = db();
 $userName = $_SESSION['full_name'] ?? 'Unknown';
 $userId = $_SESSION['user_id'] ?? 0;
@@ -68,6 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $masterConn) {
         }
     }
 }
+
+// NOW include header (outputs HTML)
+$pageTitle = 'New Support Ticket';
+require_once INCLUDES_PATH . '/header.php';
 ?>
 
 <div class="content-header">

@@ -2,8 +2,9 @@
 /**
  * Support Tickets (Super Admin)
  */
-$pageTitle = 'Support Tickets';
-require_once dirname(dirname(__DIR__)) . '/includes/header.php';
+require_once dirname(dirname(__DIR__)) . '/config/app.php';
+require_once INCLUDES_PATH . '/functions.php';
+require_once CONFIG_PATH . '/database.php';
 
 if (getCurrentUserRole() !== ROLE_SUPER_ADMIN) {
     setFlashMessage('Access denied', 'error');
@@ -77,6 +78,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
     header('Location: tickets.php' . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : ''));
     exit;
 }
+
+// NOW include header (after all redirects are done)
+$pageTitle = 'Support Tickets';
+require_once INCLUDES_PATH . '/header.php';
 
 function tStatusBadge($status) {
     $map = [
