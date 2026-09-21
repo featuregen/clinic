@@ -67,7 +67,7 @@ try {
         $tokenNumber = intval($lastToken) + 1;
 
         $db->query(
-            "INSERT INTO appointments (clinic_id, branch_id, patient_id, doctor_id, appointment_date, appointment_time, token_number, appointment_type, status, reason, booked_by)
+            "INSERT INTO appointments (clinic_id, branch_id, patient_id, doctor_id, appointment_date, appointment_time, token_number, appointment_type, status, visit_reason, booked_by)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?)",
             [
                 $clinicId, $branchId, $patientId, $doctorId, $date, $time,
@@ -103,7 +103,7 @@ try {
     }
 
     $appointments = $db->fetchAll(
-        "SELECT a.id, a.token_number, a.appointment_date, a.appointment_time, a.status, a.reason, a.appointment_type,
+        "SELECT a.id, a.token_number, a.appointment_date, a.appointment_time, a.status, a.visit_reason, a.appointment_type,
                 p.id as patient_id, p.patient_uid, p.first_name, p.last_name, p.phone as patient_phone, p.gender, p.date_of_birth,
                 d.id as doctor_id, d.specialty, u.full_name as doctor_name
          FROM appointments a
