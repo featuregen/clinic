@@ -124,16 +124,32 @@ function getCurrentClinicId() {
     $tenant = $dbInstance->tenantInfo;
     $tenantId = !empty($tenant['id']) ? intval($tenant['id']) : ($_SESSION['clinic_id'] ?? 1);
     
-    // Check if this tenant ID exists in the clinics table; if not, find the actual clinic_id
     try {
         $conn = $dbInstance->getConnection();
+        
+        // 1. Check if tenant ID exists in clinics table and has data
         $check = $conn->prepare("SELECT id FROM clinics WHERE id = ?");
         $check->execute([$tenantId]);
         if ($check->fetch()) {
-            $resolvedClinicId = $tenantId;
-            return $resolvedClinicId;
+            // Verify data exists with this clinic_id
+            $hasData = $conn->prepare("SELECT 1 FROM departments WHERE clinic_id = ? LIMIT 1");
+            $hasData->execute([$tenantId]);
+            if ($hasData->fetch()) {
+                $resolvedClinicId = $tenantId;
+                return $resolvedClinicId;
+            }
         }
-        // Tenant ID doesn't exist in clinics table - get the first active clinic
+        
+        // 2. Find the clinic_id that actually has data
+        try {
+            $dataClinic = $conn->query("SELECT clinic_id FROM departments GROUP BY clinic_id ORDER BY COUNT(*) DESC LIMIT 1")->fetch();
+            if ($dataClinic) {
+                $resolvedClinicId = intval($dataClinic['clinic_id']);
+                return $resolvedClinicId;
+            }
+        } catch (Exception $e) {}
+        
+        // 3. Fallback: get the first clinic from clinics table
         $first = $conn->query("SELECT id FROM clinics ORDER BY id LIMIT 1")->fetch();
         if ($first) {
             $resolvedClinicId = intval($first['id']);
