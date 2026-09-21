@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feature Gen Care — Live Demo Script</title>
+    <title>Feature Gen Care — Complete Demo Script</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -21,7 +21,6 @@
             --text-muted: #64748b;
             --accent: #818cf8;
             --accent-bright: #a5b4fc;
-            --accent-glow: rgba(129, 140, 248, 0.25);
             --green: #34d399;
             --green-bg: rgba(52, 211, 153, 0.1);
             --orange: #fb923c;
@@ -30,1430 +29,783 @@
             --blue-bg: rgba(96, 165, 250, 0.1);
             --pink: #f472b6;
             --pink-bg: rgba(244, 114, 182, 0.1);
+            --purple: #a78bfa;
+            --purple-bg: rgba(167, 139, 250, 0.1);
             --red: #f87171;
             --yellow: #fbbf24;
             --radius: 16px;
             --radius-sm: 10px;
             --radius-xs: 6px;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.7;
-            min-height: 100vh;
-        }
-
-        /* ===== FLOATING ACTION BUTTONS ===== */
-        .fab-container {
-            position: fixed;
-            bottom: 32px;
-            right: 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            z-index: 1000;
-        }
-
-        .fab {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-            transition: all 0.3s ease;
-        }
-
-        .fab:hover {
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-        }
-
-        .fab-pdf {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-        }
-
-        .fab-top {
-            background: linear-gradient(135deg, var(--accent), #6366f1);
-            color: white;
-        }
-
-        .fab-label {
-            position: absolute;
-            right: 68px;
-            background: var(--bg-card);
-            color: var(--text-primary);
-            padding: 6px 14px;
-            border-radius: var(--radius-xs);
-            font-size: 13px;
-            font-weight: 500;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            border: 1px solid var(--border);
-        }
-
-        .fab:hover .fab-label {
-            opacity: 1;
-        }
-
-        /* ===== HEADER ===== */
-        .hero {
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-            border-bottom: 1px solid var(--border);
-            padding: 60px 0 50px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 30% 50%, rgba(99,102,241,0.06) 0%, transparent 50%),
-                        radial-gradient(circle at 70% 50%, rgba(168,85,247,0.04) 0%, transparent 50%);
-            animation: float 20s infinite ease-in-out;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(-20px, -10px); }
-        }
-
-        .hero-content {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 0 40px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--bg-accent);
-            border: 1px solid var(--border);
-            border-radius: 50px;
-            padding: 6px 18px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--accent-bright);
-            margin-bottom: 24px;
-        }
-
-        .hero h1 {
-            font-size: 44px;
-            font-weight: 800;
-            letter-spacing: -1.5px;
-            line-height: 1.15;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, #f1f5f9, var(--accent-bright));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-subtitle {
-            font-size: 18px;
-            color: var(--text-secondary);
-            max-width: 650px;
-            line-height: 1.6;
-        }
-
-        .hero-meta {
-            display: flex;
-            gap: 28px;
-            margin-top: 28px;
-            flex-wrap: wrap;
-        }
-
-        .hero-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        .hero-meta-item span {
-            font-size: 18px;
-        }
-
-        .hero-meta-item strong {
-            color: var(--text-secondary);
-        }
-
-        /* ===== TABLE OF CONTENTS ===== */
-        .toc {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 40px 40px 0;
-        }
-
-        .toc-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 32px;
-        }
-
-        .toc-title {
-            font-size: 16px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--accent);
-            margin-bottom: 20px;
-        }
-
-        .toc-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 8px;
-        }
-
-        .toc-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            border-radius: var(--radius-sm);
-            text-decoration: none;
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .toc-item:hover {
-            background: var(--bg-accent);
-            color: var(--accent-bright);
-        }
-
-        .toc-num {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: var(--bg-accent);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--accent);
-            flex-shrink: 0;
-        }
-
-        /* ===== CHECKLIST ===== */
-        .checklist {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 40px 40px 0;
-        }
-
-        .checklist-card {
-            background: linear-gradient(135deg, rgba(251,146,60,0.06), rgba(251,146,60,0.02));
-            border: 1px solid rgba(251,146,60,0.2);
-            border-radius: var(--radius);
-            padding: 32px;
-        }
-
-        .checklist-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--orange);
-            margin-bottom: 6px;
-        }
-
-        .checklist-subtitle {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-        }
-
-        .checklist-items {
-            display: grid;
-            gap: 10px;
-        }
-
-        .checklist-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            background: rgba(0,0,0,0.2);
-            border-radius: var(--radius-xs);
-            cursor: pointer;
-            transition: all 0.2s;
-            user-select: none;
-        }
-
-        .checklist-item:hover {
-            background: rgba(0,0,0,0.3);
-        }
-
-        .checklist-item input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--orange);
-            cursor: pointer;
-        }
-
-        .checklist-item label {
-            font-size: 14px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            flex: 1;
-        }
-
-        .checklist-item input:checked + label {
-            text-decoration: line-through;
-            color: var(--text-muted);
-        }
-
-        /* ===== MAIN CONTENT ===== */
-        .content {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 40px;
-        }
-
-        /* ===== SECTION CARDS ===== */
-        .section {
-            margin-bottom: 48px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow: hidden;
-            transition: border-color 0.3s;
-        }
-
-        .section:hover {
-            border-color: var(--border-strong);
-        }
-
-        .section-header {
-            padding: 28px 32px 24px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-        }
-
-        .section-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            flex-shrink: 0;
-        }
-
-        .section-header-text {
-            flex: 1;
-        }
-
-        .section-number {
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .section-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-
-        .section-subtitle {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        .section-time {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            background: var(--bg-accent);
-            border: 1px solid var(--border);
-            border-radius: 50px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--accent);
-            white-space: nowrap;
-            flex-shrink: 0;
-            margin-top: 4px;
-        }
-
-        .section-body {
-            padding: 28px 32px;
-        }
-
-        /* ===== SCREENSHOT ===== */
-        .screenshot-wrap {
-            margin-bottom: 28px;
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-            border: 1px solid var(--border);
-        }
-
-        .screenshot-wrap img {
-            width: 100%;
-            display: block;
-        }
-
-        .screenshot-caption {
-            background: var(--bg-secondary);
-            padding: 10px 16px;
-            font-size: 12px;
-            color: var(--text-muted);
-            text-align: center;
-            border-top: 1px solid var(--border);
-        }
-
-        /* ===== NARRATION BLOCK ===== */
-        .narration {
-            background: linear-gradient(135deg, rgba(52,211,153,0.06), rgba(52,211,153,0.02));
-            border: 1px solid rgba(52,211,153,0.15);
-            border-left: 4px solid var(--green);
-            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-            padding: 20px 24px;
-            margin-bottom: 24px;
-        }
-
-        .narration-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--green);
-            margin-bottom: 10px;
-        }
-
-        .narration p {
-            font-size: 15px;
-            color: var(--text-secondary);
-            line-height: 1.8;
-            font-style: italic;
-        }
-
-        .narration p + p {
-            margin-top: 12px;
-        }
-
-        /* ===== ACTION BLOCK ===== */
-        .actions {
-            background: linear-gradient(135deg, rgba(96,165,250,0.06), rgba(96,165,250,0.02));
-            border: 1px solid rgba(96,165,250,0.15);
-            border-left: 4px solid var(--blue);
-            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-            padding: 20px 24px;
-            margin-bottom: 24px;
-        }
-
-        .actions-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--blue);
-            margin-bottom: 12px;
-        }
-
-        .action-step {
-            display: flex;
-            gap: 12px;
-            padding: 8px 0;
-        }
-
-        .action-num {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: rgba(96,165,250,0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--blue);
-            flex-shrink: 0;
-            margin-top: 1px;
-        }
-
-        .action-text {
-            font-size: 14px;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .action-text strong {
-            color: var(--text-primary);
-        }
-
-        .action-text code {
-            background: rgba(129,140,248,0.12);
-            color: var(--accent-bright);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-        }
-
-        /* ===== KEY POINTS ===== */
-        .key-points {
-            background: linear-gradient(135deg, rgba(168,85,247,0.06), rgba(168,85,247,0.02));
-            border: 1px solid rgba(168,85,247,0.15);
-            border-left: 4px solid #a855f7;
-            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-            padding: 20px 24px;
-        }
-
-        .key-points-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: #a855f7;
-            margin-bottom: 12px;
-        }
-
-        .key-point {
-            display: flex;
-            gap: 10px;
-            padding: 5px 0;
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .key-point::before {
-            content: '✦';
-            color: #a855f7;
-            flex-shrink: 0;
-        }
-
-        /* ===== URL REFERENCE TABLE ===== */
-        .url-table-wrap {
-            margin-bottom: 48px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow: hidden;
-        }
-
-        .url-table-header {
-            padding: 24px 32px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .url-table-title {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .url-table-subtitle {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        thead {
-            background: var(--bg-secondary);
-        }
-
-        th {
-            text-align: left;
-            padding: 12px 24px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--border);
-        }
-
-        td {
-            padding: 12px 24px;
-            font-size: 14px;
-            border-bottom: 1px solid rgba(99,102,241,0.06);
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover td {
-            background: var(--bg-accent);
-        }
-
-        td:first-child {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        td:last-child {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: var(--accent);
-        }
-
-        /* ===== TIPS SECTION ===== */
-        .tips {
-            margin-bottom: 48px;
-            background: linear-gradient(135deg, rgba(52,211,153,0.06), rgba(52,211,153,0.02));
-            border: 1px solid rgba(52,211,153,0.2);
-            border-radius: var(--radius);
-            padding: 32px;
-        }
-
-        .tips-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--green);
-            margin-bottom: 20px;
-        }
-
-        .tips-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 16px;
-        }
-
-        .tip-card {
-            background: rgba(0,0,0,0.2);
-            border-radius: var(--radius-sm);
-            padding: 20px;
-        }
-
-        .tip-icon {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .tip-text {
-            font-size: 14px;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .tip-text strong {
-            color: var(--text-primary);
-        }
-
-        /* ===== CLOSING CARD ===== */
-        .closing {
-            margin-bottom: 48px;
-            background: linear-gradient(135deg, rgba(244,114,182,0.06), rgba(244,114,182,0.02));
-            border: 1px solid rgba(244,114,182,0.2);
-            border-radius: var(--radius);
-            padding: 32px;
-        }
-
-        .closing-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--pink);
-            margin-bottom: 6px;
-        }
-
-        .closing-subtitle {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 24px;
-        }
-
-        .summary-grid {
-            display: grid;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-
-        .summary-item {
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
-            padding: 10px 16px;
-            background: rgba(0,0,0,0.2);
-            border-radius: var(--radius-xs);
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .summary-item .check {
-            color: var(--green);
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-
-        .closing-narration {
-            background: rgba(0,0,0,0.2);
-            border-radius: var(--radius-sm);
-            padding: 20px 24px;
-            border-left: 4px solid var(--pink);
-        }
-
-        .closing-narration p {
-            font-size: 15px;
-            color: var(--text-secondary);
-            font-style: italic;
-            line-height: 1.8;
-        }
-
-        /* ===== FOOTER ===== */
-        .footer {
-            text-align: center;
-            padding: 40px;
-            border-top: 1px solid var(--border);
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-
-        /* ===== PRINT STYLES ===== */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg-primary); color:var(--text-primary); line-height:1.7; }
+
+        /* FABs */
+        .fab-container { position:fixed; bottom:32px; right:32px; display:flex; flex-direction:column; gap:12px; z-index:1000; }
+        .fab { width:56px; height:56px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 8px 32px rgba(0,0,0,0.4); transition:all .3s; }
+        .fab:hover { transform:translateY(-3px) scale(1.05); }
+        .fab-pdf { background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; }
+        .fab-top { background:linear-gradient(135deg,var(--accent),#6366f1); color:#fff; }
+        .fab-label { position:absolute; right:68px; background:var(--bg-card); color:var(--text-primary); padding:6px 14px; border-radius:var(--radius-xs); font-size:13px; font-weight:500; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .2s; border:1px solid var(--border); }
+        .fab:hover .fab-label { opacity:1; }
+
+        /* Hero */
+        .hero { background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%); border-bottom:1px solid var(--border); padding:60px 0 50px; position:relative; overflow:hidden; }
+        .hero::before { content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:radial-gradient(circle at 30% 50%,rgba(99,102,241,0.06) 0%,transparent 50%),radial-gradient(circle at 70% 50%,rgba(168,85,247,0.04) 0%,transparent 50%); animation:float 20s infinite ease-in-out; }
+        @keyframes float { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-20px,-10px)} }
+        .hero-content { max-width:1000px; margin:0 auto; padding:0 40px; position:relative; z-index:1; }
+        .hero-badge { display:inline-flex; align-items:center; gap:8px; background:var(--bg-accent); border:1px solid var(--border); border-radius:50px; padding:6px 18px; font-size:13px; font-weight:500; color:var(--accent-bright); margin-bottom:24px; }
+        .hero h1 { font-size:44px; font-weight:800; letter-spacing:-1.5px; line-height:1.15; margin-bottom:16px; background:linear-gradient(135deg,#f1f5f9,var(--accent-bright)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .hero-subtitle { font-size:18px; color:var(--text-secondary); max-width:650px; line-height:1.6; }
+        .hero-meta { display:flex; gap:28px; margin-top:28px; flex-wrap:wrap; }
+        .hero-meta-item { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text-muted); }
+        .hero-meta-item strong { color:var(--text-secondary); }
+
+        /* TOC */
+        .toc { max-width:1000px; margin:0 auto; padding:40px 40px 0; }
+        .toc-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:32px; }
+        .toc-title { font-size:16px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--accent); margin-bottom:20px; }
+        .toc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:6px; }
+        .toc-item { display:flex; align-items:center; gap:10px; padding:8px 14px; border-radius:var(--radius-sm); text-decoration:none; color:var(--text-secondary); font-size:13px; font-weight:500; transition:all .2s; }
+        .toc-item:hover { background:var(--bg-accent); color:var(--accent-bright); }
+        .toc-num { width:26px; height:26px; border-radius:50%; background:var(--bg-accent); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--accent); flex-shrink:0; }
+
+        /* Checklist */
+        .checklist { max-width:1000px; margin:0 auto; padding:40px 40px 0; }
+        .checklist-card { background:linear-gradient(135deg,rgba(251,146,60,0.06),rgba(251,146,60,0.02)); border:1px solid rgba(251,146,60,0.2); border-radius:var(--radius); padding:32px; }
+        .checklist-title { font-size:20px; font-weight:700; color:var(--orange); margin-bottom:6px; }
+        .checklist-subtitle { font-size:14px; color:var(--text-muted); margin-bottom:20px; }
+        .checklist-items { display:grid; gap:10px; }
+        .checklist-item { display:flex; align-items:center; gap:12px; padding:10px 16px; background:rgba(0,0,0,0.2); border-radius:var(--radius-xs); cursor:pointer; transition:all .2s; user-select:none; }
+        .checklist-item:hover { background:rgba(0,0,0,0.3); }
+        .checklist-item input[type="checkbox"] { width:18px; height:18px; accent-color:var(--orange); cursor:pointer; }
+        .checklist-item label { font-size:14px; color:var(--text-secondary); cursor:pointer; flex:1; }
+        .checklist-item input:checked+label { text-decoration:line-through; color:var(--text-muted); }
+
+        /* Content */
+        .content { max-width:1000px; margin:0 auto; padding:40px; }
+
+        /* Section */
+        .section { margin-bottom:48px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:border-color .3s; }
+        .section:hover { border-color:var(--border-strong); }
+        .section-header { padding:28px 32px 24px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:16px; }
+        .section-icon { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+        .section-header-text { flex:1; }
+        .section-number { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); margin-bottom:4px; }
+        .section-title { font-size:24px; font-weight:700; }
+        .section-subtitle { font-size:14px; color:var(--text-muted); }
+        .section-time { display:flex; align-items:center; gap:6px; padding:6px 14px; background:var(--bg-accent); border:1px solid var(--border); border-radius:50px; font-size:13px; font-weight:600; color:var(--accent); white-space:nowrap; flex-shrink:0; margin-top:4px; }
+        .section-body { padding:28px 32px; }
+
+        /* Sub-section */
+        .subsection { margin-top:32px; padding-top:28px; border-top:1px solid var(--border); }
+        .subsection:first-child { margin-top:0; padding-top:0; border-top:none; }
+        .subsection-title { font-size:18px; font-weight:700; color:var(--accent-bright); margin-bottom:4px; display:flex; align-items:center; gap:10px; }
+        .subsection-url { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-muted); margin-bottom:16px; }
+
+        /* Screenshot */
+        .screenshot-wrap { margin-bottom:20px; border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border); }
+        .screenshot-wrap img { width:100%; display:block; }
+        .screenshot-caption { background:var(--bg-secondary); padding:8px 16px; font-size:12px; color:var(--text-muted); text-align:center; border-top:1px solid var(--border); }
+
+        /* Narration */
+        .narration { background:linear-gradient(135deg,rgba(52,211,153,0.06),rgba(52,211,153,0.02)); border:1px solid rgba(52,211,153,0.15); border-left:4px solid var(--green); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:16px 20px; margin-bottom:16px; }
+        .narration-label { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--green); margin-bottom:8px; }
+        .narration p { font-size:14px; color:var(--text-secondary); line-height:1.7; font-style:italic; }
+        .narration p+p { margin-top:8px; }
+
+        /* Actions */
+        .actions { background:linear-gradient(135deg,rgba(96,165,250,0.06),rgba(96,165,250,0.02)); border:1px solid rgba(96,165,250,0.15); border-left:4px solid var(--blue); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:16px 20px; margin-bottom:16px; }
+        .actions-label { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--blue); margin-bottom:10px; }
+        .action-step { display:flex; gap:10px; padding:6px 0; }
+        .action-num { width:22px; height:22px; border-radius:50%; background:rgba(96,165,250,0.15); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--blue); flex-shrink:0; margin-top:2px; }
+        .action-text { font-size:13px; color:var(--text-secondary); line-height:1.6; }
+        .action-text strong { color:var(--text-primary); }
+        .action-text code { background:rgba(129,140,248,0.12); color:var(--accent-bright); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:12px; }
+
+        /* Key Points */
+        .key-points { background:linear-gradient(135deg,rgba(168,85,247,0.06),rgba(168,85,247,0.02)); border:1px solid rgba(168,85,247,0.15); border-left:4px solid #a855f7; border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:16px 20px; }
+        .key-points-label { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#a855f7; margin-bottom:10px; }
+        .key-point { display:flex; gap:8px; padding:4px 0; font-size:13px; color:var(--text-secondary); }
+        .key-point::before { content:'✦'; color:#a855f7; flex-shrink:0; }
+
+        /* URL Table */
+        .url-table-wrap { margin-bottom:48px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+        .url-table-header { padding:24px 32px; border-bottom:1px solid var(--border); }
+        .url-table-title { font-size:20px; font-weight:700; }
+        .url-table-subtitle { font-size:14px; color:var(--text-muted); margin-top:4px; }
+        table { width:100%; border-collapse:collapse; }
+        thead { background:var(--bg-secondary); }
+        th { text-align:left; padding:12px 24px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); border-bottom:1px solid var(--border); }
+        td { padding:10px 24px; font-size:13px; border-bottom:1px solid rgba(99,102,241,0.06); }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:var(--bg-accent); }
+        td:first-child { font-weight:600; color:var(--text-primary); }
+        td:last-child { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent); }
+
+        /* Tips */
+        .tips { margin-bottom:48px; background:linear-gradient(135deg,rgba(52,211,153,0.06),rgba(52,211,153,0.02)); border:1px solid rgba(52,211,153,0.2); border-radius:var(--radius); padding:32px; }
+        .tips-title { font-size:20px; font-weight:700; color:var(--green); margin-bottom:20px; }
+        .tips-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+        .tip-card { background:rgba(0,0,0,0.2); border-radius:var(--radius-sm); padding:20px; }
+        .tip-icon { font-size:24px; margin-bottom:10px; }
+        .tip-text { font-size:13px; color:var(--text-secondary); line-height:1.6; }
+        .tip-text strong { color:var(--text-primary); }
+
+        /* Closing */
+        .closing { margin-bottom:48px; background:linear-gradient(135deg,rgba(244,114,182,0.06),rgba(244,114,182,0.02)); border:1px solid rgba(244,114,182,0.2); border-radius:var(--radius); padding:32px; }
+        .closing-title { font-size:20px; font-weight:700; color:var(--pink); margin-bottom:6px; }
+        .closing-subtitle { font-size:14px; color:var(--text-muted); margin-bottom:24px; }
+        .summary-grid { display:grid; gap:8px; margin-bottom:24px; }
+        .summary-item { display:flex; gap:12px; align-items:flex-start; padding:10px 16px; background:rgba(0,0,0,0.2); border-radius:var(--radius-xs); font-size:13px; color:var(--text-secondary); }
+        .summary-item .check { color:var(--green); font-size:16px; flex-shrink:0; }
+        .closing-narration { background:rgba(0,0,0,0.2); border-radius:var(--radius-sm); padding:20px 24px; border-left:4px solid var(--pink); }
+        .closing-narration p { font-size:14px; color:var(--text-secondary); font-style:italic; line-height:1.8; }
+
+        /* Footer */
+        .footer { text-align:center; padding:40px; border-top:1px solid var(--border); color:var(--text-muted); font-size:13px; }
+
+        /* Print */
         @media print {
-            :root {
-                --bg-primary: #fff;
-                --bg-secondary: #f8fafc;
-                --bg-card: #fff;
-                --border: #e2e8f0;
-                --border-strong: #cbd5e1;
-                --text-primary: #0f172a;
-                --text-secondary: #334155;
-                --text-muted: #64748b;
-                --accent: #4f46e5;
-                --accent-bright: #4338ca;
-                --bg-accent: #f1f5f9;
-            }
-
-            body {
-                background: #fff;
-                color: #0f172a;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            .fab-container { display: none !important; }
-
-            .hero {
-                background: #f8fafc !important;
-                padding: 30px 0;
-                border-bottom: 2px solid #e2e8f0;
-            }
-
-            .hero::before { display: none; }
-
-            .hero h1 {
-                background: none;
-                -webkit-text-fill-color: #0f172a;
-                font-size: 32px;
-            }
-
-            .section {
-                break-inside: avoid;
-                page-break-inside: avoid;
-                border: 1px solid #e2e8f0;
-                margin-bottom: 24px;
-            }
-
-            .section-header {
-                background: #f8fafc !important;
-            }
-
-            .screenshot-wrap {
-                border: 1px solid #e2e8f0;
-            }
-
-            .narration {
-                background: #f0fdf4 !important;
-                border-color: #86efac !important;
-                border-left-color: #22c55e !important;
-            }
-
-            .narration p { color: #166534 !important; }
-
-            .actions {
-                background: #eff6ff !important;
-                border-color: #93c5fd !important;
-                border-left-color: #3b82f6 !important;
-            }
-
-            .key-points {
-                background: #faf5ff !important;
-                border-color: #d8b4fe !important;
-                border-left-color: #a855f7 !important;
-            }
-
-            .tips {
-                background: #f0fdf4 !important;
-                border-color: #86efac !important;
-            }
-
-            .closing {
-                background: #fdf2f8 !important;
-                border-color: #f9a8d4 !important;
-            }
-
-            .checklist-card {
-                background: #fff7ed !important;
-                border-color: #fed7aa !important;
-            }
-
-            .toc-card {
-                background: #f8fafc !important;
-            }
-
-            a { color: var(--accent); }
+            :root { --bg-primary:#fff; --bg-secondary:#f8fafc; --bg-card:#fff; --border:#e2e8f0; --text-primary:#0f172a; --text-secondary:#334155; --text-muted:#64748b; --accent:#4f46e5; --accent-bright:#4338ca; --bg-accent:#f1f5f9; }
+            body { background:#fff; color:#0f172a; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            .fab-container { display:none !important; }
+            .hero { background:#f8fafc !important; padding:30px 0; }
+            .hero::before { display:none; }
+            .hero h1 { background:none; -webkit-text-fill-color:#0f172a; font-size:28px; }
+            .section { break-inside:avoid; page-break-inside:avoid; border:1px solid #e2e8f0; margin-bottom:20px; }
+            .narration { background:#f0fdf4 !important; border-color:#86efac !important; border-left-color:#22c55e !important; }
+            .narration p { color:#166534 !important; }
+            .actions { background:#eff6ff !important; border-color:#93c5fd !important; border-left-color:#3b82f6 !important; }
+            .key-points { background:#faf5ff !important; border-color:#d8b4fe !important; border-left-color:#a855f7 !important; }
         }
-
-        @page {
-            margin: 1.5cm;
-            size: A4;
-        }
+        @page { margin:1.5cm; size:A4; }
     </style>
 </head>
 <body>
 
-    <!-- FLOATING ACTION BUTTONS -->
-    <div class="fab-container" id="fabs">
-        <button class="fab fab-pdf" onclick="downloadPDF()" title="Download as PDF">
-            <span class="fab-label">Download PDF</span>
-            📄
-        </button>
-        <button class="fab fab-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">
-            <span class="fab-label">Back to Top</span>
-            ↑
-        </button>
-    </div>
+<div class="fab-container" id="fabs">
+    <button class="fab fab-pdf" onclick="downloadPDF()" title="Download PDF"><span class="fab-label">Download PDF</span>📄</button>
+    <button class="fab fab-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to Top"><span class="fab-label">Back to Top</span>↑</button>
+</div>
 
-    <!-- HERO -->
-    <header class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">📋 Live Demo Script — Presenter Guide</div>
-            <h1>Feature Gen Care<br>Live Demo Script</h1>
-            <p class="hero-subtitle">Complete word-for-word narration guide with click-by-click instructions for presenting the platform to clients via Zoom / Google Meet.</p>
-            <div class="hero-meta">
-                <div class="hero-meta-item"><span>🌐</span> <strong>democlinic.featuregen.com</strong></div>
-                <div class="hero-meta-item"><span>⏱️</span> <strong>25–30 min</strong> total</div>
-                <div class="hero-meta-item"><span>🔑</span> admin / admin123</div>
-                <div class="hero-meta-item"><span>📦</span> <strong>17 modules</strong></div>
-            </div>
-        </div>
-    </header>
-
-    <!-- TABLE OF CONTENTS -->
-    <div class="toc">
-        <div class="toc-card">
-            <div class="toc-title">Table of Contents</div>
-            <div class="toc-grid">
-                <a href="#part1" class="toc-item"><div class="toc-num">1</div> Opening & Login</a>
-                <a href="#part2" class="toc-item"><div class="toc-num">2</div> Dashboard Overview</a>
-                <a href="#part3" class="toc-item"><div class="toc-num">3</div> Patient Management</a>
-                <a href="#part4" class="toc-item"><div class="toc-num">4</div> Appointments</a>
-                <a href="#part5" class="toc-item"><div class="toc-num">5</div> Prescriptions</a>
-                <a href="#part6" class="toc-item"><div class="toc-num">6</div> Billing & Invoicing</a>
-                <a href="#part7" class="toc-item"><div class="toc-num">7</div> Doctors & Staff</a>
-                <a href="#part8" class="toc-item"><div class="toc-num">8</div> Specialty Modules</a>
-                <a href="#part9" class="toc-item"><div class="toc-num">9</div> Admin Panel & Settings</a>
-                <a href="#part10" class="toc-item"><div class="toc-num">10</div> Communication & Templates</a>
-                <a href="#part11" class="toc-item"><div class="toc-num">11</div> Closing & Q&A</a>
-                <a href="#urls" class="toc-item"><div class="toc-num">📌</div> Quick URL Reference</a>
-            </div>
+<!-- HERO -->
+<header class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">📋 Complete Demo Script — All Menus & Sub-Pages</div>
+        <h1>Feature Gen Care<br>Live Demo Script</h1>
+        <p class="hero-subtitle">End-to-end narration guide with screenshots for every menu item. Covers all 29 pages across 17 modules.</p>
+        <div class="hero-meta">
+            <div class="hero-meta-item"><span>🌐</span> <strong>democlinic.featuregen.com</strong></div>
+            <div class="hero-meta-item"><span>⏱️</span> <strong>25–30 min</strong></div>
+            <div class="hero-meta-item"><span>🔑</span> admin / admin123</div>
+            <div class="hero-meta-item"><span>📸</span> <strong>29 screenshots</strong></div>
         </div>
     </div>
+</header>
 
-    <!-- PRE-DEMO CHECKLIST -->
-    <div class="checklist">
-        <div class="checklist-card">
-            <div class="checklist-title">⚡ Pre-Demo Checklist</div>
-            <div class="checklist-subtitle">Complete these steps 10 minutes before the call</div>
-            <div class="checklist-items">
-                <div class="checklist-item" onclick="this.querySelector('input').click()">
-                    <input type="checkbox" id="ck1"><label for="ck1">Open Chrome/Edge browser and clear cache if needed</label>
-                </div>
-                <div class="checklist-item" onclick="this.querySelector('input').click()">
-                    <input type="checkbox" id="ck2"><label for="ck2">Navigate to <strong>democlinic.featuregen.com</strong> — do NOT log in yet</label>
-                </div>
-                <div class="checklist-item" onclick="this.querySelector('input').click()">
-                    <input type="checkbox" id="ck3"><label for="ck3">Close all other browser tabs (keep it clean)</label>
-                </div>
-                <div class="checklist-item" onclick="this.querySelector('input').click()">
-                    <input type="checkbox" id="ck4"><label for="ck4">Set browser to full screen (F11 or ⌘+Shift+F)</label>
-                </div>
-                <div class="checklist-item" onclick="this.querySelector('input').click()">
-                    <input type="checkbox" id="ck5"><label for="ck5">Enable Do Not Disturb — disable all notifications</label>
-                </div>
-                <div class="checklist-item" onclick="this.querySelector('input').click()">
-                    <input type="checkbox" id="ck6"><label for="ck6">Test microphone and screen sharing</label>
-                </div>
-                <div class="checklist-item" onclick="this.querySelector('input').click()">
-                    <input type="checkbox" id="ck7"><label for="ck7">Have this script open on a second screen or printed</label>
-                </div>
-            </div>
+<!-- TOC -->
+<div class="toc">
+    <div class="toc-card">
+        <div class="toc-title">Table of Contents — All Menus</div>
+        <div class="toc-grid">
+            <a href="#login" class="toc-item"><div class="toc-num">0</div>Login Page</a>
+            <a href="#dashboard" class="toc-item"><div class="toc-num">1</div>Dashboard</a>
+            <a href="#patients" class="toc-item"><div class="toc-num">2</div>Patients (List + Add)</a>
+            <a href="#appointments" class="toc-item"><div class="toc-num">3</div>Appointments (List + Book)</a>
+            <a href="#prescriptions" class="toc-item"><div class="toc-num">4</div>Prescriptions (List + Create)</a>
+            <a href="#templates" class="toc-item"><div class="toc-num">5</div>Templates (List + Add)</a>
+            <a href="#dental" class="toc-item"><div class="toc-num">6</div>Dental Chart</a>
+            <a href="#vaccination" class="toc-item"><div class="toc-num">7</div>Vaccination (Schedule + Master)</a>
+            <a href="#calculators" class="toc-item"><div class="toc-num">8</div>Medical Calculators</a>
+            <a href="#billing" class="toc-item"><div class="toc-num">9</div>Billing (List + Create)</a>
+            <a href="#reports" class="toc-item"><div class="toc-num">10</div>Reports</a>
+            <a href="#doctors" class="toc-item"><div class="toc-num">11</div>Doctors (List + Add)</a>
+            <a href="#staff" class="toc-item"><div class="toc-num">12</div>Staff (List + Add)</a>
+            <a href="#communication" class="toc-item"><div class="toc-num">13</div>Messages + Logs</a>
+            <a href="#masterdata" class="toc-item"><div class="toc-num">14</div>Master Data</a>
+            <a href="#settings" class="toc-item"><div class="toc-num">15</div>Clinic Settings + Branches</a>
+            <a href="#roles" class="toc-item"><div class="toc-num">16</div>Roles + Users</a>
+            <a href="#subscription" class="toc-item"><div class="toc-num">17</div>Plan & Upgrades</a>
+            <a href="#closing" class="toc-item"><div class="toc-num">🎯</div>Closing & Q&A</a>
         </div>
     </div>
+</div>
 
-    <!-- MAIN CONTENT -->
-    <div class="content">
-
-        <!-- PART 1: LOGIN -->
-        <div class="section" id="part1">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--green-bg); color: var(--green);">🔐</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 1</div>
-                    <div class="section-title">Opening & Login</div>
-                    <div class="section-subtitle">Introduction and secure authentication walkthrough</div>
-                </div>
-                <div class="section-time">⏱️ 3 min</div>
-            </div>
-            <div class="section-body">
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Thank you for joining today. I'm excited to walk you through <strong>Feature Gen Care</strong> — our comprehensive, cloud-based clinic management platform designed specifically for multi-specialty clinics."</p>
-                    <p>"What you're seeing is the live production environment. Let me log in and show you everything the platform can do."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text">You should be on the <strong>login page</strong> — Point out the split-screen design with floating medical icons</div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text">Say: <em>"Notice the clean, modern login interface with animated medical icons — this sets the professional tone for your clinic staff."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text">Type <code>admin</code> in the username field</div></div>
-                    <div class="action-step"><div class="action-num">4</div><div class="action-text">Type <code>admin123</code> in the password field</div></div>
-                    <div class="action-step"><div class="action-num">5</div><div class="action-text">Say: <em>"The system uses bcrypt password hashing and locks accounts after 5 failed attempts to prevent unauthorized access."</em></div></div>
-                    <div class="action-step"><div class="action-num">6</div><div class="action-text"><strong>Click "Sign In"</strong> and wait for dashboard to load</div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">Bcrypt password hashing with cost factor 12</div>
-                    <div class="key-point">Account lockout after 5 failed attempts (15-min cooldown)</div>
-                    <div class="key-point">Session auto-expiry after 1 hour of inactivity</div>
-                </div>
-            </div>
+<!-- CHECKLIST -->
+<div class="checklist">
+    <div class="checklist-card">
+        <div class="checklist-title">⚡ Pre-Demo Checklist</div>
+        <div class="checklist-subtitle">Complete 10 minutes before the call</div>
+        <div class="checklist-items">
+            <div class="checklist-item"><input type="checkbox" id="c1"><label for="c1">Open Chrome — navigate to <strong>democlinic.featuregen.com</strong> — do NOT log in</label></div>
+            <div class="checklist-item"><input type="checkbox" id="c2"><label for="c2">Close all other tabs, enable Do Not Disturb</label></div>
+            <div class="checklist-item"><input type="checkbox" id="c3"><label for="c3">Set browser to full screen (⌘+Shift+F)</label></div>
+            <div class="checklist-item"><input type="checkbox" id="c4"><label for="c4">Test mic + screen sharing</label></div>
+            <div class="checklist-item"><input type="checkbox" id="c5"><label for="c5">Have this script on second screen or printed</label></div>
         </div>
-
-        <!-- PART 2: DASHBOARD -->
-        <div class="section" id="part2">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--blue-bg); color: var(--blue);">📊</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 2</div>
-                    <div class="section-title">Dashboard Overview</div>
-                    <div class="section-subtitle">Real-time analytics and clinic command center</div>
-                </div>
-                <div class="section-time">⏱️ 3 min</div>
-            </div>
-            <div class="section-body">
-                <div class="screenshot-wrap">
-                    <img src="demo-assets/dashboard.png" alt="Dashboard — Real-time analytics">
-                    <div class="screenshot-caption">Dashboard — Real-time KPIs, revenue charts, and appointment analytics</div>
-                </div>
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"This is the main dashboard — the command center of your clinic. Let me walk you through what you see here."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Point to the top stat cards</strong> and say: <em>"At the top, you have real-time KPIs — Today's Appointments, Total Patients, Today's Revenue, and Outstanding Dues. These update automatically as your staff works."</em></div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text"><strong>Scroll down slowly</strong> and say: <em>"Below, you have visual charts — monthly revenue trends and appointment analytics. This helps clinic owners track performance at a glance."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Point to the sidebar</strong> and say: <em>"On the left, you have the full navigation menu organized by function — Patients, Appointments, Billing, Doctors, and more. Let's go through each one."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">Dashboard is role-based — doctors see their appointments, admins see everything</div>
-                    <div class="key-point">All data is real-time — no manual refreshing needed</div>
-                    <div class="key-point">Charts are interactive and cover revenue, appointments, and performance</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 3: PATIENTS -->
-        <div class="section" id="part3">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--pink-bg); color: var(--pink);">👥</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 3</div>
-                    <div class="section-title">Patient Management</div>
-                    <div class="section-subtitle">Complete patient lifecycle — registration, profiles, and directory</div>
-                </div>
-                <div class="section-time">⏱️ 4 min</div>
-            </div>
-            <div class="section-body">
-                <div class="screenshot-wrap">
-                    <img src="demo-assets/patients.png" alt="Patient Management">
-                    <div class="screenshot-caption">Patient list with search, filters, and quick-access profile cards</div>
-                </div>
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Let's start with the core of any clinic — Patient Management."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click "Patients"</strong> in the sidebar → Patient List opens</div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text">Say: <em>"Here's your complete patient directory. You can search by name, phone number, or patient ID. The list shows key info at a glance — name, age, gender, last visit date, and contact."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Use the search bar</strong> — type a name if patients exist. Say: <em>"Search is AJAX-powered — results appear as you type, no page reload."</em></div></div>
-                    <div class="action-step"><div class="action-num">4</div><div class="action-text"><strong>Click "Add Patient"</strong> button and scroll through the form</div></div>
-                    <div class="action-step"><div class="action-num">5</div><div class="action-text">Say: <em>"The registration form captures everything — personal demographics, blood group, allergies, known medical conditions, emergency contacts. All of this feeds into the patient's permanent digital health record."</em></div></div>
-                    <div class="action-step"><div class="action-num">6</div><div class="action-text"><strong>Click on any patient row</strong> to open their profile</div></div>
-                    <div class="action-step"><div class="action-num">7</div><div class="action-text">Say: <em>"Each patient has a complete profile page showing their visit history, prescriptions, invoices, and medical timeline — all in one place."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">No duplicate patients — system checks phone/email</div>
-                    <div class="key-point">Complete medical history tracking from day one</div>
-                    <div class="key-point">Quick lookup during walk-in visits</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 4: APPOINTMENTS -->
-        <div class="section" id="part4">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--orange-bg); color: var(--orange);">📅</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 4</div>
-                    <div class="section-title">Appointments</div>
-                    <div class="section-subtitle">Booking, scheduling, and real-time doctor availability</div>
-                </div>
-                <div class="section-time">⏱️ 3 min</div>
-            </div>
-            <div class="section-body">
-                <div class="screenshot-wrap">
-                    <img src="demo-assets/appointments.png" alt="Appointments">
-                    <div class="screenshot-caption">Appointment list with status tracking and booking interface</div>
-                </div>
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Next, let's look at Appointment Management — the daily workhorse of your reception desk."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click "Appointments"</strong> in sidebar → List view opens</div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text">Say: <em>"Here's today's appointment schedule. Each appointment shows the patient name, doctor, time slot, and current status. Statuses flow automatically — Scheduled, Confirmed, In Progress, and Completed."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Click "Add Appointment"</strong> and scroll through the form</div></div>
-                    <div class="action-step"><div class="action-num">4</div><div class="action-text">Say: <em>"Booking is simple — select the patient with auto-search, choose a doctor, pick the date and available time slot, and add any notes. The system shows doctor availability in real-time so you never double-book."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">Automated SMS/WhatsApp reminders sent to patients (configurable)</div>
-                    <div class="key-point">Conflict detection — prevents double booking</div>
-                    <div class="key-point">Receptionists manage appointments; doctors see only their own</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 5: PRESCRIPTIONS -->
-        <div class="section" id="part5">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--green-bg); color: var(--green);">💊</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 5</div>
-                    <div class="section-title">Prescriptions</div>
-                    <div class="section-subtitle">Smart prescription builder with templates and medicine database</div>
-                </div>
-                <div class="section-time">⏱️ 2 min</div>
-            </div>
-            <div class="section-body">
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Once a patient's appointment is complete, the doctor creates a prescription."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click "Prescriptions"</strong> in sidebar</div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text">Say: <em>"The prescription module shows all prescriptions with their status — Draft, Finalized, or Sent to patient."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Click "Add Prescription"</strong> and scroll through the form</div></div>
-                    <div class="action-step"><div class="action-num">4</div><div class="action-text">Say: <em>"Doctors can add medicines from the database with dosage, frequency, duration, and special instructions. They can also use pre-saved templates for common conditions to save time."</em></div></div>
-                    <div class="action-step"><div class="action-num">5</div><div class="action-text">Say: <em>"Once finalized, prescriptions can be printed or sent digitally to the patient's phone."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">Medicine database with auto-suggestions</div>
-                    <div class="key-point">Prescription templates for common conditions (saves 70% of doctor's time)</div>
-                    <div class="key-point">Print-ready format with clinic branding</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 6: BILLING -->
-        <div class="section" id="part6">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--orange-bg); color: var(--orange);">💰</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 6</div>
-                    <div class="section-title">Billing & Invoicing</div>
-                    <div class="section-subtitle">GST-compliant invoicing with multi-payment mode support</div>
-                </div>
-                <div class="section-time">⏱️ 3 min</div>
-            </div>
-            <div class="section-body">
-                <div class="screenshot-wrap">
-                    <img src="demo-assets/billing.png" alt="Billing & Invoicing">
-                    <div class="screenshot-caption">Invoice list with payment status tracking and GST breakdown</div>
-                </div>
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Now let's look at the financial side — Billing and Invoicing."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click "Billing"</strong> in sidebar</div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text">Say: <em>"The billing dashboard shows all invoices with payment status — Paid, Partial, Due, or Overdue. You can filter by date range, patient, or status."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Click "Create Invoice"</strong> and scroll through the form</div></div>
-                    <div class="action-step"><div class="action-num">4</div><div class="action-text">Say: <em>"Creating an invoice is straightforward — select the patient, add line items for consultations, procedures, medicines, or lab tests. The system automatically calculates GST, applies discounts, and shows the final amount."</em></div></div>
-                    <div class="action-step"><div class="action-num">5</div><div class="action-text">Say: <em>"We support all payment modes — Cash, Card, UPI, Bank Transfer, Insurance, and Online payments. Partial payments are tracked automatically."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">GST compliant with CGST/SGST breakdown</div>
-                    <div class="key-point">Partial payment tracking — system shows remaining balance</div>
-                    <div class="key-point">Invoice PDF generation for patient receipts</div>
-                    <div class="key-point">Outstanding dues dashboard for follow-up</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 7: DOCTORS & STAFF -->
-        <div class="section" id="part7">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--blue-bg); color: var(--blue);">🩺</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 7</div>
-                    <div class="section-title">Doctors & Staff Management</div>
-                    <div class="section-subtitle">Clinical team directory, schedules, and availability</div>
-                </div>
-                <div class="section-time">⏱️ 2 min</div>
-            </div>
-            <div class="section-body">
-                <div class="screenshot-wrap">
-                    <img src="demo-assets/doctors.png" alt="Doctors Management">
-                    <div class="screenshot-caption">Doctor directory with specializations and availability management</div>
-                </div>
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Let me show you how you manage your clinical team."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click "Doctors"</strong> in sidebar</div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text">Say: <em>"Here's your doctor directory with specializations, qualifications, and availability status. You can add new doctors with their schedule, consultation fees, and department."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Click "Add Doctor"</strong> and scroll through the form</div></div>
-                    <div class="action-step"><div class="action-num">4</div><div class="action-text"><strong>Click "Staff"</strong> in sidebar</div></div>
-                    <div class="action-step"><div class="action-num">5</div><div class="action-text">Say: <em>"Similarly, all non-clinical staff — receptionists, nurses, lab techs, accountants — are managed here with their roles and permissions."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">Each doctor has a configurable weekly schedule</div>
-                    <div class="key-point">Staff roles determine what modules they can access</div>
-                    <div class="key-point">Doctor availability feeds into the appointment booking system</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 8: SPECIALTY MODULES -->
-        <div class="section" id="part8">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--pink-bg); color: var(--pink);">🦷</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 8</div>
-                    <div class="section-title">Specialty Modules</div>
-                    <div class="section-subtitle">Dental charts, vaccination tracking, reports, and medical calculators</div>
-                </div>
-                <div class="section-time">⏱️ 3 min</div>
-            </div>
-            <div class="section-body">
-                <div class="screenshot-wrap">
-                    <img src="demo-assets/dental.png" alt="Dental Chart">
-                    <div class="screenshot-caption">Interactive dental chart with 32-tooth mapping and treatment tracking</div>
-                </div>
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Now let me show you what makes Feature Gen Care special — our specialty clinical modules."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click "Dental"</strong> → Say: <em>"For dental clinics, we have a fully interactive tooth chart — 32 teeth for adults, 20 for children. Click any tooth to record conditions, treatments, and track history over time."</em></div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text"><strong>Click "Vaccination"</strong> → Say: <em>"The vaccination module maintains a master database of all vaccines with recommended schedules. You can track patient-wise vaccination status and send automated reminders for due doses."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Click "Reports"</strong> → Say: <em>"Daily reports give you revenue breakdowns, appointment summaries, and performance metrics — essential for clinic owners to track business health."</em></div></div>
-                    <div class="action-step"><div class="action-num">4</div><div class="action-text"><strong>Click "Calculators"</strong> → Say: <em>"Built-in medical calculators — BMI, dosage calculations, and other clinical tools — right within the platform so doctors don't need external apps."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">Dental charting follows international tooth numbering</div>
-                    <div class="key-point">Vaccination reminders sent automatically via SMS</div>
-                    <div class="key-point">Reports can be filtered by date range and exported</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 9: ADMIN & SETTINGS -->
-        <div class="section" id="part9">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--orange-bg); color: var(--orange);">⚙️</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 9</div>
-                    <div class="section-title">Admin Panel & Settings</div>
-                    <div class="section-subtitle">Users, roles, permissions, master data, clinic settings, and branches</div>
-                </div>
-                <div class="section-time">⏱️ 4 min</div>
-            </div>
-            <div class="section-body">
-                <div class="screenshot-wrap">
-                    <img src="demo-assets/admin.png" alt="Admin Panel">
-                    <div class="screenshot-caption">Admin panel — User management with role-based access control</div>
-                </div>
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Let me take you behind the scenes to the admin panel — this is where you configure everything."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click Admin → Users</strong> — Say: <em>"Full user management — create accounts for your staff, assign roles, activate or deactivate users. Every user gets a unique login."</em></div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text"><strong>Click "Roles"</strong> — Say: <em>"We have 7 built-in roles — Super Admin, Admin, Doctor, Receptionist, Accountant, Nurse, and Lab Technician. Each role has default permissions, but you can customize access at the individual user level."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Click "Permissions"</strong> — Show the permission grid — Say: <em>"This granular permission matrix lets you control exactly which modules and actions each user can access."</em></div></div>
-                    <div class="action-step"><div class="action-num">4</div><div class="action-text"><strong>Click "Master Data"</strong> — Say: <em>"Master data manages your lookup values — departments, services, medicines, and other configurable data."</em></div></div>
-                </div>
-
-                <div class="screenshot-wrap" style="margin-top: 24px;">
-                    <img src="demo-assets/settings.png" alt="Clinic Settings">
-                    <div class="screenshot-caption">Clinic settings — Branding, working hours, and billing configuration</div>
-                </div>
-
-                <div class="actions" style="margin-top: 24px;">
-                    <div class="actions-label">👆 Continue With</div>
-                    <div class="action-step"><div class="action-num">5</div><div class="action-text"><strong>Click Clinic → Settings</strong> — Say: <em>"Clinic settings let you configure your branding — logo, clinic name, address, phone numbers — all of which appear on invoices and prescriptions. You also set working hours, billing parameters, and system defaults here."</em></div></div>
-                    <div class="action-step"><div class="action-num">6</div><div class="action-text"><strong>Click "Branches"</strong> — Say: <em>"For multi-location clinics, the branch management feature lets you manage multiple clinic branches from a single admin dashboard."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">7 built-in roles + custom per-user permission overrides</div>
-                    <div class="key-point">Master data is fully configurable — no coding needed</div>
-                    <div class="key-point">Multi-branch support for clinic chains</div>
-                    <div class="key-point">Complete audit trail for all administrative actions</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 10: COMMUNICATION -->
-        <div class="section" id="part10">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--green-bg); color: var(--green);">📨</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 10</div>
-                    <div class="section-title">Communication & Templates</div>
-                    <div class="section-subtitle">Automated messaging, delivery logs, and prescription templates</div>
-                </div>
-                <div class="section-time">⏱️ 2 min</div>
-            </div>
-            <div class="section-body">
-                <div class="screenshot-wrap">
-                    <img src="demo-assets/comms.png" alt="Communication Templates">
-                    <div class="screenshot-caption">Communication templates with dynamic variables and delivery tracking</div>
-                </div>
-                <div class="narration">
-                    <div class="narration-label">🎤 What to Say</div>
-                    <p>"Finally, let me show you the communication engine — this automates patient engagement."</p>
-                </div>
-                <div class="actions">
-                    <div class="actions-label">👆 What to Do</div>
-                    <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click Communication → Templates</strong> — Say: <em>"We have pre-configured SMS templates for every key event — appointment confirmation, reminders, bill notifications, payment receipts, and vaccination reminders. Each template uses dynamic variables like patient name, doctor name, and amount — so messages are personalized automatically."</em></div></div>
-                    <div class="action-step"><div class="action-num">2</div><div class="action-text"><strong>Click "Communication Logs"</strong> — Say: <em>"The delivery log tracks every message sent — you can see the status (Sent, Failed, Queued), recipient, and timestamp. This gives you full visibility into patient communication."</em></div></div>
-                    <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Click Templates → Prescription Templates</strong> — Say: <em>"Prescription templates allow doctors to save commonly used prescriptions as templates — so they can prescribe in seconds instead of typing everything from scratch."</em></div></div>
-                </div>
-                <div class="key-points">
-                    <div class="key-points-label">🔑 Key Points to Mention</div>
-                    <div class="key-point">6 pre-configured SMS templates covering all key events</div>
-                    <div class="key-point">Dynamic variables for personalized messaging</div>
-                    <div class="key-point">Complete delivery tracking with status dashboard</div>
-                    <div class="key-point">Supports SMS, Email, and WhatsApp channels</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PART 11: CLOSING -->
-        <div class="section" id="part11">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--pink-bg); color: var(--pink);">🎯</div>
-                <div class="section-header-text">
-                    <div class="section-number">Part 11</div>
-                    <div class="section-title">Closing & Q&A</div>
-                    <div class="section-subtitle">Summarize key benefits and open the floor for questions</div>
-                </div>
-                <div class="section-time">⏱️ 2 min</div>
-            </div>
-        </div>
-
-        <!-- CLOSING CARD -->
-        <div class="closing">
-            <div class="closing-title">🎯 Summary — What We Covered</div>
-            <div class="closing-subtitle">Read these points to wrap up the demo</div>
-            <div class="summary-grid">
-                <div class="summary-item"><span class="check">✅</span> <strong>Complete Patient Lifecycle</strong> — Registration to prescription to billing, all connected</div>
-                <div class="summary-item"><span class="check">✅</span> <strong>Smart Automation</strong> — SMS reminders, auto-calculations, template-based prescribing</div>
-                <div class="summary-item"><span class="check">✅</span> <strong>Enterprise Security</strong> — Role-based access, bcrypt hashing, brute-force protection, audit logs</div>
-                <div class="summary-item"><span class="check">✅</span> <strong>Multi-Tenancy</strong> — Each clinic gets its own isolated database and subdomain</div>
-                <div class="summary-item"><span class="check">✅</span> <strong>Specialty Support</strong> — Dental charts, vaccination tracking, medical calculators</div>
-                <div class="summary-item"><span class="check">✅</span> <strong>Financial Management</strong> — GST-compliant billing with multi-payment mode support</div>
-                <div class="summary-item"><span class="check">✅</span> <strong>Mobile App</strong> — Companion React Native app for on-the-go access</div>
-            </div>
-            <div class="closing-narration">
-                <div class="narration-label" style="color: var(--pink);">🎤 What to Say</div>
-                <p>"The platform is subscription-based with Trial, Monthly, Yearly, and Lifetime plans — all payments processed securely through Razorpay."</p>
-                <p>"I'm happy to answer any questions, dive deeper into any specific module, or discuss customization options for your clinic's needs."</p>
-            </div>
-        </div>
-
-        <!-- URL REFERENCE TABLE -->
-        <div class="url-table-wrap" id="urls">
-            <div class="url-table-header">
-                <div class="url-table-title">📌 Quick URL Reference</div>
-                <div class="url-table-subtitle">Use these URLs to jump directly to any module during Q&A</div>
-            </div>
-            <table>
-                <thead>
-                    <tr><th>Module</th><th>URL Path</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>📊 Dashboard</td><td>/modules/dashboard/index.php</td></tr>
-                    <tr><td>👥 Patient List</td><td>/modules/patients/list.php</td></tr>
-                    <tr><td>➕ Add Patient</td><td>/modules/patients/add.php</td></tr>
-                    <tr><td>📅 Appointments</td><td>/modules/appointments/list.php</td></tr>
-                    <tr><td>💊 Prescriptions</td><td>/modules/prescriptions/list.php</td></tr>
-                    <tr><td>💰 Billing</td><td>/modules/billing/list.php</td></tr>
-                    <tr><td>🩺 Doctors</td><td>/modules/doctors/list.php</td></tr>
-                    <tr><td>👨‍💼 Staff</td><td>/modules/staff/list.php</td></tr>
-                    <tr><td>🦷 Dental Chart</td><td>/modules/dental/chart.php</td></tr>
-                    <tr><td>💉 Vaccination Master</td><td>/modules/vaccination/master.php</td></tr>
-                    <tr><td>📊 Daily Reports</td><td>/modules/reports/daily.php</td></tr>
-                    <tr><td>🧮 Calculators</td><td>/modules/calculators/index.php</td></tr>
-                    <tr><td>👤 Admin Users</td><td>/modules/admin/users.php</td></tr>
-                    <tr><td>🔑 Roles</td><td>/modules/admin/roles.php</td></tr>
-                    <tr><td>🔒 Permissions</td><td>/modules/admin/permissions.php</td></tr>
-                    <tr><td>📦 Master Data</td><td>/modules/admin/master_data.php</td></tr>
-                    <tr><td>📨 Comm Templates</td><td>/modules/communication/templates.php</td></tr>
-                    <tr><td>📋 Comm Logs</td><td>/modules/communication/logs.php</td></tr>
-                    <tr><td>📝 Rx Templates</td><td>/modules/templates/list.php</td></tr>
-                    <tr><td>⚙️ Clinic Settings</td><td>/modules/clinic/settings.php</td></tr>
-                    <tr><td>🏥 Branches</td><td>/modules/clinic/branches.php</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- TIPS -->
-        <div class="tips">
-            <div class="tips-title">💡 Tips for a Great Demo</div>
-            <div class="tips-grid">
-                <div class="tip-card">
-                    <div class="tip-icon">🐢</div>
-                    <div class="tip-text"><strong>Go slow</strong> — Let each page load fully before speaking. Pause after key features so the client can absorb.</div>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">🗣️</div>
-                    <div class="tip-text"><strong>Use their language</strong> — Say "your receptionist" instead of "the user". Makes it personal and relatable.</div>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">❓</div>
-                    <div class="tip-text"><strong>Ask questions</strong> — "Does your clinic currently track vaccinations?" builds engagement and uncovers needs.</div>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">🛡️</div>
-                    <div class="tip-text"><strong>Handle errors gracefully</strong> — If a page loads slowly, say "The live server is demonstrating real-world performance."</div>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">🎯</div>
-                    <div class="tip-text"><strong>End strong</strong> — Always close with subscription options, pricing, and clear next steps for the client.</div>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">📱</div>
-                    <div class="tip-text"><strong>Mention the mobile app</strong> — Doctors love hearing they can check schedules and patient info from their phone.</div>
-                </div>
-            </div>
-        </div>
-
     </div>
+</div>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <p>Feature Gen Care — Live Demo Script • Confidential • For internal use only</p>
-        <p style="margin-top: 8px; opacity: 0.6;">Generated for client presentation • democlinic.featuregen.com</p>
-    </footer>
+<div class="content">
 
-    <script>
-        function downloadPDF() {
-            // Hide FABs during print
-            document.getElementById('fabs').style.display = 'none';
-            
-            // Trigger browser's print dialog (user can choose "Save as PDF")
-            window.print();
-            
-            // Restore FABs after print dialog
-            setTimeout(() => {
-                document.getElementById('fabs').style.display = 'flex';
-            }, 1000);
-        }
+<!-- ==================== SECTION 0: LOGIN ==================== -->
+<div class="section" id="login">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--green-bg);color:var(--green);">🔐</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 0</div>
+            <div class="section-title">Login Page</div>
+            <div class="section-subtitle">Secure authentication with brute-force protection</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection-url">📍 democlinic.featuregen.com</div>
+        <div class="screenshot-wrap"><img src="demo-assets/login.png" alt="Login Page"><div class="screenshot-caption">Split-screen login with animated medical icons</div></div>
+        <div class="narration"><div class="narration-label">🎤 Say</div><p>"Welcome! Let me walk you through Feature Gen Care — our cloud-based clinic management platform. This is the login page — notice the modern split-screen design with animated medical icons."</p></div>
+        <div class="actions"><div class="actions-label">👆 Do</div>
+            <div class="action-step"><div class="action-num">1</div><div class="action-text">Type <code>admin</code> in username, <code>admin123</code> in password</div></div>
+            <div class="action-step"><div class="action-num">2</div><div class="action-text">Say: <em>"bcrypt hashing, account locks after 5 failed attempts"</em></div></div>
+            <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Click Sign In</strong></div></div>
+        </div>
+    </div>
+</div>
 
-        // Smooth scroll for TOC links
-        document.querySelectorAll('.toc-item').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const target = document.querySelector(link.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
+<!-- ==================== SECTION 1: DASHBOARD ==================== -->
+<div class="section" id="dashboard">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--blue-bg);color:var(--blue);">📊</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 1 — Main</div>
+            <div class="section-title">Dashboard</div>
+            <div class="section-subtitle">Real-time analytics command center</div>
+        </div>
+        <div class="section-time">⏱️ 3 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection-url">📍 /modules/dashboard/index.php</div>
+        <div class="screenshot-wrap"><img src="demo-assets/dashboard.png" alt="Dashboard"><div class="screenshot-caption">Dashboard with real-time KPIs, revenue charts, and appointment analytics</div></div>
+        <div class="narration"><div class="narration-label">🎤 Say</div><p>"This is the command center. At the top — real-time KPIs: Today's Appointments, Total Patients, Revenue, Outstanding Dues. Below — monthly revenue trends and appointment charts."</p></div>
+        <div class="actions"><div class="actions-label">👆 Do</div>
+            <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Point to stat cards</strong> — explain each KPI</div></div>
+            <div class="action-step"><div class="action-num">2</div><div class="action-text"><strong>Scroll down</strong> to show charts and recent activity</div></div>
+            <div class="action-step"><div class="action-num">3</div><div class="action-text"><strong>Point to sidebar</strong> — overview the navigation structure</div></div>
+        </div>
+        <div class="key-points"><div class="key-points-label">🔑 Key Points</div>
+            <div class="key-point">Dashboard is role-based — doctors see their own data only</div>
+            <div class="key-point">All data is real-time, no refresh needed</div>
+        </div>
+    </div>
+</div>
 
-        // Interactive checklist - prevent double toggle
-        document.querySelectorAll('.checklist-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (e.target.tagName !== 'INPUT') {
-                    e.preventDefault();
-                    const cb = item.querySelector('input[type="checkbox"]');
-                    cb.checked = !cb.checked;
-                }
-            });
-        });
-    </script>
+<!-- ==================== SECTION 2: PATIENTS ==================== -->
+<div class="section" id="patients">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--pink-bg);color:var(--pink);">👥</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 2 — Patient Care</div>
+            <div class="section-title">Patients</div>
+            <div class="section-subtitle">Complete patient lifecycle management</div>
+        </div>
+        <div class="section-time">⏱️ 4 min</div>
+    </div>
+    <div class="section-body">
+        <!-- Patient List -->
+        <div class="subsection">
+            <div class="subsection-title">📋 Patient List</div>
+            <div class="subsection-url">📍 /modules/patients/list.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/patients_list.png" alt="Patient List"><div class="screenshot-caption">Patient directory with search, filters, and quick access</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Here's your complete patient directory. Search by name, phone, or ID. AJAX-powered — results appear as you type."</p></div>
+            <div class="actions"><div class="actions-label">👆 Do</div>
+                <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click Patients</strong> in sidebar</div></div>
+                <div class="action-step"><div class="action-num">2</div><div class="action-text">Try the <strong>search bar</strong> — type a name</div></div>
+            </div>
+        </div>
+        <!-- Add Patient -->
+        <div class="subsection">
+            <div class="subsection-title">➕ Add Patient</div>
+            <div class="subsection-url">📍 /modules/patients/add.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/patients_add.png" alt="Add Patient"><div class="screenshot-caption">Comprehensive registration form — demographics, medical history, allergies</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"The registration form captures everything — personal info, blood group, allergies, medical conditions, emergency contacts. All feeds into the patient's permanent digital health record."</p></div>
+            <div class="actions"><div class="actions-label">👆 Do</div>
+                <div class="action-step"><div class="action-num">1</div><div class="action-text"><strong>Click Add Patient</strong> button</div></div>
+                <div class="action-step"><div class="action-num">2</div><div class="action-text"><strong>Scroll through the form</strong> slowly — point out key fields</div></div>
+            </div>
+        </div>
+        <div class="key-points"><div class="key-points-label">🔑 Key Points</div>
+            <div class="key-point">Duplicate detection via phone/email</div>
+            <div class="key-point">Complete medical history from day one</div>
+            <div class="key-point">Each patient has a full profile with visits, prescriptions, invoices</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 3: APPOINTMENTS ==================== -->
+<div class="section" id="appointments">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--orange-bg);color:var(--orange);">📅</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 3 — Patient Care</div>
+            <div class="section-title">Appointments</div>
+            <div class="section-subtitle">Booking, scheduling, and real-time availability</div>
+        </div>
+        <div class="section-time">⏱️ 3 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">📋 Appointment List</div>
+            <div class="subsection-url">📍 /modules/appointments/list.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/appointments_list.png" alt="Appointment List"><div class="screenshot-caption">Appointment schedule with status tracking</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Today's appointment schedule — patient, doctor, time slot, status. Statuses flow: Scheduled → Confirmed → In Progress → Completed."</p></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">➕ Book Appointment</div>
+            <div class="subsection-url">📍 /modules/appointments/book.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/appointments_book.png" alt="Book Appointment"><div class="screenshot-caption">Appointment booking with doctor availability and time slots</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Booking is simple — select patient with auto-search, choose doctor, pick date and time slot. Doctor availability is shown in real-time — no double booking."</p></div>
+        </div>
+        <div class="key-points"><div class="key-points-label">🔑 Key Points</div>
+            <div class="key-point">Automated SMS/WhatsApp reminders</div>
+            <div class="key-point">Conflict detection prevents double booking</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 4: PRESCRIPTIONS ==================== -->
+<div class="section" id="prescriptions">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--green-bg);color:var(--green);">💊</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 4 — Patient Care</div>
+            <div class="section-title">Prescriptions</div>
+            <div class="section-subtitle">Smart prescription builder with medicine database</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">📋 Prescription List</div>
+            <div class="subsection-url">📍 /modules/prescriptions/list.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/prescriptions_list.png" alt="Prescriptions List"><div class="screenshot-caption">All prescriptions with Draft / Finalized / Sent status</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"All prescriptions with status tracking — Draft, Finalized, or Sent to patient."</p></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">➕ Create Prescription</div>
+            <div class="subsection-url">📍 /modules/prescriptions/create.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/prescriptions_create.png" alt="Create Prescription"><div class="screenshot-caption">Prescription builder with medicine auto-suggest, dosage, and instructions</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Doctors add medicines from the database with dosage, frequency, duration, and instructions. Templates save 70% of typing time. Print-ready output with clinic branding."</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 5: TEMPLATES ==================== -->
+<div class="section" id="templates">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--purple-bg);color:var(--purple);">📝</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 5 — Patient Care</div>
+            <div class="section-title">Prescription Templates</div>
+            <div class="section-subtitle">Pre-saved templates for common conditions</div>
+        </div>
+        <div class="section-time">⏱️ 1 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">📋 Template List</div>
+            <div class="subsection-url">📍 /modules/templates/list.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/templates_list.png" alt="Templates List"><div class="screenshot-caption">Saved prescription templates for quick re-use</div></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">➕ Add Template</div>
+            <div class="subsection-url">📍 /modules/templates/add.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/templates_add.png" alt="Add Template"><div class="screenshot-caption">Create reusable prescription template</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Doctors save commonly used prescriptions as templates — 'Common Cold', 'Post-Surgery Care' — prescribe in seconds."</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 6: DENTAL ==================== -->
+<div class="section" id="dental">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--pink-bg);color:var(--pink);">🦷</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 6 — Specialty</div>
+            <div class="section-title">Dental Chart</div>
+            <div class="section-subtitle">Interactive tooth chart with treatment tracking</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection-url">📍 /modules/dental/chart.php</div>
+        <div class="screenshot-wrap"><img src="demo-assets/dental_chart.png" alt="Dental Chart"><div class="screenshot-caption">Interactive 32-tooth chart with condition and treatment mapping</div></div>
+        <div class="narration"><div class="narration-label">🎤 Say</div><p>"For dental clinics — fully interactive tooth chart. 32 teeth for adults, 20 for children. Click any tooth to record conditions, track treatments over time."</p></div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 7: VACCINATION ==================== -->
+<div class="section" id="vaccination">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--blue-bg);color:var(--blue);">💉</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 7 — Specialty</div>
+            <div class="section-title">Vaccination</div>
+            <div class="section-subtitle">Vaccine database and patient schedule tracking</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">📅 Vaccination Schedule</div>
+            <div class="subsection-url">📍 /modules/vaccination/schedule.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/vaccination_schedule.png" alt="Vaccination Schedule"><div class="screenshot-caption">Patient-wise vaccination tracking with due date reminders</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Track patient-wise vaccination status and send automated reminders for due doses."</p></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">🧪 Vaccine Master</div>
+            <div class="subsection-url">📍 /modules/vaccination/master.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/vaccination_master.png" alt="Vaccine Master"><div class="screenshot-caption">Master database of all vaccines with schedules and dosing</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"The vaccine master maintains all vaccines with recommended schedules and dosing information."</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 8: CALCULATORS ==================== -->
+<div class="section" id="calculators">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--orange-bg);color:var(--orange);">🧮</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 8 — Specialty</div>
+            <div class="section-title">Medical Calculators</div>
+            <div class="section-subtitle">BMI, dosage, and clinical calculation tools</div>
+        </div>
+        <div class="section-time">⏱️ 1 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection-url">📍 /modules/calculators/index.php</div>
+        <div class="screenshot-wrap"><img src="demo-assets/calculators.png" alt="Medical Calculators"><div class="screenshot-caption">Built-in BMI, dosage, and clinical calculators</div></div>
+        <div class="narration"><div class="narration-label">🎤 Say</div><p>"Built-in medical calculators — BMI, dosage calculations, clinical tools — right within the platform."</p></div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 9: BILLING ==================== -->
+<div class="section" id="billing">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--green-bg);color:var(--green);">💰</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 9 — Finance</div>
+            <div class="section-title">Billing & Invoicing</div>
+            <div class="section-subtitle">GST-compliant invoicing with multi-payment support</div>
+        </div>
+        <div class="section-time">⏱️ 3 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">📋 Invoice List</div>
+            <div class="subsection-url">📍 /modules/billing/list.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/billing_list.png" alt="Billing List"><div class="screenshot-caption">Invoice dashboard with Paid / Partial / Due / Overdue status</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"All invoices with payment status — Paid, Partial, Due, Overdue. Filter by date, patient, or status."</p></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">➕ Create Invoice</div>
+            <div class="subsection-url">📍 /modules/billing/create.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/billing_create.png" alt="Create Invoice"><div class="screenshot-caption">Invoice creation with line items, GST, discounts, and payment modes</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Select patient, add line items — consultations, procedures, medicines. Auto-calculates GST, applies discounts. Supports Cash, Card, UPI, Bank Transfer, Insurance, Online."</p></div>
+        </div>
+        <div class="key-points"><div class="key-points-label">🔑 Key Points</div>
+            <div class="key-point">GST compliant with CGST/SGST breakdown</div>
+            <div class="key-point">Partial payment tracking</div>
+            <div class="key-point">PDF invoice generation</div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 10: REPORTS ==================== -->
+<div class="section" id="reports">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--purple-bg);color:var(--purple);">📊</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 10 — Finance</div>
+            <div class="section-title">Daily Reports</div>
+            <div class="section-subtitle">Revenue, appointments, and performance metrics</div>
+        </div>
+        <div class="section-time">⏱️ 1 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection-url">📍 /modules/reports/daily.php</div>
+        <div class="screenshot-wrap"><img src="demo-assets/reports_daily.png" alt="Daily Reports"><div class="screenshot-caption">Daily revenue breakdown, appointment summaries, and performance</div></div>
+        <div class="narration"><div class="narration-label">🎤 Say</div><p>"Daily reports — revenue breakdowns, appointment summaries, performance metrics. Essential for tracking business health."</p></div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 11: DOCTORS ==================== -->
+<div class="section" id="doctors">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--blue-bg);color:var(--blue);">🩺</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 11 — Management</div>
+            <div class="section-title">Doctors</div>
+            <div class="section-subtitle">Doctor directory, schedules, and availability</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">📋 Doctor List</div>
+            <div class="subsection-url">📍 /modules/doctors/list.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/doctors_list.png" alt="Doctor List"><div class="screenshot-caption">Doctor directory with specializations and availability</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Your doctor directory — specializations, qualifications, availability status."</p></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">➕ Add Doctor</div>
+            <div class="subsection-url">📍 /modules/doctors/add.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/doctors_add.png" alt="Add Doctor"><div class="screenshot-caption">Doctor registration with schedule, fees, and department</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Add new doctors with weekly schedule, consultation fees, and department. Availability feeds into appointment booking."</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 12: STAFF ==================== -->
+<div class="section" id="staff">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--orange-bg);color:var(--orange);">👨‍💼</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 12 — Management</div>
+            <div class="section-title">Staff</div>
+            <div class="section-subtitle">Non-clinical staff management</div>
+        </div>
+        <div class="section-time">⏱️ 1 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">📋 Staff List</div>
+            <div class="subsection-url">📍 /modules/staff/list.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/staff_list.png" alt="Staff List"><div class="screenshot-caption">Staff directory with roles and status</div></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">➕ Add Staff</div>
+            <div class="subsection-url">📍 /modules/staff/add.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/staff_add.png" alt="Add Staff"><div class="screenshot-caption">Staff registration form</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Receptionists, nurses, lab techs, accountants — all managed here with roles and access permissions."</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 13: COMMUNICATION ==================== -->
+<div class="section" id="communication">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--green-bg);color:var(--green);">📨</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 13 — Communication</div>
+            <div class="section-title">Messages & Logs</div>
+            <div class="section-subtitle">Automated SMS/Email templates and delivery tracking</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">📨 Message Templates</div>
+            <div class="subsection-url">📍 /modules/communication/templates.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/comm_templates.png" alt="Communication Templates"><div class="screenshot-caption">Pre-configured SMS templates with dynamic variables</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Pre-configured templates for appointment confirmation, reminders, bill notifications, payment receipts, vaccine reminders. Dynamic variables like {patient_name}, {doctor_name} personalize every message."</p></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">📋 Delivery Logs</div>
+            <div class="subsection-url">📍 /modules/communication/logs.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/comm_logs.png" alt="Communication Logs"><div class="screenshot-caption">Delivery tracking — Sent, Failed, Queued status</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Every message tracked — status (Sent, Failed, Queued), recipient, timestamp. Full visibility."</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 14: MASTER DATA ==================== -->
+<div class="section" id="masterdata">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--purple-bg);color:var(--purple);">📦</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 14 — Administration</div>
+            <div class="section-title">Master Data</div>
+            <div class="section-subtitle">Configurable lookup values — departments, services, medicines</div>
+        </div>
+        <div class="section-time">⏱️ 1 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection-url">📍 /modules/admin/master_data.php</div>
+        <div class="screenshot-wrap"><img src="demo-assets/master_data.png" alt="Master Data"><div class="screenshot-caption">Master data management — departments, services, medicines, lookups</div></div>
+        <div class="narration"><div class="narration-label">🎤 Say</div><p>"Master data manages your lookup values — departments, services, medicines, configurable data. No coding needed to customize."</p></div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 15: CLINIC SETTINGS & BRANCHES ==================== -->
+<div class="section" id="settings">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--orange-bg);color:var(--orange);">⚙️</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 15 — Administration</div>
+            <div class="section-title">Clinic Settings & Branches</div>
+            <div class="section-subtitle">Branding, working hours, and multi-branch management</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">⚙️ Clinic Settings</div>
+            <div class="subsection-url">📍 /modules/clinic/settings.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/clinic_settings.png" alt="Clinic Settings"><div class="screenshot-caption">Clinic branding, logo, working hours, billing parameters</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Configure branding — logo, name, address, phone. Appears on invoices and prescriptions. Set working hours, billing defaults."</p></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">🏥 Branches</div>
+            <div class="subsection-url">📍 /modules/clinic/branches.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/branches.png" alt="Branches"><div class="screenshot-caption">Multi-location clinic branch management</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Multi-location clinics — manage all branches from a single admin dashboard."</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 16: ROLES & USERS ==================== -->
+<div class="section" id="roles">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--blue-bg);color:var(--blue);">🔒</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 16 — Administration</div>
+            <div class="section-title">Roles & Users</div>
+            <div class="section-subtitle">Role-based access control and user management</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection">
+            <div class="subsection-title">🛡️ Role Permissions</div>
+            <div class="subsection-url">📍 /modules/admin/roles.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/roles.png" alt="Roles"><div class="screenshot-caption">7 built-in roles with configurable permission matrix</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"7 built-in roles — Super Admin, Admin, Doctor, Receptionist, Accountant, Nurse, Lab Tech. Each has default permissions, fully customizable per user."</p></div>
+        </div>
+        <div class="subsection">
+            <div class="subsection-title">👤 User Management</div>
+            <div class="subsection-url">📍 /modules/admin/users.php</div>
+            <div class="screenshot-wrap"><img src="demo-assets/users.png" alt="Users"><div class="screenshot-caption">User accounts with role assignment and status control</div></div>
+            <div class="narration"><div class="narration-label">🎤 Say</div><p>"Create accounts, assign roles, activate or deactivate. Granular permission overrides at individual user level."</p></div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SECTION 17: SUBSCRIPTION ==================== -->
+<div class="section" id="subscription">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--pink-bg);color:var(--pink);">👑</div>
+        <div class="section-header-text">
+            <div class="section-number">Part 17 — Administration</div>
+            <div class="section-title">Plan & Upgrades</div>
+            <div class="section-subtitle">SaaS subscription management with Razorpay</div>
+        </div>
+        <div class="section-time">⏱️ 1 min</div>
+    </div>
+    <div class="section-body">
+        <div class="subsection-url">📍 /modules/subscription/paywall.php</div>
+        <div class="screenshot-wrap"><img src="demo-assets/subscription.png" alt="Subscription"><div class="screenshot-caption">Subscription plans — Trial, Monthly, Yearly, Lifetime</div></div>
+        <div class="narration"><div class="narration-label">🎤 Say</div><p>"Subscription-based SaaS — Trial (14 days free), Monthly, Yearly, and Lifetime plans. All payments via Razorpay. Configurable doctor quotas per plan."</p></div>
+    </div>
+</div>
+
+<!-- ==================== CLOSING ==================== -->
+<div class="section" id="closing">
+    <div class="section-header">
+        <div class="section-icon" style="background:var(--green-bg);color:var(--green);">🎯</div>
+        <div class="section-header-text">
+            <div class="section-number">Closing</div>
+            <div class="section-title">Summary & Q&A</div>
+            <div class="section-subtitle">Wrap up and open the floor</div>
+        </div>
+        <div class="section-time">⏱️ 2 min</div>
+    </div>
+</div>
+
+<div class="closing">
+    <div class="closing-title">🎯 Summary — What We Covered</div>
+    <div class="closing-subtitle">Read these to wrap up</div>
+    <div class="summary-grid">
+        <div class="summary-item"><span class="check">✅</span><strong>Complete Patient Lifecycle</strong> — Registration → Prescription → Billing, all connected</div>
+        <div class="summary-item"><span class="check">✅</span><strong>Smart Automation</strong> — SMS reminders, auto-calculations, template prescriptions</div>
+        <div class="summary-item"><span class="check">✅</span><strong>Enterprise Security</strong> — RBAC, bcrypt, brute-force protection, audit logs</div>
+        <div class="summary-item"><span class="check">✅</span><strong>Multi-Tenancy</strong> — Isolated database + subdomain per clinic</div>
+        <div class="summary-item"><span class="check">✅</span><strong>Specialty Modules</strong> — Dental charts, vaccination, calculators</div>
+        <div class="summary-item"><span class="check">✅</span><strong>GST-Compliant Billing</strong> — Multi-payment modes, partial tracking, PDF invoices</div>
+        <div class="summary-item"><span class="check">✅</span><strong>Mobile App</strong> — React Native companion for on-the-go access</div>
+    </div>
+    <div class="closing-narration">
+        <div class="narration-label" style="color:var(--pink);">🎤 Say</div>
+        <p>"The platform is subscription-based — Trial, Monthly, Yearly, Lifetime — all via Razorpay. I'm happy to answer questions, dive deeper, or discuss customization for your clinic."</p>
+    </div>
+</div>
+
+<!-- URL TABLE -->
+<div class="url-table-wrap">
+    <div class="url-table-header">
+        <div class="url-table-title">📌 Quick URL Reference — All 29 Pages</div>
+        <div class="url-table-subtitle">Jump to any page during Q&A</div>
+    </div>
+    <table>
+        <thead><tr><th>Module</th><th>Page</th><th>URL</th></tr></thead>
+        <tbody>
+            <tr><td>🔐 Auth</td><td>Login</td><td>/</td></tr>
+            <tr><td>📊 Dashboard</td><td>Dashboard</td><td>/modules/dashboard/index.php</td></tr>
+            <tr><td rowspan="2">👥 Patients</td><td>List</td><td>/modules/patients/list.php</td></tr>
+            <tr><td>Add</td><td>/modules/patients/add.php</td></tr>
+            <tr><td rowspan="2">📅 Appointments</td><td>List</td><td>/modules/appointments/list.php</td></tr>
+            <tr><td>Book</td><td>/modules/appointments/book.php</td></tr>
+            <tr><td rowspan="2">💊 Prescriptions</td><td>List</td><td>/modules/prescriptions/list.php</td></tr>
+            <tr><td>Create</td><td>/modules/prescriptions/create.php</td></tr>
+            <tr><td rowspan="2">📝 Templates</td><td>List</td><td>/modules/templates/list.php</td></tr>
+            <tr><td>Add</td><td>/modules/templates/add.php</td></tr>
+            <tr><td>🦷 Dental</td><td>Chart</td><td>/modules/dental/chart.php</td></tr>
+            <tr><td rowspan="2">💉 Vaccination</td><td>Schedule</td><td>/modules/vaccination/schedule.php</td></tr>
+            <tr><td>Master</td><td>/modules/vaccination/master.php</td></tr>
+            <tr><td>🧮 Calculators</td><td>Index</td><td>/modules/calculators/index.php</td></tr>
+            <tr><td rowspan="2">💰 Billing</td><td>List</td><td>/modules/billing/list.php</td></tr>
+            <tr><td>Create</td><td>/modules/billing/create.php</td></tr>
+            <tr><td>📊 Reports</td><td>Daily</td><td>/modules/reports/daily.php</td></tr>
+            <tr><td rowspan="2">🩺 Doctors</td><td>List</td><td>/modules/doctors/list.php</td></tr>
+            <tr><td>Add</td><td>/modules/doctors/add.php</td></tr>
+            <tr><td rowspan="2">👨‍💼 Staff</td><td>List</td><td>/modules/staff/list.php</td></tr>
+            <tr><td>Add</td><td>/modules/staff/add.php</td></tr>
+            <tr><td rowspan="2">📨 Communication</td><td>Templates</td><td>/modules/communication/templates.php</td></tr>
+            <tr><td>Logs</td><td>/modules/communication/logs.php</td></tr>
+            <tr><td>📦 Master Data</td><td>Data</td><td>/modules/admin/master_data.php</td></tr>
+            <tr><td>⚙️ Clinic Settings</td><td>Settings</td><td>/modules/clinic/settings.php</td></tr>
+            <tr><td>🏥 Branches</td><td>Branches</td><td>/modules/clinic/branches.php</td></tr>
+            <tr><td>🛡️ Roles</td><td>Permissions</td><td>/modules/admin/roles.php</td></tr>
+            <tr><td>👤 Users</td><td>Users</td><td>/modules/admin/users.php</td></tr>
+            <tr><td>👑 Subscription</td><td>Plan</td><td>/modules/subscription/paywall.php</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- TIPS -->
+<div class="tips">
+    <div class="tips-title">💡 Demo Tips</div>
+    <div class="tips-grid">
+        <div class="tip-card"><div class="tip-icon">🐢</div><div class="tip-text"><strong>Go slow</strong> — Let pages load before speaking</div></div>
+        <div class="tip-card"><div class="tip-icon">🗣️</div><div class="tip-text"><strong>Use their language</strong> — "your receptionist" not "the user"</div></div>
+        <div class="tip-card"><div class="tip-icon">❓</div><div class="tip-text"><strong>Ask questions</strong> — "Do you track vaccinations?" builds engagement</div></div>
+        <div class="tip-card"><div class="tip-icon">🛡️</div><div class="tip-text"><strong>Handle errors</strong> — "Demonstrating real-world performance"</div></div>
+        <div class="tip-card"><div class="tip-icon">🎯</div><div class="tip-text"><strong>End strong</strong> — Pricing, next steps, timeline</div></div>
+        <div class="tip-card"><div class="tip-icon">📱</div><div class="tip-text"><strong>Mention mobile app</strong> — Doctors love on-the-go access</div></div>
+    </div>
+</div>
+
+</div>
+
+<footer class="footer">
+    <p>Feature Gen Care — Complete Demo Script • Confidential • For internal use only</p>
+    <p style="margin-top:8px;opacity:.6">29 pages • 17 modules • democlinic.featuregen.com</p>
+</footer>
+
+<script>
+function downloadPDF(){document.getElementById('fabs').style.display='none';window.print();setTimeout(()=>{document.getElementById('fabs').style.display='flex'},1000)}
+document.querySelectorAll('.toc-item').forEach(l=>{l.addEventListener('click',e=>{e.preventDefault();const t=document.querySelector(l.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth',block:'start'})})});
+document.querySelectorAll('.checklist-item').forEach(i=>{i.addEventListener('click',e=>{if(e.target.tagName!=='INPUT'){e.preventDefault();const c=i.querySelector('input[type="checkbox"]');c.checked=!c.checked}})});
+</script>
 </body>
 </html>
