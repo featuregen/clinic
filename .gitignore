@@ -1,4 +1,9 @@
 .DS_Store
 *.log
+node_modules/
+package-lock.json
+package.json
+capture-screenshots.js
+demo-assets/
 uploads/*
 !uploads/index.html
