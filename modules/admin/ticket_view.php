@@ -2,9 +2,8 @@
 /**
  * View/Manage Support Ticket (Super Admin)
  */
-require_once dirname(dirname(__DIR__)) . '/config/app.php';
-require_once INCLUDES_PATH . '/functions.php';
-require_once CONFIG_PATH . '/database.php';
+require_once dirname(dirname(__DIR__)) . '/config/session.php';
+requireAuth();
 
 if (getCurrentUserRole() !== ROLE_SUPER_ADMIN) {
     setFlashMessage('Access denied', 'error');

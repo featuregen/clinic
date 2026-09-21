@@ -2,9 +2,8 @@
 /**
  * View Support Ticket (Clinic Side)
  */
-require_once dirname(dirname(__DIR__)) . '/config/app.php';
-require_once INCLUDES_PATH . '/functions.php';
-require_once CONFIG_PATH . '/database.php';
+require_once dirname(dirname(__DIR__)) . '/config/session.php';
+requireAuth();
 
 $db = db();
 $userName = $_SESSION['full_name'] ?? 'Unknown';
