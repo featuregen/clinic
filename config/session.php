@@ -117,11 +117,32 @@ function getCurrentUserRole() {
  * Get current clinic ID
  */
 function getCurrentClinicId() {
-    $tenant = db()->tenantInfo;
-    if (!empty($tenant['id'])) {
-        return intval($tenant['id']);
-    }
-    return $_SESSION['clinic_id'] ?? 1;
+    static $resolvedClinicId = null;
+    if ($resolvedClinicId !== null) return $resolvedClinicId;
+    
+    $dbInstance = db();
+    $tenant = $dbInstance->tenantInfo;
+    $tenantId = !empty($tenant['id']) ? intval($tenant['id']) : ($_SESSION['clinic_id'] ?? 1);
+    
+    // Check if this tenant ID exists in the clinics table; if not, find the actual clinic_id
+    try {
+        $conn = $dbInstance->getConnection();
+        $check = $conn->prepare("SELECT id FROM clinics WHERE id = ?");
+        $check->execute([$tenantId]);
+        if ($check->fetch()) {
+            $resolvedClinicId = $tenantId;
+            return $resolvedClinicId;
+        }
+        // Tenant ID doesn't exist in clinics table - get the first active clinic
+        $first = $conn->query("SELECT id FROM clinics ORDER BY id LIMIT 1")->fetch();
+        if ($first) {
+            $resolvedClinicId = intval($first['id']);
+            return $resolvedClinicId;
+        }
+    } catch (Exception $e) {}
+    
+    $resolvedClinicId = $tenantId;
+    return $resolvedClinicId;
 }
 
 /**

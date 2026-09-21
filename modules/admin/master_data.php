@@ -131,7 +131,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
 // Fetch data for current tab
 switch ($tab) {
     case 'departments':
-        $items = $db->fetchAll("SELECT * FROM departments ORDER BY name");
+        $items = $db->fetchAll("SELECT * FROM departments WHERE clinic_id = ? ORDER BY name", [$clinicId]);
         break;
     case 'specialties':
         $items = $db->fetchAll("SELECT * FROM specialties ORDER BY name");
@@ -146,7 +146,7 @@ switch ($tab) {
         $items = $db->fetchAll("SELECT * FROM lab_tests ORDER BY name");
         break;
     case 'services':
-        $items = $db->fetchAll("SELECT * FROM services ORDER BY category, name");
+        $items = $db->fetchAll("SELECT * FROM services WHERE clinic_id = ? ORDER BY category, name", [$clinicId]);
         break;
 }
 
