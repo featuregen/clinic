@@ -47,6 +47,111 @@ $patients = $db->fetchAll(
      LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}",
     $params
 );
+
+// --- Patient Statistics for Overview Cards (Real Data) ---
+try {
+    // 1. Total Patients & Trend
+    $statsTotalPatients = (int)($db->fetch("SELECT COUNT(*) as c FROM patients WHERE clinic_id = ?", [$clinicId])['c'] ?? 0);
+    $statsPatientsThisMonth = (int)($db->fetch(
+        "SELECT COUNT(*) as c FROM patients WHERE clinic_id = ? AND created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01 00:00:00')",
+        [$clinicId]
+    )['c'] ?? 0);
+    $statsPatientsLastMonth = (int)($db->fetch(
+        "SELECT COUNT(*) as c FROM patients WHERE clinic_id = ? 
+         AND created_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01 00:00:00')
+         AND created_at < DATE_FORMAT(CURDATE(), '%Y-%m-01 00:00:00')",
+        [$clinicId]
+    )['c'] ?? 0);
+
+    // Patient base growth vs last month
+    $prevPatientBase = $statsTotalPatients - $statsPatientsThisMonth;
+    if ($prevPatientBase > 0) {
+        $growthPct = round(($statsPatientsThisMonth / $prevPatientBase) * 100);
+        $patientTrend = [
+            'percent' => abs($growthPct) . '%',
+            'is_up' => $growthPct >= 0,
+            'label' => 'from last month'
+        ];
+    } elseif ($statsTotalPatients > 0) {
+        $patientTrend = ['percent' => '100%', 'is_up' => true, 'label' => 'from last month'];
+    } else {
+        $patientTrend = ['percent' => '0%', 'is_up' => true, 'label' => 'from last month'];
+    }
+
+    // 2. Today's Appointments & Trend vs yesterday
+    $statsTodayAppts = (int)($db->fetch(
+        "SELECT COUNT(*) as c FROM appointments WHERE clinic_id = ? AND appointment_date = CURDATE()",
+        [$clinicId]
+    )['c'] ?? 0);
+    $statsYesterdayAppts = (int)($db->fetch(
+        "SELECT COUNT(*) as c FROM appointments WHERE clinic_id = ? AND appointment_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)",
+        [$clinicId]
+    )['c'] ?? 0);
+
+    if ($statsYesterdayAppts > 0) {
+        $apptPct = round((($statsTodayAppts - $statsYesterdayAppts) / $statsYesterdayAppts) * 100);
+        $apptTrend = [
+            'percent' => abs($apptPct) . '%',
+            'is_up' => $apptPct >= 0,
+            'label' => 'from yesterday'
+        ];
+    } elseif ($statsTodayAppts > 0) {
+        $apptTrend = ['percent' => '100%', 'is_up' => true, 'label' => 'from yesterday'];
+    } else {
+        $apptTrend = ['percent' => '0%', 'is_up' => true, 'label' => 'from yesterday'];
+    }
+
+    // 3. New Patients (This Month) & Trend vs last month
+    $statsNewThisMonth = $statsPatientsThisMonth;
+    if ($statsPatientsLastMonth > 0) {
+        $newPct = round((($statsNewThisMonth - $statsPatientsLastMonth) / $statsPatientsLastMonth) * 100);
+        $newPatientTrend = [
+            'percent' => abs($newPct) . '%',
+            'is_up' => $newPct >= 0,
+            'label' => 'from last month'
+        ];
+    } elseif ($statsNewThisMonth > 0) {
+        $newPatientTrend = ['percent' => '100%', 'is_up' => true, 'label' => 'from last month'];
+    } else {
+        $newPatientTrend = ['percent' => '0%', 'is_up' => true, 'label' => 'from last month'];
+    }
+
+    // 4. Total Visits & Trend vs last month
+    $statsTotalVisits = (int)($db->fetch(
+        "SELECT COUNT(*) as c FROM appointments WHERE clinic_id = ?",
+        [$clinicId]
+    )['c'] ?? 0);
+    $statsVisitsThisMonth = (int)($db->fetch(
+        "SELECT COUNT(*) as c FROM appointments WHERE clinic_id = ? AND appointment_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')",
+        [$clinicId]
+    )['c'] ?? 0);
+    $statsVisitsLastMonth = (int)($db->fetch(
+        "SELECT COUNT(*) as c FROM appointments WHERE clinic_id = ? 
+         AND appointment_date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01')
+         AND appointment_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')",
+        [$clinicId]
+    )['c'] ?? 0);
+
+    if ($statsVisitsLastMonth > 0) {
+        $visitPct = round((($statsVisitsThisMonth - $statsVisitsLastMonth) / $statsVisitsLastMonth) * 100);
+        $visitTrend = [
+            'percent' => abs($visitPct) . '%',
+            'is_up' => $visitPct >= 0,
+            'label' => 'from last month'
+        ];
+    } elseif ($statsVisitsThisMonth > 0) {
+        $visitTrend = ['percent' => '100%', 'is_up' => true, 'label' => 'from last month'];
+    } else {
+        $visitTrend = ['percent' => '0%', 'is_up' => true, 'label' => 'from last month'];
+    }
+} catch (Exception $e) {
+    $statsTotalPatients = $statsTodayAppts = $statsNewThisMonth = $statsTotalVisits = 0;
+    $patientTrend = $apptTrend = $newPatientTrend = $visitTrend = [
+        'percent' => '0%',
+        'is_up' => true,
+        'label' => 'from last month'
+    ];
+}
 ?>
 
 <div class="content-header">
@@ -62,6 +167,85 @@ $patients = $db->fetchAll(
         <i class="fas fa-user-plus"></i> Add New Patient
     </a>
     <?php endif; ?>
+</div>
+
+<!-- Patient Stats Overview Cards -->
+<div class="patient-stats-grid">
+    <!-- Total Patients -->
+    <div class="patient-stat-card">
+        <div class="patient-stat-icon icon-blue">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="patient-stat-info">
+            <span class="patient-stat-label">Total Patients</span>
+            <div class="patient-stat-data">
+                <span class="patient-stat-value"><?= number_format($statsTotalPatients) ?></span>
+                <div class="patient-stat-trend">
+                    <span class="trend-badge <?= $patientTrend['is_up'] ? 'trend-up' : 'trend-down' ?>">
+                        <i class="fas <?= $patientTrend['is_up'] ? 'fa-arrow-up' : 'fa-arrow-down' ?>"></i> <?= $patientTrend['percent'] ?>
+                    </span>
+                    <span class="trend-subtext"><?= $patientTrend['label'] ?></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Appointments -->
+    <div class="patient-stat-card">
+        <div class="patient-stat-icon icon-teal">
+            <i class="fas fa-calendar-check"></i>
+        </div>
+        <div class="patient-stat-info">
+            <span class="patient-stat-label">Today's Appointments</span>
+            <div class="patient-stat-data">
+                <span class="patient-stat-value"><?= number_format($statsTodayAppts) ?></span>
+                <div class="patient-stat-trend">
+                    <span class="trend-badge <?= $apptTrend['is_up'] ? 'trend-up' : 'trend-down' ?>">
+                        <i class="fas <?= $apptTrend['is_up'] ? 'fa-arrow-up' : 'fa-arrow-down' ?>"></i> <?= $apptTrend['percent'] ?>
+                    </span>
+                    <span class="trend-subtext"><?= $apptTrend['label'] ?></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Patients (This Month) -->
+    <div class="patient-stat-card">
+        <div class="patient-stat-icon icon-green">
+            <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="patient-stat-info">
+            <span class="patient-stat-label">New Patients (This Month)</span>
+            <div class="patient-stat-data">
+                <span class="patient-stat-value"><?= number_format($statsNewThisMonth) ?></span>
+                <div class="patient-stat-trend">
+                    <span class="trend-badge <?= $newPatientTrend['is_up'] ? 'trend-up' : 'trend-down' ?>">
+                        <i class="fas <?= $newPatientTrend['is_up'] ? 'fa-arrow-up' : 'fa-arrow-down' ?>"></i> <?= $newPatientTrend['percent'] ?>
+                    </span>
+                    <span class="trend-subtext"><?= $newPatientTrend['label'] ?></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Visits -->
+    <div class="patient-stat-card">
+        <div class="patient-stat-icon icon-indigo">
+            <i class="fas fa-folder-open"></i>
+        </div>
+        <div class="patient-stat-info">
+            <span class="patient-stat-label">Total Visits</span>
+            <div class="patient-stat-data">
+                <span class="patient-stat-value"><?= number_format($statsTotalVisits) ?></span>
+                <div class="patient-stat-trend">
+                    <span class="trend-badge <?= $visitTrend['is_up'] ? 'trend-up' : 'trend-down' ?>">
+                        <i class="fas <?= $visitTrend['is_up'] ? 'fa-arrow-up' : 'fa-arrow-down' ?>"></i> <?= $visitTrend['percent'] ?>
+                    </span>
+                    <span class="trend-subtext"><?= $visitTrend['label'] ?></span>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Filters -->
