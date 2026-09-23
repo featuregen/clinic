@@ -105,11 +105,7 @@ $currentUser = [
                 <h2 class="page-title"><?= $pageTitle ?></h2>
                 <?php endif; ?>
             </div>
-            
-            <div class="header-search">
-                <i class="fas fa-search"></i>
-                <input type="text" id="globalSearch" placeholder="Search patients, doctors, appointments...">
-            </div>
+
             
             <div class="header-right">
                 <?php if (in_array(getCurrentUserRole(), [ROLE_SUPER_ADMIN, ROLE_ADMIN])): ?>
