@@ -8,6 +8,9 @@ require_once __DIR__ . '/constants.php';
 require_once __DIR__ . '/database.php';
 require_once dirname(__DIR__) . '/includes/functions.php';
 
+// Set timezone to IST (Indian Standard Time)
+date_default_timezone_set('Asia/Kolkata');
+
 // Configure session
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
