@@ -48,9 +48,6 @@ $prescriptions = $db->fetchAll(
         </ul>
         <h1>Prescriptions</h1>
     </div>
-    <a href="<?= BASE_URL ?>/modules/prescriptions/create.php" class="btn btn-primary">
-        <i class="fas fa-prescription"></i> New Prescription
-    </a>
 </div>
 
 <div class="card mb-24">

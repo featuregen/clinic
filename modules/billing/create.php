@@ -10,6 +10,13 @@ $db = db();
 $clinicId = getCurrentClinicId();
 
 $patientId = intval($_REQUEST['patient_id'] ?? 0);
+$appointmentId = intval($_REQUEST['appointment_id'] ?? 0);
+if (!$patientId && $appointmentId) {
+    $appt = $db->fetch("SELECT patient_id FROM appointments WHERE id = ? AND clinic_id = ?", [$appointmentId, $clinicId]);
+    if ($appt) {
+        $patientId = intval($appt['patient_id']);
+    }
+}
 $prefilledPatient = $patientId ? $db->fetch("SELECT * FROM patients WHERE id = ? AND clinic_id = ?", [$patientId, $clinicId]) : null;
 
 // Handle POST BEFORE any output
@@ -500,8 +507,18 @@ function loadPatientHistory(patientId) {
             var oldNotice = document.getElementById('apptFeeNotice');
             if (oldNotice) oldNotice.style.display = 'none';
 
+            var container = document.getElementById('itemsContainer');
             if (pendingAppts.length > 0) {
-                var container = document.getElementById('itemsContainer');
+                // Remove blank/empty item rows so they don't clutter
+                var existingRows = container.querySelectorAll('.item-row:not(.appt-fee-row)');
+                existingRows.forEach(function(r) {
+                    var nameInput = r.querySelector('[name="item_name[]"]');
+                    var rateInput = r.querySelector('[name="item_rate[]"]');
+                    if (nameInput && !nameInput.value.trim() && (!rateInput || !rateInput.value || parseFloat(rateInput.value) === 0)) {
+                        r.remove();
+                    }
+                });
+
                 pendingAppts.forEach(function(appt) {
                     var label = 'Consultation - Dr. ' + appt.doctor_name + (appt.specialty ? ' (' + appt.specialty + ')' : '');
                     var fee = parseFloat(appt.consultation_fee) || 0;
@@ -509,13 +526,13 @@ function loadPatientHistory(patientId) {
                     row.className = 'item-row appt-fee-row d-flex gap-12 align-center mb-12';
                     row.style.cssText = 'background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:8px 10px;';
                     row.innerHTML =
-                        '<div class="form-group mb-0" style="flex:2;"><input type="text" name="item_name[]" class="form-control" value="' + label + '" readonly style="background:transparent;border-color:transparent;font-weight:600;"></div>' +
+                        '<div class="form-group mb-0" style="flex:2;"><input type="text" name="item_name[]" class="form-control" value="' + label + '" style="background:transparent;border-color:transparent;font-weight:600;"></div>' +
                         '<div class="form-group mb-0" style="flex:0.8;"><select name="item_type[]" class="form-control"><option value="consultation" selected>Consultation</option></select></div>' +
-                        '<div class="form-group mb-0" style="flex:0.5;"><input type="number" name="item_qty[]" class="form-control" value="1" min="1" readonly oninput="calculateTotal()"></div>' +
-                        '<div class="form-group mb-0" style="flex:0.7;"><input type="number" name="item_rate[]" class="form-control" value="' + fee + '" readonly oninput="calculateTotal()" style="font-weight:600;color:#16a34a;"></div>' +
-                        '<div class="form-group mb-0" style="flex:0.3;"><span style="font-size:11px;color:#16a34a;white-space:nowrap;"><i class="fas fa-check-circle"></i> Auto</span></div>' +
+                        '<div class="form-group mb-0" style="flex:0.5;"><input type="number" name="item_qty[]" class="form-control" value="1" min="1" oninput="calculateTotal()"></div>' +
+                        '<div class="form-group mb-0" style="flex:0.7;"><input type="number" name="item_rate[]" class="form-control" value="' + fee + '" oninput="calculateTotal()" style="font-weight:600;color:#16a34a;"></div>' +
+                        '<div class="form-group mb-0" style="flex:0.3;"><button type="button" class="btn btn-sm btn-ghost text-danger" onclick="removeItem(this)" title="Remove item"><i class="fas fa-trash"></i></button></div>' +
                         '<input type="hidden" name="appointment_ids[]" value="' + appt.id + '">';
-                    container.insertBefore(row, container.firstChild);
+                    container.appendChild(row);
                 });
                 calculateTotal();
 
@@ -528,8 +545,13 @@ function loadPatientHistory(patientId) {
                     notice.style.cssText = 'background:#f0fdf4; border:1px solid #86efac; color:#166534; margin-bottom:12px; font-size:13px;';
                     container.parentNode.insertBefore(notice, container);
                 }
-                notice.innerHTML = '<i class="fas fa-calendar-check"></i> <strong>' + pendingAppts.length + '</strong> pending consultation fee' + (pendingAppts.length > 1 ? 's' : '') + ' auto-added from completed appointment' + (pendingAppts.length > 1 ? 's' : '') + '.';
+                notice.innerHTML = '<i class="fas fa-calendar-check"></i> <strong>' + pendingAppts.length + '</strong> pending consultation fee' + (pendingAppts.length > 1 ? 's' : '') + ' auto-added from appointment' + (pendingAppts.length > 1 ? 's' : '') + '.';
                 notice.style.display = 'block';
+            } else {
+                if (container.querySelectorAll('.item-row').length === 0) {
+                    addItem();
+                }
+                calculateTotal();
             }
 
             // Invoice History Table

@@ -259,10 +259,22 @@ if ($isDateRange) {
                     <td><?= getStatusBadge($apt['status']) ?></td>
                     <td>
                         <?= formatCurrency($apt['consultation_fee']) ?>
-                        <span class="badge badge-<?= $apt['fee_status'] === 'paid' ? 'success' : 'warning' ?>" style="font-size: 10px;"><?= ucfirst($apt['fee_status']) ?></span>
+                        <?php if ($apt['fee_status'] === 'due' && $apt['status'] !== 'cancelled'): ?>
+                            <a href="<?= BASE_URL ?>/modules/billing/create.php?patient_id=<?= $apt['patient_id'] ?>&appointment_id=<?= $apt['id'] ?>" style="text-decoration:none;" title="Click to Bill Consultation Fee">
+                                <span class="badge badge-warning" style="font-size: 10px; cursor:pointer;"><i class="fas fa-file-invoice-dollar"></i> Due</span>
+                            </a>
+                        <?php else: ?>
+                            <span class="badge badge-<?= $apt['fee_status'] === 'paid' ? 'success' : 'secondary' ?>" style="font-size: 10px;"><?= ucfirst($apt['fee_status']) ?></span>
+                        <?php endif; ?>
                     </td>
                     <td>
                         <div class="actions">
+                            <?php if ($apt['fee_status'] === 'due' && $apt['status'] !== 'cancelled'): ?>
+                            <a href="<?= BASE_URL ?>/modules/billing/create.php?patient_id=<?= $apt['patient_id'] ?>&appointment_id=<?= $apt['id'] ?>" 
+                               class="btn btn-sm btn-outline text-success" title="Create Bill / Invoice" style="border-color:#10b981; color:#059669;">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </a>
+                            <?php endif; ?>
                             <?php if ($apt['status'] === 'scheduled' || $apt['status'] === 'confirmed'): ?>
                             <button class="btn btn-sm btn-success" title="Check In" onclick="updateStatus(<?= $apt['id'] ?>, 'checked_in')">
                                 <i class="fas fa-sign-in-alt"></i>

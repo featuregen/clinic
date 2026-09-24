@@ -662,7 +662,7 @@ try {
 }
 .qv-action-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
 }
 .qv-action-btn {
@@ -835,7 +835,6 @@ function renderQuickView(d) {
     var base = '<?= BASE_URL ?>';
     document.getElementById('qvActionGrid').innerHTML =
         '<a href="' + base + '/modules/appointments/book.php?patient_id=' + d.id + '" class="qv-action-btn act-appt"><i class="fas fa-calendar-plus"></i>Book Appointment</a>' +
-        '<a href="' + base + '/modules/prescriptions/create.php?patient_id=' + d.id + '" class="qv-action-btn act-rx"><i class="fas fa-prescription"></i>New Prescription</a>' +
         '<a href="' + base + '/modules/billing/create.php?patient_id=' + d.id + '" class="qv-action-btn act-bill"><i class="fas fa-file-invoice-dollar"></i>Create Bill</a>' +
         '<a href="' + base + '/modules/patients/add.php?id=' + d.id + '" class="qv-action-btn act-edit"><i class="fas fa-user-edit"></i>Edit Patient</a>';
 }

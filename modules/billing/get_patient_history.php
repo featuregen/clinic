@@ -32,20 +32,21 @@ $invoices = $db->fetchAll(
     [$clinicId, $patientId]
 );
 
-// Fetch today's completed appointments with unpaid consultation fees
-// (fee_status = 'due' means the consultation fee hasn't been collected yet)
+// Fetch appointments with unpaid consultation fees
+// (fee_status = 'due' and status not cancelled/no-show)
 $pendingAppointments = $db->fetchAll(
     "SELECT a.id, a.appointment_date, a.consultation_fee, a.fee_status,
-            u.full_name as doctor_name, s.name as specialty
+            COALESCE(u.full_name, 'Doctor') as doctor_name, s.name as specialty
      FROM appointments a
-     JOIN doctors d ON a.doctor_id = d.id
-     JOIN users u ON d.user_id = u.id
+     LEFT JOIN doctors d ON a.doctor_id = d.id
+     LEFT JOIN users u ON d.user_id = u.id
      LEFT JOIN specialties s ON d.specialty_id = s.id
      WHERE a.clinic_id = ?
        AND a.patient_id = ?
-       AND a.status = 'completed'
+       AND a.status NOT IN ('cancelled', 'no_show')
        AND a.fee_status = 'due'
-       AND a.consultation_fee > 0",
+       AND a.consultation_fee > 0
+     ORDER BY a.appointment_date DESC, a.appointment_time DESC",
     [$clinicId, $patientId]
 );
 
