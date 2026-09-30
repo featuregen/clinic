@@ -371,7 +371,7 @@ function formatToothDisplay($toothNum) {
             </div>
         </div>
 
-        <div class="card-body text-center" style="padding: 28px 20px;">
+        <div class="card-body text-center" style="padding: 24px 12px;">
 
             <!-- ========================================== -->
             <!-- 1. PEDIATRIC / PRIMARY TEETH VIEW (20 TEETH) -->
@@ -761,27 +761,30 @@ function formatToothDisplay($toothNum) {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
     flex-wrap: nowrap;
-    overflow-x: auto;
     padding-bottom: 4px;
+    width: 100%;
 }
 .arch-midline {
     width: 2px;
     height: 70px;
     background: repeating-linear-gradient(to bottom, #94a3b8 0, #94a3b8 4px, transparent 4px, transparent 8px);
-    margin: 0 6px;
+    margin: 0 3px;
     flex-shrink: 0;
 }
 .tooth-container {
     cursor: pointer;
     text-align: center;
-    padding: 6px 4px;
-    min-width: 44px;
+    padding: 4px 2px;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 52px;
     border-radius: 8px;
     border: 1px solid transparent;
     transition: all 0.15s ease;
     user-select: none;
+    overflow: hidden;
 }
 .tooth-container:hover {
     background: #f0fdfa;
@@ -790,10 +793,10 @@ function formatToothDisplay($toothNum) {
     box-shadow: 0 4px 12px rgba(8, 145, 178, 0.12);
 }
 .tooth-number {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #475569;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -804,24 +807,30 @@ function formatToothDisplay($toothNum) {
     color: #0891b2;
 }
 .letter-tag {
-    font-size: 9.5px;
+    font-size: 9px;
     background: #e0f2fe;
     color: #0369a1;
-    padding: 1px 4px;
+    padding: 1px 3px;
     border-radius: 3px;
     font-weight: 800;
 }
 .tooth-icon {
     color: #cbd5e1;
     transition: color 0.2s ease;
-    margin: 4px 0;
+    margin: 3px 0;
+}
+.tooth-icon .fa-2x {
+    font-size: 1.5em;
 }
 .tooth-status {
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 600;
     height: 14px;
     line-height: 14px;
     color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Status Colors */
