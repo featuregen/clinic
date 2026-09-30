@@ -55,7 +55,7 @@ define('DB_DATE_FORMAT', 'Y-m-d');
 define('DB_DATETIME_FORMAT', 'Y-m-d H:i:s');
 
 // Currency
-define('CURRENCY_SYMBOL', 'Rs');
+define('CURRENCY_SYMBOL', '₹');
 define('CURRENCY_CODE', 'INR');
 
 // GST Rates

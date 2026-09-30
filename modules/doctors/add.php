@@ -332,12 +332,12 @@ $addonDocPriceLabel = (floor($addonDocPrice) == $addonDocPrice) ? number_format(
         <h4 class="mb-16 mt-24"><i class="fas fa-hospital" style="color: var(--warning);"></i> Clinic Settings</h4>
         <div class="form-row mb-24">
             <div class="form-group">
-                <label class="form-label">Consultation Fee (<?= CURRENCY_SYMBOL ?>)</label>
+                <label class="form-label">Consultation Fee (<?= getCurrencySymbol() ?>)</label>
                 <input type="number" name="consultation_fee" class="form-control" min="0" step="0.01"
                        value="<?= $doctor['consultation_fee'] ?? 0 ?>">
             </div>
             <div class="form-group">
-                <label class="form-label">Follow-up Fee (<?= CURRENCY_SYMBOL ?>)</label>
+                <label class="form-label">Follow-up Fee (<?= getCurrencySymbol() ?>)</label>
                 <input type="number" name="followup_fee" class="form-control" min="0" step="0.01"
                        value="<?= $doctor['followup_fee'] ?? 0 ?>">
             </div>

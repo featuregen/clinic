@@ -81,12 +81,17 @@ function calculateAge($dob) {
 // CURRENCY & NUMBER FORMATTING
 // ============================================
 
-function formatCurrency($amount) {
-    $symbol = CURRENCY_SYMBOL;
-    // Fallback if symbol is broken (e.g. integer 262145)
-    if (is_numeric($symbol)) {
-        $symbol = 'Rs.';
+function getCurrencySymbol() {
+    $symbol = defined('CURRENCY_SYMBOL') ? CURRENCY_SYMBOL : '₹';
+    // Fallback if symbol is corrupted (e.g. integer 262145 or numeric string)
+    if (is_numeric($symbol) || is_int($symbol) || empty($symbol)) {
+        $symbol = '₹';
     }
+    return $symbol;
+}
+
+function formatCurrency($amount) {
+    $symbol = getCurrencySymbol();
     return $symbol . ' ' . number_format((float)$amount, 2);
 }
 

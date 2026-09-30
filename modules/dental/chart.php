@@ -676,7 +676,7 @@ function formatToothDisplay($toothNum) {
                             </select>
                         </div>
                         <div class="form-group mb-0">
-                            <label class="form-label" style="font-weight: 600;">Cost (<?= CURRENCY_SYMBOL ?>)</label>
+                            <label class="form-label" style="font-weight: 600;">Cost (<?= getCurrencySymbol() ?>)</label>
                             <input type="number" step="0.01" name="cost" id="t_cost" class="form-control" value="0">
                         </div>
                     </div>
