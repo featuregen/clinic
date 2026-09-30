@@ -32,14 +32,16 @@ try {
     $id = 0;
     
     switch ($type) {
+        case 'department':
+            $db->query("INSERT INTO departments (clinic_id, name, description, is_active) VALUES (?, ?, ?, 1)", [$clinicId, $name, $description]);
+            $id = $db->lastInsertId();
+            logAudit('create', 'master_data', 'departments', $id, null, ['name' => $name, 'description' => $description], "Quick created department '{$name}' (ID: {$id})");
+            break;
+            
         case 'specialty':
             $db->query("INSERT INTO specialties (name, code, description, is_active) VALUES (?, ?, ?, 1)", [$name, $code, $description]);
             $id = $db->lastInsertId();
-            break;
-            
-        case 'department':
-            $db->query("INSERT INTO departments (clinic_id, name, code, description, is_active) VALUES (?, ?, ?, ?, 1)", [$clinicId, $name, $code, $description]);
-            $id = $db->lastInsertId();
+            logAudit('create', 'master_data', 'specialties', $id, null, ['name' => $name, 'code' => $code, 'description' => $description], "Quick created specialty '{$name}' (ID: {$id})");
             break;
             
         default:
