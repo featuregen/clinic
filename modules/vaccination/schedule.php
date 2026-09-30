@@ -7,8 +7,25 @@ requirePermission('vaccination.view');
 
 $db = db();
 $clinicId = getCurrentClinicId();
-$patientId = intval($_GET['patient_id'] ?? 0);
+$patientId = intval($_POST['patient_id'] ?? $_GET['patient_id'] ?? 0);
 $canManage = hasPermission('vaccination.manage') || hasPermission('vaccination.record');
+
+// Auto-migrate missing columns schedule_id and route if needed
+static $vaccColsChecked = false;
+if (!$vaccColsChecked) {
+    try {
+        $pdo = $db->getConnection();
+        $cols = $db->fetchAll("SHOW COLUMNS FROM patient_vaccinations");
+        $colNames = array_column($cols, 'Field');
+        if (!in_array('schedule_id', $colNames)) {
+            try { $pdo->exec("ALTER TABLE patient_vaccinations ADD COLUMN schedule_id INT NULL AFTER vaccine_id"); } catch (Exception $e) {}
+        }
+        if (!in_array('route', $colNames)) {
+            try { $pdo->exec("ALTER TABLE patient_vaccinations ADD COLUMN route VARCHAR(50) NULL AFTER site"); } catch (Exception $e) {}
+        }
+    } catch (Exception $e) {}
+    $vaccColsChecked = true;
+}
 
 // Handle vaccination record or delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
@@ -30,30 +47,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
 
         if (!$patientId || !$vaccineId) {
             setFlashMessage('error', 'Please select a patient and vaccine.');
-        } else {
-            $db->query(
-                "INSERT INTO patient_vaccinations (patient_id, vaccine_id, schedule_id, vaccination_date, dose_number, status, batch_number, site, route, administered_by, notes)
-                 VALUES (?, ?, ?, ?, ?, 'administered', ?, ?, ?, ?, ?)",
-                [
-                    $patientId,
-                    $vaccineId,
-                    intval($_POST['schedule_id']) ?: null,
-                    $vaccDate,
-                    $doseNo,
-                    sanitize($_POST['batch_number'] ?? ''),
-                    sanitize($_POST['site'] ?? ''),
-                    sanitize($_POST['route'] ?? 'IM'),
-                    getCurrentUserId(),
-                    sanitize($_POST['notes'] ?? '')
-                ]
-            );
-            logAudit('create', 'vaccination', 'patient_vaccination', $db->lastInsertId());
-            setFlashMessage('success', 'Vaccination recorded successfully.');
+            header("Location: " . BASE_URL . "/modules/vaccination/schedule.php" . ($patientId ? "?patient_id=" . $patientId : ""));
+            exit;
+        }
+
+        // Verify patient exists
+        $pCheck = $db->fetch("SELECT id FROM patients WHERE id = ?", [$patientId]);
+        if (!$pCheck) {
+            setFlashMessage('error', 'Invalid patient selected.');
+            header("Location: " . BASE_URL . "/modules/vaccination/schedule.php");
+            exit;
+        }
+
+        // Verify vaccine exists
+        $vCheck = $db->fetch("SELECT id FROM vaccines WHERE id = ?", [$vaccineId]);
+        if (!$vCheck) {
+            setFlashMessage('error', 'Invalid vaccine selected.');
             header("Location: " . BASE_URL . "/modules/vaccination/schedule.php?patient_id=" . $patientId);
             exit;
         }
+
+        // Safely determine administered_by (must exist in users table or be NULL)
+        $adminId = getCurrentUserId();
+        if ($adminId) {
+            $uCheck = $db->fetch("SELECT id FROM users WHERE id = ?", [$adminId]);
+            if (!$uCheck) $adminId = null;
+        } else {
+            $adminId = null;
+        }
+
+        // Detect available columns in patient_vaccinations dynamically
+        $cols = $db->fetchAll("SHOW COLUMNS FROM patient_vaccinations");
+        $colNames = array_column($cols, 'Field');
+        $colMap = array_flip($colNames);
+
+        $insertData = [
+            'patient_id'       => $patientId,
+            'vaccine_id'       => $vaccineId,
+            'vaccination_date' => $vaccDate,
+            'dose_number'      => $doseNo,
+            'status'           => 'administered',
+            'batch_number'     => sanitize($_POST['batch_number'] ?? '') ?: null,
+            'site'             => sanitize($_POST['site'] ?? '') ?: null,
+            'administered_by'  => $adminId,
+            'notes'            => sanitize($_POST['notes'] ?? '') ?: null,
+        ];
+
+        if (isset($colMap['schedule_id'])) {
+            $insertData['schedule_id'] = intval($_POST['schedule_id'] ?? 0) ?: null;
+        }
+        if (isset($colMap['route'])) {
+            $insertData['route'] = sanitize($_POST['route'] ?? 'IM');
+        }
+
+        $fields = array_keys($insertData);
+        $placeholders = array_fill(0, count($fields), '?');
+        $sql = "INSERT INTO patient_vaccinations (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
+        $db->query($sql, array_values($insertData));
+        $newId = $db->lastInsertId();
+
+        logAudit('create', 'vaccination', 'patient_vaccination', $newId);
+        setFlashMessage('success', 'Vaccination recorded successfully.');
+        header("Location: " . BASE_URL . "/modules/vaccination/schedule.php?patient_id=" . $patientId);
+        exit;
     } catch (Exception $e) {
-        setFlashMessage('error', 'Error: ' . $e->getMessage());
+        setFlashMessage('error', 'Error recording vaccination: ' . $e->getMessage());
+        header("Location: " . BASE_URL . "/modules/vaccination/schedule.php?patient_id=" . $patientId);
+        exit;
     }
 }
 
@@ -68,6 +128,11 @@ $schedules = $db->fetchAll(
 
 // Patient details & history
 $patient = $patientId ? $db->fetch("SELECT * FROM patients WHERE id = ? AND clinic_id = ?", [$patientId, $clinicId]) : null;
+if (!$patient && $patientId) {
+    // Fallback without clinic_id check in case clinic_id was updated
+    $patient = $db->fetch("SELECT * FROM patients WHERE id = ?", [$patientId]);
+}
+
 $patientVaccinations = [];
 $administeredMap = [];
 
@@ -213,12 +278,13 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                             <td><?= formatDate($pv['vaccination_date']) ?></td>
                             <td class="font-semibold"><?= sanitizeOutput($pv['vaccine_name']) ?></td>
                             <td><span class="badge badge-info">#<?= $pv['dose_number'] ?></span></td>
-                            <td style="font-size: 12px;"><?= sanitizeOutput($pv['batch_number'] ?: '-') ?></td>
+                            <td style="font-size: 12px;"><?= sanitizeOutput($pv['batch_number'] ?? '-') ?></td>
                             <td style="font-size: 12px;"><?= sanitizeOutput($pv['admin_by'] ?? '-') ?></td>
                             <?php if ($canManage): ?>
                             <td style="text-align: right;">
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this vaccination record?');">
+                                <form method="POST" action="<?= BASE_URL ?>/modules/vaccination/schedule.php?patient_id=<?= $patientId ?>" style="display: inline;" onsubmit="return confirm('Delete this vaccination record?');">
                                     <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="patient_id" value="<?= $patientId ?>">
                                     <input type="hidden" name="record_id" value="<?= $pv['id'] ?>">
                                     <button type="submit" class="btn btn-sm btn-ghost text-danger" title="Delete record"><i class="fas fa-trash"></i></button>
                                 </form>
@@ -240,7 +306,7 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                 <h3><i class="fas fa-plus-circle" style="color: var(--accent);"></i> Record Vaccination</h3>
             </div>
             <div class="card-body">
-                <form method="POST" id="vaccinationForm">
+                <form method="POST" action="<?= BASE_URL ?>/modules/vaccination/schedule.php?patient_id=<?= $patientId ?>" id="vaccinationForm">
                     <input type="hidden" name="action" value="record">
                     <input type="hidden" name="patient_id" value="<?= $patientId ?>">
                     <input type="hidden" name="schedule_id" id="rec_schedule_id" value="0">
