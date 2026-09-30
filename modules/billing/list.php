@@ -119,7 +119,7 @@ try {
                         <?php if ($inv['due_amount'] > 0 && hasPermission('billing.payment')): ?>
                         <a href="<?= BASE_URL ?>/modules/billing/payment.php?id=<?= $inv['id'] ?>" class="btn btn-sm btn-success" title="Record Payment"><i class="fas fa-rupee-sign"></i></a>
                         <?php endif; ?>
-                        <button class="btn btn-sm btn-ghost" onclick="printContent('print-<?= $inv['id'] ?>')" title="Print"><i class="fas fa-print"></i></button>
+                        <a href="<?= BASE_URL ?>/modules/billing/print.php?id=<?= $inv['id'] ?>" target="_blank" class="btn btn-sm btn-ghost" title="Print"><i class="fas fa-print"></i></a>
                     </td>
                 </tr>
                 <?php endforeach; ?>

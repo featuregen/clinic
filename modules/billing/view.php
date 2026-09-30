@@ -57,9 +57,9 @@ $payments = $db->fetchAll(
             <i class="fas fa-rupee-sign"></i> Record Payment
         </a>
         <?php endif; ?>
-        <button class="btn btn-primary" onclick="printContent('invoice-print')">
+        <a href="<?= BASE_URL ?>/modules/billing/print.php?id=<?= $id ?>" target="_blank" class="btn btn-primary">
             <i class="fas fa-print"></i> Print
-        </button>
+        </a>
     </div>
 </div>
 
