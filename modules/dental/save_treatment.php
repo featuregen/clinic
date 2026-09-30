@@ -5,15 +5,19 @@
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
 requirePermission('dental.edit');
 
+header('Content-Type: application/json');
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $db = db();
+        $clinicId = getCurrentClinicId();
         $action = sanitize($_POST['action'] ?? '');
+        
         if ($action === 'delete') {
             $id = intval($_POST['id'] ?? 0);
             if ($id) {
                 $db->query("DELETE FROM dental_treatments WHERE id = ?", [$id]);
-                jsonResponse(['success' => true]);
+                echo json_encode(['success' => true]);
                 exit;
             }
         }
@@ -23,7 +27,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $procedure = sanitize($_POST['procedure_name'] ?? '');
         $status = sanitize($_POST['status'] ?? 'planned');
         $cost = floatval($_POST['cost'] ?? 0);
-        $doctorId = getCurrentDoctorId() ?: $_SESSION['user_id']; // Fallback if not doctor role
+        
+        // Resolve doctor_id properly: must be a valid doctors.id, not users.id
+        $doctorId = getCurrentDoctorId();
+        if (!$doctorId) {
+            // Admin/staff — find the first doctor in this clinic as fallback
+            $firstDoc = $db->fetch(
+                "SELECT d.id FROM doctors d WHERE d.clinic_id = ? ORDER BY d.id ASC LIMIT 1",
+                [$clinicId]
+            );
+            $doctorId = $firstDoc ? intval($firstDoc['id']) : null;
+        }
+        
+        if (!$doctorId) {
+            echo json_encode(['success' => false, 'error' => 'No doctor found. Please add a doctor first.']);
+            exit;
+        }
+        
+        if (empty($procedure)) {
+            echo json_encode(['success' => false, 'error' => 'Procedure name is required.']);
+            exit;
+        }
         
         $id = intval($_POST['id'] ?? 0);
 
@@ -40,12 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         }
         
-        // If completed and linked to a tooth, update tooth status? 
-        // Logic: specific procedures might imply status change (e.g. Extraction -> Missing).
-        // For now, keep it manual status update.
-        
-        jsonResponse(['success' => true]);
+        echo json_encode(['success' => true]);
     } catch (Exception $e) {
-        jsonResponse(['success' => false, 'error' => $e->getMessage()]);
+        error_log("save_treatment error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
 }
