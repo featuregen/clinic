@@ -8,10 +8,20 @@ requirePermission('dental.edit');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $db = db();
+        $action = sanitize($_POST['action'] ?? '');
+        if ($action === 'delete') {
+            $id = intval($_POST['id'] ?? 0);
+            if ($id) {
+                $db->query("DELETE FROM dental_treatments WHERE id = ?", [$id]);
+                jsonResponse(['success' => true]);
+                exit;
+            }
+        }
+
         $patientId = intval($_POST['patient_id']);
         $toothNumber = intval($_POST['tooth_number'] ?? 0);
-        $procedure = sanitize($_POST['procedure_name']);
-        $status = sanitize($_POST['status']);
+        $procedure = sanitize($_POST['procedure_name'] ?? '');
+        $status = sanitize($_POST['status'] ?? 'planned');
         $cost = floatval($_POST['cost'] ?? 0);
         $doctorId = getCurrentDoctorId() ?: $_SESSION['user_id']; // Fallback if not doctor role
         
