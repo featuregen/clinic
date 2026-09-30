@@ -58,6 +58,11 @@ $age = $patient['date_of_birth'] ? calculateAge($patient['date_of_birth']) : ($p
             <i class="fas fa-calendar-plus"></i> Book Appointment
         </a>
 
+        <?php if (hasPermission('vaccination.view')): ?>
+        <a href="<?= BASE_URL ?>/modules/vaccination/schedule.php?patient_id=<?= $patientId ?>" class="btn btn-outline btn-sm">
+            <i class="fas fa-syringe"></i> Vaccination
+        </a>
+        <?php endif; ?>
         <a href="<?= BASE_URL ?>/modules/dental/chart.php?patient_id=<?= $patientId ?>" class="btn btn-outline btn-sm">
             <i class="fas fa-tooth"></i> Dental Chart
         </a>
