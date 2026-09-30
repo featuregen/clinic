@@ -1049,15 +1049,24 @@ function saveTreatment(e) {
         method: 'POST',
         body: formData
     })
-    .then(r => r.json())
-    .then(res => {
-        if(res.success) {
-            location.reload();
-        } else {
-            alert('Error: ' + (res.error || 'Failed to save treatment'));
+    .then(r => {
+        if (!r.ok) throw new Error('Server returned ' + r.status);
+        return r.text();
+    })
+    .then(text => {
+        try {
+            const res = JSON.parse(text);
+            if(res.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (res.error || 'Failed to save treatment'));
+            }
+        } catch(e) {
+            console.error('Server response:', text);
+            alert('Server error: ' + text.substring(0, 200));
         }
     })
-    .catch(() => alert('Network error saving treatment'));
+    .catch(err => alert('Network error: ' + err.message));
 }
 
 function deleteTreatment(id) {

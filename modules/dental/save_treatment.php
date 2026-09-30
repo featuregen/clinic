@@ -3,9 +3,14 @@
  * Save Dental Treatment
  */
 require_once dirname(dirname(__DIR__)) . '/config/session.php';
-requirePermission('dental.edit');
 
 header('Content-Type: application/json');
+
+// AJAX-safe permission check (returns JSON instead of redirect)
+if (!hasPermission('dental.manage') && !hasPermission('dental.edit')) {
+    echo json_encode(['success' => false, 'error' => 'Permission denied']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
