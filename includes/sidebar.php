@@ -170,9 +170,15 @@ if (!empty($logoFile)) {
             
             <?php if (hasPermission('reports.view')): ?>
             <div class="nav-item">
-                <a href="<?= BASE_URL ?>/modules/reports/daily.php" class="nav-link <?= isActiveMenu('reports') ?>">
+                <a href="<?= BASE_URL ?>/modules/reports/daily.php" class="nav-link <?= ($currentModule == 'reports' && ($currentPage == 'daily.php' || empty($currentPage))) ? 'active' : '' ?>">
                     <i class="fas fa-chart-bar"></i>
                     <span>Reports</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="<?= BASE_URL ?>/modules/reports/followups.php" class="nav-link <?= ($currentModule == 'reports' && $currentPage == 'followups.php') ? 'active' : '' ?>">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Follow-up Report</span>
                 </a>
             </div>
             <?php endif; ?>

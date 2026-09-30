@@ -153,16 +153,26 @@ $age = $patient['date_of_birth'] ? calculateAge($patient['date_of_birth']) : ($p
             <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>Date</th><th>Doctor</th><th>Diagnosis</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Doctor</th><th>Diagnosis</th><th>Follow-up</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                     <?php foreach ($prescriptions as $rx): ?>
                     <tr>
                         <td><?= formatDate($rx['prescription_date']) ?></td>
                         <td><?= sanitizeOutput($rx['doctor_name']) ?></td>
                         <td><?= sanitizeOutput(truncateText($rx['diagnosis'] ?? '-', 40)) ?></td>
+                        <td>
+                            <?php if (!empty($rx['follow_up_date'])): ?>
+                            <span class="badge badge-info" style="font-size: 11px; font-weight: 600;">
+                                <i class="fas fa-calendar-check"></i> <?= formatDate($rx['follow_up_date']) ?>
+                            </span>
+                            <?php else: ?>
+                            <span class="text-muted">-</span>
+                            <?php endif; ?>
+                        </td>
                         <td><?= getStatusBadge($rx['status'], 'payment') ?></td>
                         <td>
-                            <a href="<?= BASE_URL ?>/modules/prescriptions/view.php?id=<?= $rx['id'] ?>" class="btn btn-sm btn-ghost"><i class="fas fa-eye"></i></a>
+                            <a href="<?= BASE_URL ?>/modules/prescriptions/view.php?id=<?= $rx['id'] ?>" class="btn btn-sm btn-ghost" title="View"><i class="fas fa-eye"></i></a>
+                            <a href="<?= BASE_URL ?>/modules/prescriptions/print.php?id=<?= $rx['id'] ?>" target="_blank" class="btn btn-sm btn-ghost" title="Print"><i class="fas fa-print"></i></a>
                         </td>
                     </tr>
                     <?php endforeach; ?>

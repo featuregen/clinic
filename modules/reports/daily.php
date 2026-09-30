@@ -130,6 +130,16 @@ try {
     </button>
 </div>
 
+<!-- Tabs Navigation -->
+<div class="tab-bar-nav d-flex gap-8 mb-24 no-print" style="border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">
+    <a href="<?= BASE_URL ?>/modules/reports/daily.php" class="btn btn-primary" style="font-weight: 700; box-shadow: 0 2px 8px rgba(8, 145, 178, 0.25);">
+        <i class="fas fa-chart-line"></i> Daily & Financial Summary
+    </a>
+    <a href="<?= BASE_URL ?>/modules/reports/followups.php" class="btn btn-ghost" style="font-weight: 600;">
+        <i class="fas fa-calendar-check"></i> Patient Follow-up Report
+    </a>
+</div>
+
 <!-- Date Filters -->
 <div class="card mb-24 no-print">
     <div class="card-body">

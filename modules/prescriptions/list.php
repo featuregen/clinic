@@ -48,6 +48,11 @@ $prescriptions = $db->fetchAll(
         </ul>
         <h1>Prescriptions</h1>
     </div>
+    <?php if (hasPermission('reports.view')): ?>
+    <a href="<?= BASE_URL ?>/modules/reports/followups.php" class="btn btn-outline">
+        <i class="fas fa-calendar-check"></i> Follow-up Report
+    </a>
+    <?php endif; ?>
 </div>
 
 <div class="card mb-24">
