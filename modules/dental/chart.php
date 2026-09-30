@@ -37,29 +37,32 @@ if (!$patientId) {
         </div>
 
         <!-- Search Body -->
-        <div style="padding: 28px 32px 32px;">
-            <div style="position: relative; margin-bottom: 8px;">
-                <i class="fas fa-search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 15px; z-index: 2; pointer-events: none;"></i>
+        <div style="padding: 24px 28px 28px;">
+            <div style="position: relative; margin-bottom: 6px;">
+                <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px; z-index: 2; pointer-events: none;"></i>
                 <input type="text" id="patientSearch" class="form-control" placeholder="Search by name, phone, or patient ID..." autocomplete="off"
-                       style="padding-left: 44px; padding-right: 16px; height: 50px; font-size: 15px; border: 2px solid #e2e8f0; border-radius: 12px; transition: all 0.2s; background: #f8fafc;"
+                       style="padding-left: 38px; padding-right: 36px; height: 46px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 10px; transition: all 0.2s; background: #f8fafc;"
                        onfocus="this.style.borderColor='#0891b2'; this.style.background='white'; this.style.boxShadow='0 0 0 3px rgba(8,145,178,0.1)'"
                        onblur="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.boxShadow='none'">
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
-                <i class="fas fa-info-circle" style="color: #94a3b8; font-size: 11px;"></i>
-                <span style="color: #94a3b8; font-size: 11.5px;">Type at least 2 characters to search</span>
-            </div>
+                <button type="button" id="clearSearchBtn" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; font-size: 14px; z-index: 3;" title="Clear">
+                    <i class="fas fa-times-circle"></i>
+                </button>
 
-            <!-- Dropdown Results -->
-            <div id="searchResults" style="display:none; position:absolute; left: 16px; right: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.15); z-index: 9999; max-height: 340px; overflow-y: auto; text-align: left; margin-top: 4px;"></div>
+                <!-- Compact Dropdown Results: constrained directly to this input box -->
+                <div id="searchResults" style="display:none; position:absolute; top: calc(100% + 4px); left: 0; right: 0; width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.12); z-index: 9999; max-height: 280px; overflow-y: auto; text-align: left;"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                <i class="fas fa-info-circle" style="color: #94a3b8; font-size: 11px;"></i>
+                <span style="color: #94a3b8; font-size: 11px;">Type at least 2 characters to search</span>
+            </div>
         </div>
 
         <!-- Quick Tip -->
-        <div style="padding: 0 32px 24px;">
-            <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border: 1px solid #99f6e4; border-radius: 10px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 10px;">
-                <i class="fas fa-lightbulb" style="color: #0d9488; font-size: 14px; margin-top: 2px; flex-shrink: 0;"></i>
-                <div style="font-size: 12px; color: #0f766e; line-height: 1.5;">
-                    <strong>Quick Tip:</strong> You can search by phone number for the fastest results, or use the patient ID (e.g. PT001000).
+        <div style="padding: 0 28px 24px;">
+            <div style="background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%); border: 1px solid #99f6e4; border-radius: 10px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px;">
+                <i class="fas fa-lightbulb" style="color: #0d9488; font-size: 13px; margin-top: 2px; flex-shrink: 0;"></i>
+                <div style="font-size: 11.5px; color: #0f766e; line-height: 1.4;">
+                    <strong>Quick Tip:</strong> Search by phone number for fastest results, or use the patient ID (e.g. PT001000).
                 </div>
             </div>
         </div>
@@ -70,11 +73,19 @@ if (!$patientId) {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.08); }
     }
+    #searchResults::-webkit-scrollbar {
+        width: 6px;
+    }
+    #searchResults::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
     </style>
 
     <script>
     const searchInput = document.getElementById('patientSearch');
     const resultsDiv = document.getElementById('searchResults');
+    const clearBtn = document.getElementById('clearSearchBtn');
     let debounceTimer;
 
     function escapeHtml(str) {
@@ -83,7 +94,7 @@ if (!$patientId) {
     }
 
     function getInitials(name) {
-        return name.split(' ').map(w => w.charAt(0)).join('').substring(0, 2).toUpperCase();
+        return name.split(' ').filter(Boolean).map(w => w.charAt(0)).join('').substring(0, 2).toUpperCase() || 'P';
     }
 
     function getAvatarColor(name) {
@@ -93,10 +104,25 @@ if (!$patientId) {
         return colors[Math.abs(hash) % colors.length];
     }
 
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            resultsDiv.style.display = 'none';
+            clearBtn.style.display = 'none';
+            searchInput.focus();
+        });
+    }
+
     searchInput.addEventListener('input', function() {
         clearTimeout(debounceTimer);
         const query = this.value.trim();
         
+        if (query.length > 0) {
+            clearBtn.style.display = 'block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+
         if (query.length < 2) {
             resultsDiv.style.display = 'none';
             return;
@@ -104,8 +130,8 @@ if (!$patientId) {
 
         // Show loading state
         resultsDiv.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: #64748b; font-size: 13px;">
-                <i class="fas fa-spinner fa-spin" style="margin-right: 6px;"></i> Searching patients...
+            <div style="padding: 14px; text-align: center; color: #64748b; font-size: 12px;">
+                <i class="fas fa-spinner fa-spin" style="margin-right: 6px; color: #0891b2;"></i> Searching patients...
             </div>`;
         resultsDiv.style.display = 'block';
 
@@ -114,11 +140,12 @@ if (!$patientId) {
                 .then(r => r.json())
                 .then(data => {
                     resultsDiv.innerHTML = '';
-                    if (data.length > 0) {
-                        // Results header
+                    if (data && data.length > 0) {
+                        // Compact results header
                         resultsDiv.innerHTML += `
-                            <div style="padding: 8px 16px; background: #f8fafc; border-bottom: 1px solid #f1f5f9; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 12px 12px 0 0;">
-                                <i class="fas fa-users" style="margin-right: 4px;"></i> ${data.length} patient${data.length > 1 ? 's' : ''} found
+                            <div style="padding: 6px 12px; background: #f8fafc; border-bottom: 1px solid #f1f5f9; font-size: 10.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 9px 9px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span><i class="fas fa-users" style="margin-right: 4px;"></i> ${data.length} patient${data.length > 1 ? 's' : ''} found</span>
+                                <span style="font-size: 10px; color: #94a3b8; text-transform: none; font-weight: 400;">Select patient</span>
                             </div>`;
 
                         data.forEach(p => {
@@ -128,29 +155,29 @@ if (!$patientId) {
                             const metaParts = [];
                             if (p.gender) metaParts.push(p.gender);
                             if (p.age) metaParts.push(p.age + ' yrs');
-                            if (p.blood_group) metaParts.push(`<span style="background:#fef2f2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700;">${escapeHtml(p.blood_group)}</span>`);
+                            if (p.blood_group) metaParts.push(`<span style="background:#fef2f2; color:#dc2626; padding:0 4px; border-radius:3px; font-size:9.5px; font-weight:700;">${escapeHtml(p.blood_group)}</span>`);
 
                             const div = document.createElement('div');
-                            div.style.cssText = 'padding: 12px 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.15s ease;';
-                            div.onmouseover = () => { div.style.background = '#f0fdfa'; div.style.paddingLeft = '20px'; };
-                            div.onmouseout = () => { div.style.background = 'white'; div.style.paddingLeft = '16px'; };
+                            div.style.cssText = 'padding: 8px 12px; border-bottom: 1px solid #f8fafc; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.12s ease;';
+                            div.onmouseover = () => { div.style.background = '#f0fdfa'; };
+                            div.onmouseout = () => { div.style.background = 'white'; };
                             div.onclick = () => window.location.href = `chart.php?patient_id=${p.id}`;
                             div.innerHTML = `
-                                <div style="width: 40px; height: 40px; border-radius: 10px; background: ${avatarColor}; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0;">
+                                <div style="width: 28px; height: 28px; border-radius: 6px; background: ${avatarColor}; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">
                                     ${initials}
                                 </div>
                                 <div style="flex: 1; min-width: 0;">
-                                    <div style="font-weight: 700; font-size: 14px; color: #1e293b; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                        ${fullName}
-                                        <span style="background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 5px; font-size: 10.5px; font-weight: 600;">${escapeHtml(p.patient_uid)}</span>
+                                    <div style="font-weight: 600; font-size: 13px; color: #1e293b; display: flex; align-items: center; gap: 6px; line-height: 1.2;">
+                                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${fullName}</span>
+                                        <span style="background: #e0f2fe; color: #0369a1; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700; flex-shrink: 0;">${escapeHtml(p.patient_uid)}</span>
                                     </div>
-                                    <div style="font-size: 12px; color: #64748b; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                        <span><i class="fas fa-phone" style="font-size: 10px; margin-right: 3px;"></i>${escapeHtml(p.phone || '—')}</span>
+                                    <div style="font-size: 11px; color: #64748b; margin-top: 2px; display: flex; align-items: center; gap: 6px; line-height: 1.2;">
+                                        <span><i class="fas fa-phone-alt" style="font-size: 9px; margin-right: 3px; color: #94a3b8;"></i>${escapeHtml(p.phone || '—')}</span>
                                         ${metaParts.length > 0 ? '<span style="color:#cbd5e1;">•</span> ' + metaParts.join(' <span style="color:#cbd5e1;">•</span> ') : ''}
                                     </div>
                                 </div>
-                                <div style="flex-shrink: 0;">
-                                    <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 12px;"></i>
+                                <div style="flex-shrink: 0; padding-left: 4px;">
+                                    <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 10px;"></i>
                                 </div>
                             `;
                             resultsDiv.appendChild(div);
@@ -158,23 +185,37 @@ if (!$patientId) {
                         resultsDiv.style.display = 'block';
                     } else {
                         resultsDiv.innerHTML = `
-                            <div style="padding: 28px 16px; text-align: center;">
-                                <i class="fas fa-user-slash" style="font-size: 28px; color: #e2e8f0; margin-bottom: 10px;"></i>
-                                <div style="font-size: 14px; color: #64748b; font-weight: 600;">No patients found</div>
-                                <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Try a different name, phone, or patient ID</div>
-                                <a href="<?= BASE_URL ?>/modules/patients/add.php" target="_blank" class="btn btn-sm btn-primary" style="margin-top: 14px; font-size: 12px;">
+                            <div style="padding: 20px 14px; text-align: center;">
+                                <i class="fas fa-user-slash" style="font-size: 22px; color: #cbd5e1; margin-bottom: 6px;"></i>
+                                <div style="font-size: 13px; color: #64748b; font-weight: 600;">No patients found</div>
+                                <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Try a different name, phone, or patient ID</div>
+                                <a href="<?= BASE_URL ?>/modules/patients/add.php" target="_blank" class="btn btn-sm btn-primary" style="margin-top: 10px; font-size: 11.5px; padding: 4px 12px;">
                                     <i class="fas fa-plus"></i> Register New Patient
                                 </a>
                             </div>`;
                         resultsDiv.style.display = 'block';
                     }
+                })
+                .catch(() => {
+                    resultsDiv.innerHTML = `
+                        <div style="padding: 14px; text-align: center; color: #ef4444; font-size: 12px;">
+                            <i class="fas fa-exclamation-circle" style="margin-right: 4px;"></i> Error searching patients. Please try again.
+                        </div>`;
+                    resultsDiv.style.display = 'block';
                 });
-        }, 250);
+        }, 220);
     });
 
     // Close search on click outside
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('#patientSearch') && !e.target.closest('#searchResults')) {
+        if (!e.target.closest('#patientSearch') && !e.target.closest('#searchResults') && !e.target.closest('#clearSearchBtn')) {
+            resultsDiv.style.display = 'none';
+        }
+    });
+
+    // Close search on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
             resultsDiv.style.display = 'none';
         }
     });
