@@ -370,7 +370,29 @@ require_once INCLUDES_PATH . '/header.php';
     }
 }
 
-/* Custom UI Polish */
+/* ============================================
+   FOLLOW-UP REPORT CUSTOM STYLES
+   ============================================ */
+
+/* Filter Form Grid */
+.fu-filter-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 130px 130px auto;
+    gap: 14px;
+    align-items: end;
+}
+@media (max-width: 1200px) {
+    .fu-filter-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+@media (max-width: 768px) {
+    .fu-filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Chip Group */
 .chip-group {
     display: flex;
     gap: 8px;
@@ -390,6 +412,7 @@ require_once INCLUDES_PATH . '/header.php';
     border: 1px solid #e2e8f0;
     text-decoration: none;
     transition: all 0.15s ease-in-out;
+    white-space: nowrap;
 }
 .chip:hover {
     background: #e2e8f0;
@@ -411,6 +434,8 @@ require_once INCLUDES_PATH . '/header.php';
     background: rgba(255,255,255,0.25);
     color: #ffffff;
 }
+
+/* Action Buttons */
 .btn-whatsapp {
     background: #25D366;
     color: #ffffff;
@@ -420,6 +445,8 @@ require_once INCLUDES_PATH . '/header.php';
     background: #1eb854;
     color: #ffffff;
 }
+
+/* Patient Cell */
 .patient-cell {
     display: flex;
     flex-direction: column;
@@ -438,6 +465,8 @@ require_once INCLUDES_PATH . '/header.php';
     gap: 8px;
     flex-wrap: wrap;
 }
+
+/* Follow-up Date Cell */
 .followup-date-cell {
     display: flex;
     flex-direction: column;
@@ -447,6 +476,22 @@ require_once INCLUDES_PATH . '/header.php';
     font-weight: 800;
     font-size: 13.5px;
     color: #0f172a;
+    white-space: nowrap;
+}
+
+/* Follow-up table column tuning */
+.fu-table th,
+.fu-table td {
+    vertical-align: top;
+    padding: 12px 14px;
+}
+.fu-table th {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #475569;
+    background: #f8fafc;
+    white-space: nowrap;
 }
 </style>
 
@@ -593,57 +638,59 @@ require_once INCLUDES_PATH . '/header.php';
 
 <!-- Detailed Filter Controls -->
 <div class="card mb-24 no-print">
-    <div class="card-body">
-        <form method="GET" class="d-flex gap-16 align-end flex-wrap">
+    <div class="card-body" style="padding: 16px 20px;">
+        <form method="GET">
             <input type="hidden" name="preset" value="custom">
-
-            <div class="form-group mb-0" style="min-width: 240px; flex: 1;">
-                <label class="form-label" style="font-size: 12px; font-weight: 600;">Search Patient / Presc #</label>
-                <div style="position: relative;">
-                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 11px; color: #94a3b8;"></i>
-                    <input type="text" name="search" class="form-control" style="padding-left: 36px;" 
-                           value="<?= sanitizeOutput($search) ?>" placeholder="Name, UID, phone, Rx number...">
+            <div class="fu-filter-grid">
+                <div class="form-group mb-0">
+                    <label class="form-label" style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">Search Patient / Rx #</label>
+                    <div style="position: relative;">
+                        <i class="fas fa-search" style="position: absolute; left: 12px; top: 11px; color: #94a3b8; font-size: 13px;"></i>
+                        <input type="text" name="search" class="form-control" style="padding-left: 36px; height: 38px;" 
+                               value="<?= sanitizeOutput($search) ?>" placeholder="Name, UID, phone, prescription...">
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group mb-0" style="min-width: 170px;">
-                <label class="form-label" style="font-size: 12px; font-weight: 600;">Doctor</label>
-                <select name="doctor_id" class="form-control">
-                    <option value="">All Doctors</option>
-                    <?php foreach ($doctors as $doc): ?>
-                    <option value="<?= $doc['id'] ?>" <?= ($filterDoctor == $doc['id']) ? 'selected' : '' ?>>
-                        Dr. <?= sanitizeOutput($doc['full_name']) ?> <?= !empty($doc['specialization']) ? '(' . sanitizeOutput($doc['specialization']) . ')' : '' ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+                <div class="form-group mb-0">
+                    <label class="form-label" style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">Doctor</label>
+                    <select name="doctor_id" class="form-control" style="height: 38px;">
+                        <option value="">All Doctors</option>
+                        <?php foreach ($doctors as $doc): ?>
+                        <option value="<?= $doc['id'] ?>" <?= ($filterDoctor == $doc['id']) ? 'selected' : '' ?>>
+                            Dr. <?= sanitizeOutput($doc['full_name']) ?> <?= !empty($doc['specialization']) ? '(' . sanitizeOutput($doc['specialization']) . ')' : '' ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-            <div class="form-group mb-0" style="min-width: 160px;">
-                <label class="form-label" style="font-size: 12px; font-weight: 600;">Follow-up Status</label>
-                <select name="status" class="form-control">
-                    <option value="">All Statuses</option>
-                    <option value="due_today" <?= ($filterStatus === 'due_today') ? 'selected' : '' ?>>Due Today</option>
-                    <option value="upcoming" <?= ($filterStatus === 'upcoming') ? 'selected' : '' ?>>Upcoming</option>
-                    <option value="overdue" <?= ($filterStatus === 'overdue') ? 'selected' : '' ?>>Overdue</option>
-                    <option value="booked" <?= ($filterStatus === 'booked') ? 'selected' : '' ?>>Appointment Booked</option>
-                    <option value="completed" <?= ($filterStatus === 'completed') ? 'selected' : '' ?>>Completed / Visited</option>
-                </select>
-            </div>
+                <div class="form-group mb-0">
+                    <label class="form-label" style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">Status</label>
+                    <select name="status" class="form-control" style="height: 38px;">
+                        <option value="">All Statuses</option>
+                        <option value="due_today" <?= ($filterStatus === 'due_today') ? 'selected' : '' ?>>Due Today</option>
+                        <option value="upcoming" <?= ($filterStatus === 'upcoming') ? 'selected' : '' ?>>Upcoming</option>
+                        <option value="overdue" <?= ($filterStatus === 'overdue') ? 'selected' : '' ?>>Overdue</option>
+                        <option value="booked" <?= ($filterStatus === 'booked') ? 'selected' : '' ?>>Booked</option>
+                        <option value="completed" <?= ($filterStatus === 'completed') ? 'selected' : '' ?>>Completed</option>
+                    </select>
+                </div>
 
-            <div class="form-group mb-0" style="width: 145px;">
-                <label class="form-label" style="font-size: 12px; font-weight: 600;">From Date</label>
-                <input type="date" name="from" class="form-control" value="<?= $fromDate ?>">
-            </div>
+                <div class="form-group mb-0">
+                    <label class="form-label" style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">From</label>
+                    <input type="date" name="from" class="form-control" value="<?= $fromDate ?>" style="height: 38px;">
+                </div>
 
-            <div class="form-group mb-0" style="width: 145px;">
-                <label class="form-label" style="font-size: 12px; font-weight: 600;">To Date</label>
-                <input type="date" name="to" class="form-control" value="<?= $toDate ?>">
-            </div>
+                <div class="form-group mb-0">
+                    <label class="form-label" style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">To</label>
+                    <input type="date" name="to" class="form-control" value="<?= $toDate ?>" style="height: 38px;">
+                </div>
 
-            <div class="form-group mb-0">
-                <button type="submit" class="btn btn-primary" style="height: 38px;">
-                    <i class="fas fa-filter"></i> Apply
-                </button>
+                <div class="form-group mb-0">
+                    <label class="form-label" style="visibility: hidden; font-size: 11.5px;">Action</label>
+                    <button type="submit" class="btn btn-primary" style="height: 38px; width: 100%; white-space: nowrap;">
+                        <i class="fas fa-filter"></i> Apply
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -679,15 +726,15 @@ require_once INCLUDES_PATH . '/header.php';
         </div>
         <?php else: ?>
         <div class="table-responsive">
-            <table class="table" style="margin-bottom: 0;">
+            <table class="table fu-table" style="margin-bottom: 0; table-layout: fixed; width: 100%;">
                 <thead>
                     <tr>
-                        <th style="width: 170px;">Follow-up Date</th>
-                        <th style="min-width: 200px;">Patient Details</th>
-                        <th style="width: 170px;">Doctor</th>
-                        <th style="width: 150px;">Initial Visit</th>
-                        <th>Follow-up Reason / Advice</th>
-                        <th style="width: 140px;" class="no-print text-right">Actions</th>
+                        <th style="width: 155px;">Follow-up Date</th>
+                        <th style="width: 22%;">Patient Details</th>
+                        <th style="width: 130px;">Doctor</th>
+                        <th style="width: 135px;">Initial Visit</th>
+                        <th>Reason / Advice</th>
+                        <th style="width: 135px;" class="no-print" style="text-align: right;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -763,45 +810,40 @@ require_once INCLUDES_PATH . '/header.php';
                             </div>
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td style="word-wrap: break-word; overflow-wrap: break-word;">
                             <?php if (!empty($row['notes'])): ?>
-                            <div style="font-size: 12.5px; color: #1e293b; font-weight: 500; line-height: 1.4;">
-                                <?= nl2br(sanitizeOutput($row['notes'])) ?>
+                            <div style="font-size: 12.5px; color: #1e293b; font-weight: 500; line-height: 1.45; max-height: 60px; overflow: hidden; text-overflow: ellipsis;" title="<?= sanitizeOutput($row['notes']) ?>">
+                                <?= nl2br(sanitizeOutput(mb_strimwidth($row['notes'], 0, 120, '...'))) ?>
                             </div>
                             <?php else: ?>
                             <span class="text-muted" style="font-size: 12px;">No specific notes recorded</span>
                             <?php endif; ?>
                             
                             <?php if (!empty($row['next_appt_date'])): ?>
-                            <div style="margin-top: 6px; font-size: 11px; color: #047857; background: #ecfdf5; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                                <i class="fas fa-calendar-check"></i>
-                                Appointment scheduled on <?= formatDate($row['next_appt_date']) ?> (<?= ucfirst($row['next_appt_status']) ?>)
+                            <div style="margin-top: 6px; font-size: 10.5px; color: #047857; background: #ecfdf5; padding: 3px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; max-width: 100%;">
+                                <i class="fas fa-calendar-check" style="font-size: 10px; flex-shrink: 0;"></i>
+                                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Appt: <?= formatDate($row['next_appt_date']) ?> (<?= ucfirst($row['next_appt_status']) ?>)</span>
                             </div>
                             <?php endif; ?>
                         </td>
-                        <td class="no-print text-right">
-                            <div class="d-flex gap-4 justify-end">
+                        <td class="no-print" style="text-align: right;">
+                            <div class="d-flex gap-4 justify-end flex-wrap" style="gap: 4px;">
                                 <?php if (!empty($row['phone'])): ?>
-                                <!-- WhatsApp Reminder -->
-                                <a href="<?= $waUrl ?>" target="_blank" class="btn btn-sm btn-whatsapp" title="Send WhatsApp Reminder">
+                                <a href="<?= $waUrl ?>" target="_blank" class="btn btn-sm btn-whatsapp" title="WhatsApp Reminder" style="padding: 5px 7px; font-size: 12px;">
                                     <i class="fab fa-whatsapp"></i>
                                 </a>
-                                <!-- Call Patient -->
-                                <a href="tel:<?= $cleanPhone ?>" class="btn btn-sm btn-ghost text-primary" title="Call Patient">
+                                <a href="tel:<?= $cleanPhone ?>" class="btn btn-sm btn-ghost text-primary" title="Call" style="padding: 5px 7px; font-size: 12px;">
                                     <i class="fas fa-phone-alt"></i>
                                 </a>
                                 <?php endif; ?>
-
                                 <?php if ($row['follow_up_status'] !== 'completed'): ?>
-                                <!-- Book Appointment -->
                                 <a href="<?= BASE_URL ?>/modules/appointments/book.php?patient_id=<?= $row['patient_id'] ?>&doctor_id=<?= $row['doctor_id'] ?>&date=<?= $row['follow_up_date'] ?>&type=followup" 
-                                   class="btn btn-sm btn-outline-primary" title="Book Follow-up Appointment" style="padding: 4px 8px; font-size: 11.5px;">
+                                   class="btn btn-sm btn-outline-primary" title="Book Follow-up" style="padding: 4px 7px; font-size: 11px; white-space: nowrap;">
                                     <i class="fas fa-calendar-plus"></i> Book
                                 </a>
                                 <?php endif; ?>
-
                                 <?php if ($row['source_type'] === 'prescription'): ?>
-                                <a href="<?= BASE_URL ?>/modules/prescriptions/print.php?id=<?= $row['source_id'] ?>" target="_blank" class="btn btn-sm btn-ghost" title="Print Prescription">
+                                <a href="<?= BASE_URL ?>/modules/prescriptions/print.php?id=<?= $row['source_id'] ?>" target="_blank" class="btn btn-sm btn-ghost" title="Print Rx" style="padding: 5px 7px; font-size: 12px;">
                                     <i class="fas fa-print"></i>
                                 </a>
                                 <?php endif; ?>
