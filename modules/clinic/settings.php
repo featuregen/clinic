@@ -28,7 +28,8 @@ try {
             'pincode' => "VARCHAR(10) NULL",
             'website' => "VARCHAR(200) NULL",
             'pan_number' => "VARCHAR(20) NULL",
-            'gst_number' => "VARCHAR(20) NULL"
+            'gst_number' => "VARCHAR(20) NULL",
+            'print_header_style' => "VARCHAR(20) NOT NULL DEFAULT 'logo_with_name'"
         ];
         foreach ($colDefinitions as $colName => $colDef) {
             if (!in_array($colName, $cols)) {
@@ -50,6 +51,7 @@ try {
             website VARCHAR(200) NULL,
             pan_number VARCHAR(20) NULL,
             gst_number VARCHAR(20) NULL,
+            print_header_style VARCHAR(20) NOT NULL DEFAULT 'logo_with_name',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB;");
@@ -109,6 +111,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $gstNumber = strtoupper(sanitize(trim($_POST['gst_number'] ?? '')));
 
         $logoFilename = $clinic['logo'] ?? null;
+        $printHeaderStyle = in_array($_POST['print_header_style'] ?? '', ['logo_only', 'logo_with_name']) ? $_POST['print_header_style'] : 'logo_with_name';
+
         if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
             $uploadStatus = uploadFile($_FILES['logo_file'], 'clinics');
             if ($uploadStatus['success']) {
@@ -123,22 +127,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($existingClinic) {
             $db->query(
-                "UPDATE clinics SET name=?, email=?, phone=?, address=?, city=?, state=?, pincode=?, website=?, pan_number=?, gst_number=?, logo=COALESCE(?, logo) WHERE id=?",
+                "UPDATE clinics SET name=?, email=?, phone=?, address=?, city=?, state=?, pincode=?, website=?, pan_number=?, gst_number=?, print_header_style=?, logo=COALESCE(?, logo) WHERE id=?",
                 [
                     $name, $email, $phone, $address, $city, $state,
                     $pincode, $website, $panNumber, $gstNumber,
-                    $logoFilename, $clinicId
+                    $printHeaderStyle, $logoFilename, $clinicId
                 ]
             );
             $_SESSION['clinic_id'] = $clinicId;
         } else {
             $db->query(
-                "INSERT INTO clinics (id, name, email, phone, address, city, state, pincode, website, pan_number, gst_number, logo) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO clinics (id, name, email, phone, address, city, state, pincode, website, pan_number, gst_number, print_header_style, logo) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $clinicId, $name, $email, $phone, $address, $city, $state,
                     $pincode, $website, $panNumber, $gstNumber,
-                    $logoFilename
+                    $printHeaderStyle, $logoFilename
                 ]
             );
             $_SESSION['clinic_id'] = $clinicId;
@@ -182,6 +186,7 @@ $valPincode = isset($_POST['pincode']) ? sanitize($_POST['pincode']) : ($clinic[
 $valWebsite = isset($_POST['website']) ? sanitize($_POST['website']) : ($clinic['website'] ?? '');
 $valPan = isset($_POST['pan_number']) ? strtoupper(sanitize(trim($_POST['pan_number']))) : ($clinic['pan_number'] ?? '');
 $valGst = isset($_POST['gst_number']) ? strtoupper(sanitize(trim($_POST['gst_number']))) : ($clinic['gst_number'] ?? '');
+$valPrintStyle = isset($_POST['print_header_style']) ? sanitize($_POST['print_header_style']) : ($clinic['print_header_style'] ?? 'logo_with_name');
 
 $pageTitle = 'Clinic Settings';
 require_once dirname(dirname(__DIR__)) . '/includes/header.php';
@@ -208,6 +213,40 @@ require_once dirname(dirname(__DIR__)) . '/includes/header.php';
                     <label class="form-label d-block">Clinic Logo</label>
                     <input type="file" name="logo_file" class="form-control" accept="image/*" style="max-width: 300px; margin: 0 auto;">
                     <div class="text-muted mt-8" style="font-size: 11px;">Recommended height: 40px. Format: PNG or JPG. Max 2MB.</div>
+                </div>
+
+                <!-- Print Header Style Setting -->
+                <div class="form-group mb-24" style="border: 1px solid var(--border-color); padding: 16px 20px; border-radius: 8px; background: #f8fafc;">
+                    <label class="form-label" style="font-weight: 700; font-size: 13px; margin-bottom: 12px;">
+                        <i class="fas fa-print" style="color: var(--primary); margin-right: 6px;"></i> Print Header Display Style
+                    </label>
+                    <p class="text-muted" style="font-size: 12px; margin-bottom: 14px;">Controls how the clinic branding appears on printed invoices, prescriptions, and reports.</p>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border: 2px solid <?= ($valPrintStyle === 'logo_only') ? 'var(--primary)' : 'var(--border-color)' ?>; border-radius: 10px; cursor: pointer; background: <?= ($valPrintStyle === 'logo_only') ? '#ecfeff' : '#fff' ?>; flex: 1; min-width: 200px; transition: all 0.15s;">
+                            <input type="radio" name="print_header_style" value="logo_only" <?= ($valPrintStyle === 'logo_only') ? 'checked' : '' ?> style="margin-top: 3px; accent-color: var(--primary);">
+                            <div>
+                                <div style="font-weight: 700; font-size: 13px; color: #0f172a;">Logo Only</div>
+                                <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">Show only the clinic logo image. Best when your logo already contains the clinic name.</div>
+                                <div style="margin-top: 10px; padding: 8px 12px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px;">
+                                    <div style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), #06b6d4); border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border: 2px solid <?= ($valPrintStyle === 'logo_with_name') ? 'var(--primary)' : 'var(--border-color)' ?>; border-radius: 10px; cursor: pointer; background: <?= ($valPrintStyle === 'logo_with_name') ? '#ecfeff' : '#fff' ?>; flex: 1; min-width: 200px; transition: all 0.15s;">
+                            <input type="radio" name="print_header_style" value="logo_with_name" <?= ($valPrintStyle === 'logo_with_name') ? 'checked' : '' ?> style="margin-top: 3px; accent-color: var(--primary);">
+                            <div>
+                                <div style="font-weight: 700; font-size: 13px; color: #0f172a;">Logo + Clinic Name</div>
+                                <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">Show the logo alongside the clinic name, address, and contact info in the header.</div>
+                                <div style="margin-top: 10px; padding: 8px 12px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px;">
+                                    <div style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), #06b6d4); border-radius: 4px;"></div>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 11px; color: #0f172a;">Clinic Name</div>
+                                        <div style="font-size: 9px; color: #94a3b8;">Address &bull; Phone</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Clinic Name</label>

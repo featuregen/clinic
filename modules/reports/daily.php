@@ -100,13 +100,30 @@ try {
 <!-- Print Only Header -->
 <div class="print-only-header" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00838f; padding-bottom: 16px; margin-bottom: 20px;">
-        <div>
-            <h1 style="font-size: 22px; color: #00838f; margin: 0 0 4px; font-weight: 800;"><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></h1>
-            <p style="margin: 0; font-size: 12px; color: #4b5563;">
-                <?= sanitizeOutput($clinic['address'] ?? '') ?> 
-                <?= !empty($clinic['phone']) ? ' &bull; Phone: ' . sanitizeOutput($clinic['phone']) : '' ?>
-                <?= !empty($clinic['email']) ? ' &bull; Email: ' . sanitizeOutput($clinic['email']) : '' ?>
-            </p>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <?php 
+            $printHeaderStyle = $clinic['print_header_style'] ?? 'logo_with_name';
+            $dLogo = $clinic['logo'] ?? '';
+            $dLogoUrl = '';
+            if (!empty($dLogo)) {
+                $dClean = ltrim($dLogo, '/');
+                $dUrl = (strpos($dClean, 'clinics/') === 0) ? (UPLOADS_URL . '/' . $dClean) : (UPLOADS_URL . '/clinics/' . $dClean);
+                $dPath = (strpos($dClean, 'clinics/') === 0) ? (UPLOADS_PATH . '/' . $dClean) : (UPLOADS_PATH . '/clinics/' . $dClean);
+                if (file_exists($dPath)) { $dLogoUrl = $dUrl; }
+            }
+            if (!empty($dLogoUrl)): ?>
+            <img src="<?= $dLogoUrl ?>" alt="Logo" style="height: <?= ($printHeaderStyle === 'logo_only') ? '60px' : '50px' ?>; width: auto; object-fit: contain;">
+            <?php endif; ?>
+            <?php if ($printHeaderStyle !== 'logo_only'): ?>
+            <div>
+                <h1 style="font-size: 22px; color: #00838f; margin: 0 0 4px; font-weight: 800;"><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></h1>
+                <p style="margin: 0; font-size: 12px; color: #4b5563;">
+                    <?= sanitizeOutput($clinic['address'] ?? '') ?> 
+                    <?= !empty($clinic['phone']) ? ' &bull; Phone: ' . sanitizeOutput($clinic['phone']) : '' ?>
+                    <?= !empty($clinic['email']) ? ' &bull; Email: ' . sanitizeOutput($clinic['email']) : '' ?>
+                </p>
+            </div>
+            <?php endif; ?>
         </div>
         <div style="text-align: right;">
             <h3 style="margin: 0 0 4px; font-size: 15px; text-transform: uppercase; color: #111827; font-weight: 700;">Performance Summary Report</h3>

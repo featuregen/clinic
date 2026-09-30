@@ -301,6 +301,7 @@ if (!empty($bLogo)) {
         $bLogoUrl = $bUrl;
     }
 }
+$printHeaderStyle = $clinic['print_header_style'] ?? 'logo_with_name';
 
 // Helpers for status presentation
 function getFollowUpBadge($status, $followUpDate) {
@@ -500,8 +501,9 @@ require_once INCLUDES_PATH . '/header.php';
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0891b2; padding-bottom: 16px; margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 14px;">
             <?php if (!empty($bLogoUrl)): ?>
-            <img src="<?= $bLogoUrl ?>" alt="Logo" style="height: 50px; width: auto; object-fit: contain;">
+            <img src="<?= $bLogoUrl ?>" alt="Logo" style="height: <?= ($printHeaderStyle === 'logo_only') ? '60px' : '50px' ?>; width: auto; object-fit: contain;">
             <?php endif; ?>
+            <?php if ($printHeaderStyle !== 'logo_only'): ?>
             <div>
                 <h1 style="font-size: 22px; color: #155e75; margin: 0 0 4px; font-weight: 800;"><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></h1>
                 <p style="margin: 0; font-size: 12px; color: #475569;">
@@ -510,6 +512,7 @@ require_once INCLUDES_PATH . '/header.php';
                     <?= !empty($clinic['email']) ? ' &bull; Email: ' . sanitizeOutput($clinic['email']) : '' ?>
                 </p>
             </div>
+            <?php endif; ?>
         </div>
         <div style="text-align: right;">
             <h3 style="margin: 0 0 4px; font-size: 15px; text-transform: uppercase; color: #0f172a; font-weight: 800;">Patient Follow-up Report</h3>

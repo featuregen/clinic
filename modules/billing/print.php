@@ -58,6 +58,7 @@ if (!empty($bLogo)) {
     }
 }
 
+$printHeaderStyle = $clinic['print_header_style'] ?? 'logo_with_name';
 $patientAge = $invoice['date_of_birth'] ? calculateAge($invoice['date_of_birth']) : ($invoice['age'] ?? '-');
 $isReceipt = ($invoice['status'] === 'paid');
 ?>
@@ -303,10 +304,11 @@ $isReceipt = ($invoice['status'] === 'paid');
                 <table style="border-collapse: collapse;" cellpadding="0" cellspacing="0">
                     <tr>
                         <?php if (!empty($bLogoUrl)): ?>
-                        <td style="vertical-align: top; padding-right: 14px;">
-                            <img src="<?= $bLogoUrl ?>" alt="Logo" style="height: 54px; width: auto; object-fit: contain; border-radius: 6px;" onerror="this.parentElement.style.display='none'">
+                        <td style="vertical-align: top; padding-right: <?= ($printHeaderStyle === 'logo_only') ? '0' : '14' ?>px;">
+                            <img src="<?= $bLogoUrl ?>" alt="Logo" style="height: <?= ($printHeaderStyle === 'logo_only') ? '64px' : '54px' ?>; width: auto; object-fit: contain; border-radius: 6px;" onerror="this.parentElement.style.display='none'">
                         </td>
                         <?php endif; ?>
+                        <?php if ($printHeaderStyle !== 'logo_only'): ?>
                         <td style="vertical-align: top;">
                             <div class="clinic-name"><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></div>
                             <?php if (!empty($clinic['address'])): ?>
@@ -322,6 +324,7 @@ $isReceipt = ($invoice['status'] === 'paid');
                             <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">GSTIN: <?= sanitizeOutput($clinic['gst_number']) ?></div>
                             <?php endif; ?>
                         </td>
+                        <?php endif; ?>
                     </tr>
                 </table>
             </td>

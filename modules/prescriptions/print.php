@@ -43,6 +43,7 @@ if (!empty($rxLogo)) {
         $rxLogoUrl = $rxUrl;
     }
 }
+$printHeaderStyle = $clinic['print_header_style'] ?? 'logo_with_name';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -395,7 +396,7 @@ if (!empty($rxLogo)) {
             <div class="letterhead-content">
                 <div class="letterhead-left">
                     <?php if (!empty($rxLogoUrl)): ?>
-                        <img src="<?= $rxLogoUrl ?>" alt="<?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?>" class="clinic-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                        <img src="<?= $rxLogoUrl ?>" alt="<?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?>" class="clinic-logo" style="<?= ($printHeaderStyle === 'logo_only') ? 'height: 64px;' : '' ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                         <div class="clinic-logo-placeholder" style="display: none;">
                             <?= strtoupper(substr($clinic['name'] ?? 'C', 0, 1)) ?>
                         </div>
@@ -404,6 +405,7 @@ if (!empty($rxLogo)) {
                             <?= strtoupper(substr($clinic['name'] ?? 'C', 0, 1)) ?>
                         </div>
                     <?php endif; ?>
+                    <?php if ($printHeaderStyle !== 'logo_only'): ?>
                     <div class="clinic-info">
                         <h1><?= sanitizeOutput($clinic['name'] ?? APP_NAME) ?></h1>
                         <?php if (!empty($clinic['tagline'])): ?>
@@ -426,6 +428,7 @@ if (!empty($rxLogo)) {
                             <?php endif; ?>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <div class="letterhead-right">
                     <div class="doctor-name">Dr. <?= sanitizeOutput($rx['doctor_name']) ?></div>
