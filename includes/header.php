@@ -89,6 +89,56 @@ $currentUser = [
     </script>
 </head>
 <body>
+<!-- Global Page Loading Progress Bar -->
+<div id="pageProgressBar" style="position:fixed;top:0;left:0;width:0;height:3px;background:linear-gradient(90deg,#06b6d4,#0891b2,#14b8a6,#06b6d4);background-size:200% 100%;z-index:99999;transition:width 0.3s ease;pointer-events:none;border-radius:0 2px 2px 0;box-shadow:0 0 8px rgba(8,145,178,0.5);"></div>
+<style>
+    #pageProgressBar.active {
+        animation: progressShimmer 1s linear infinite, progressGrow 8s cubic-bezier(0.1,0.6,0.3,1) forwards;
+    }
+    @keyframes progressShimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    @keyframes progressGrow {
+        0% { width: 0; }
+        15% { width: 25%; }
+        30% { width: 45%; }
+        50% { width: 65%; }
+        70% { width: 78%; }
+        90% { width: 88%; }
+        100% { width: 92%; }
+    }
+    #pageProgressBar.done {
+        width: 100% !important;
+        opacity: 0;
+        transition: width 0.2s ease, opacity 0.4s ease 0.2s;
+    }
+</style>
+<script>
+(function(){
+    var bar = document.getElementById('pageProgressBar');
+    function startProgress() {
+        if (bar.classList.contains('active')) return;
+        bar.style.width = '0';
+        bar.style.opacity = '1';
+        bar.classList.remove('done');
+        // Force reflow
+        void bar.offsetWidth;
+        bar.classList.add('active');
+    }
+    // Trigger on any navigation away
+    window.addEventListener('beforeunload', startProgress);
+    // Trigger on form submissions
+    document.addEventListener('submit', startProgress);
+    // Trigger on link clicks that navigate
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('a[href]');
+        if (link && !link.target && !link.getAttribute('href').startsWith('#') && !link.getAttribute('href').startsWith('javascript')) {
+            startProgress();
+        }
+    });
+})();
+</script>
 <div class="app-wrapper">
     <!-- Sidebar Overlay (Mobile) -->
     <div class="sidebar-overlay"></div>
